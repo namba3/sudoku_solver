@@ -1,0 +1,90 @@
+.container {
+    text-align: center;
+}
+.matrix {
+    padding: 0;
+    width: 450px;
+    height: 450px;
+    margin: auto;
+}
+.matrix li {
+    list-style:none;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+.row {
+    display: flex;
+    padding-left: 0;
+}
+.cell {
+    display: flex;
+    margin: auto;
+}
+.odd input {
+    background-color: aliceblue;
+}
+.even input {
+    background-color: white;
+}
+.cell input {
+    border: solid 1px gray;
+    border-radius: 5px;
+    height: 40px;
+    width: 40px;
+    font-size: 30px;
+    text-align: center;
+    font-family: monospace;
+    caret-color: transparent;
+    -moz-appearance: textfield;
+}
+.cell input::-webkit-outer-spin-button,
+.cell input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
+
+.buttons {
+    width: 360px;
+    height: 50px;
+    display: flex;
+    margin: auto;
+    padding: 5px 0;
+}
+.buttons button {
+    margin: 0 5px;
+    font-style: bold;
+    font-size: 16px;
+}
+.buttons .arrow-up {
+}
+.buttons .arrow-down {
+}
+.buttons .left {
+    margin-left: 0;
+    margin-right: auto;
+}
+.buttons .right {
+    margin-left: auto;
+    margin-right: 0;
+}
+.text {
+    resize: none;
+    width: 360px;
+    height: 360px;
+    font-size: 30px;
+    font-family: monospace;
+    letter-spacing: 25px;
+    padding-top: 25px;
+    padding-left: 25px;
+}
+.msg {
+    height: 20px;
+    font-style: bold;
+    font-size: 20px;
+}
+.ok {
+    color: green;
+}
+.error {
+    color: red;
+}
