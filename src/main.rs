@@ -1,4 +1,4 @@
-use dioxus::{events::onchange, prelude::*};
+use dioxus::prelude::*;
 fn main() {
     // init debug tool for WebAssembly
     wasm_logger::init(wasm_logger::Config::default());
@@ -19,9 +19,6 @@ const INITIAL_MTX: sudoku_solver::Matrix = [
     [1, 5, 0, 0, 0, 0, 0, 9, 0],
 ];
 
-struct Props {
-    mtx: sudoku_solver::Matrix,
-}
 fn app(cx: Scope) -> Element {
     let mtx: Vec<Vec<_>> = (0..9)
         .into_iter()
