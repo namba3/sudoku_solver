@@ -51,10 +51,8 @@ fn fill(
     }
 
     // Temporarily place candidates and self-recurse
-    for val in 1..=9 {
-        if !manager.set(x, y, val) {
-            continue;
-        }
+    for val in manager.candidates(x, y) {
+        manager.set(x, y, val);
         mtx[y][x] = val;
         if fill(mtx, empty_cells, manager) {
             return true;
@@ -68,7 +66,9 @@ fn fill(
     false
 }
 
-/// State Manager that controls whether a matrix cell can have a value
+/// A state manager that manages whether each cell in the matrix can have candidates
+///
+/// This uses bitwise operations to find candidates faster than using naive `for` statements.
 struct StateManager {
     row: [u16; 9],
     col: [u16; 9],
@@ -103,18 +103,53 @@ impl StateManager {
         self.sub_mtx[y / 3][x / 3] &= mask;
     }
 
+    pub const fn candidates(&self, x: usize, y: usize) -> Candidates {
+        let bits = self.bits(x, y);
+        Candidates::new(bits)
+    }
+
     pub const fn num_candidates(&self, x: usize, y: usize) -> u8 {
-        let bits = self.row[y] | self.col[x] | self.sub_mtx[y / 3][x / 3];
+        let bits = self.bits(x, y);
         9 - bits.count_ones() as u8
     }
 
     const fn flag(val: u8) -> u16 {
-        1u16 << val
+        1u16 << (val - 1)
+    }
+
+    const fn bits(&self, x: usize, y: usize) -> u16 {
+        self.row[y] | self.col[x] | self.sub_mtx[y / 3][x / 3]
     }
 
     const fn is_settable(&self, x: usize, y: usize, val: u8) -> bool {
         let flag = Self::flag(val);
-        let bits = self.row[y] | self.col[x] | self.sub_mtx[y / 3][x / 3];
+        let bits = self.bits(x, y);
         (bits & flag) == 0
+    }
+}
+
+pub struct Candidates {
+    bits: u16,
+    i: u8,
+}
+impl Candidates {
+    pub const fn new(bits: u16) -> Self {
+        Self { bits: !bits, i: 0 }
+    }
+}
+impl Iterator for Candidates {
+    type Item = u8;
+    fn next(&mut self) -> Option<Self::Item> {
+        while self.bits != 0 && self.i < 9 {
+            let current = self.bits;
+            self.bits >>= 1;
+            self.i += 1;
+
+            if current & 1 == 1 {
+                return Some(self.i);
+            }
+        }
+
+        None
     }
 }
