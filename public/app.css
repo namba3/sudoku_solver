@@ -1,6 +1,7 @@
 :root {
     color-scheme: light;
     font-family: system-ui, sans-serif;
+    --number-font-family: "Consolas", "Liberation Mono", "Courier New", monospace;
     background: #f4f7fb;
     color: #1d2939;
 }
@@ -125,7 +126,7 @@ h1 {
     align-items: center;
     justify-items: center;
     color: #475467;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--number-font-family);
     font-size: clamp(0.4rem, 1.8vw, 0.7rem);
     line-height: 1;
     pointer-events: none;
@@ -152,7 +153,7 @@ h1 {
     border-bottom: 1px solid #d0d5dd;
     border-radius: 0;
     color: #175cd3;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--number-font-family);
     font-size: clamp(1rem, 5.5vw, 1.75rem);
     text-align: center;
     caret-color: #175cd3;
@@ -320,7 +321,7 @@ h1 {
     table-layout: fixed;
     background: #fff;
     color: #175cd3;
-    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--number-font-family);
     font-size: clamp(0.8rem, 4vw, 1rem);
     font-weight: 650;
     text-align: center;
@@ -413,7 +414,9 @@ h1 {
     border-radius: 8px;
     background: #fff;
     color: #344054;
-    font: 1rem/1.65 ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-family: var(--number-font-family);
+    font-size: 1rem;
+    line-height: 1.65;
     letter-spacing: 0.38em;
     resize: vertical;
 }

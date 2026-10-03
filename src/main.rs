@@ -280,6 +280,7 @@ fn app() -> Element {
         tr(lang, "候補を表示", "Show candidates")
     };
     let language_switch_label = tr(lang, "English", "日本語");
+    let title_label = tr(lang, "数独ソルバー", "Sudoku Solver");
     let input_help = tr(lang, "矢印キーで移動、数字キーで入力して次の空欄へ移動します。Ctrl/Cmd+Z: 元に戻す、Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z: やり直し。", "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo.");
     let undo_label = format!("↶ {}", tr(lang, "元に戻す", "Undo"));
     let redo_label = format!("↷ {}", tr(lang, "やり直す", "Redo"));
@@ -330,7 +331,7 @@ fn app() -> Element {
                     "{language_switch_label}"
                 }
             }
-            h1 { "Sudoku Solver" }
+            h1 { "{title_label}" }
             p { class: "{msg_class}", role: "status", " {msg} " }
             p {
                 class: "input-help",
