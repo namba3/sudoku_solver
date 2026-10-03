@@ -344,6 +344,11 @@ fn app() -> Element {
             href: "favicon.svg",
             r#type: "image/svg+xml",
         }
+        document::Link {
+            rel: "icon",
+            href: "favicon.ico",
+            r#type: "image/x-icon",
+        }
         div {
             class: "container",
             lang: "{lang.code()}",
