@@ -305,7 +305,13 @@ fn app() -> Element {
         tr(lang, "探索を中断", "Cancel search")
     };
     let solve_label = tr(lang, "解く", "Solve");
+    let reset_label = tr(lang, "リセット", "Reset");
     let clear_label = tr(lang, "クリア", "Clear");
+    let reset_message = tr(
+        lang,
+        "初期数字を残して盤面をリセットしました。",
+        "Board reset to its given clues.",
+    );
     let save_text_label = tr(lang, "テキストに保存 ↓", "Save text ↓");
     let found_solutions_label = tr(lang, "見つかった解", "Found solutions");
     let previous_solution_label = tr(lang, "前の解", "Previous solution");
@@ -668,6 +674,29 @@ fn app() -> Element {
                         }
                     },
                     "{generate_puzzle_label}"
+                }
+                button {
+                    disabled: board == *givens.read(),
+                    onclick: move |_| {
+                        let initial_clues = *givens.read();
+                        record_board_change(
+                            &mut undo_stack.write(),
+                            &mut redo_stack.write(),
+                            BoardSnapshot {
+                                board: *mtx.read(),
+                                givens: initial_clues,
+                            },
+                            BoardSnapshot {
+                                board: initial_clues,
+                                givens: initial_clues,
+                            },
+                        );
+                        mtx.set(initial_clues);
+                        msg.set(reset_message.to_string());
+                        is_ok.set(true);
+                        focus_cell(0, 0);
+                    },
+                    "{reset_label}"
                 }
                 button {
                     onclick: move |_| {
