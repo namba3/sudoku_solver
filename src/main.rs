@@ -25,9 +25,17 @@ fn app() -> Element {
     let mut txt = use_signal(|| to_txt(&INITIAL_MTX));
     let mut msg = use_signal(String::new);
     let mut is_ok = use_signal(|| true);
+    let mut show_candidates = use_signal(|| false);
 
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
-    let conflicts = conflicting_cells(&mtx.read());
+    let board = *mtx.read();
+    let conflicts = conflicting_cells(&board);
+    let no_candidates = no_candidate_cells(&board);
+    let candidate_toggle_label = if show_candidates() {
+        "Hide candidates"
+    } else {
+        "Show candidates"
+    };
 
     rsx! {
         div {
@@ -40,15 +48,30 @@ fn app() -> Element {
             }
             ul {
                 class: "matrix",
-                for (y, row) in mtx.read().iter().enumerate() {
+                for (y, row) in board.iter().enumerate() {
                     li {
                         key: "{y}",
                         ul {
                             class: "row",
                             for (x, cell) in row.iter().copied().enumerate() {
                                 li {
-                                    class: "{cell_classes(y, x, givens.read()[y][x] != 0, conflicts[y][x])}",
+                                    class: "{cell_classes(y, x, givens.read()[y][x] != 0, conflicts[y][x], no_candidates[y][x], show_candidates() && !(1..=9).contains(&cell))}",
                                     key: "{y}-{x}",
+                                    if show_candidates() && !(1..=9).contains(&cell) {
+                                        div {
+                                            class: "candidate-grid",
+                                            for digit in sudoku_solver::candidates_for(&board, x, y) {
+                                                span {
+                                                    class: "candidate",
+                                                    style: "{candidate_position(digit)}",
+                                                    "{digit}"
+                                                }
+                                            }
+                                            if no_candidates[y][x] {
+                                                span { class: "candidate-empty", "×" }
+                                            }
+                                        }
+                                    }
                                     input {
                                         id: "cell-{y}-{x}",
                                         r#type: "number",
@@ -57,7 +80,7 @@ fn app() -> Element {
                                         inputmode: "numeric",
                                         value: "{cell_text(cell)}",
                                         aria_label: "Row {y + 1}, column {x + 1}",
-                                        aria_invalid: "{conflicts[y][x]}",
+                                        aria_invalid: "{conflicts[y][x] || no_candidates[y][x]}",
                                         oninput: move |evt| {
                                             let mut board = *mtx.read();
                                             board[y][x] = cell_value(&evt.value());
@@ -72,8 +95,14 @@ fn app() -> Element {
                                                 msg.set(format!("Resolve conflicts in {conflict_count} highlighted cells."));
                                                 is_ok.set(false);
                                             } else {
-                                                msg.set(String::new());
-                                                is_ok.set(true);
+                                                let stuck_count = count_no_candidate_cells(&board);
+                                                if stuck_count > 0 {
+                                                    msg.set(format!("No candidates remain in {stuck_count} empty cells."));
+                                                    is_ok.set(false);
+                                                } else {
+                                                    msg.set(String::new());
+                                                    is_ok.set(true);
+                                                }
                                             }
 
                                             if board[y][x] != 0 {
@@ -120,8 +149,14 @@ fn app() -> Element {
                                     msg.set(format!("Puzzle loaded. Resolve conflicts in {conflict_count} highlighted cells."));
                                     is_ok.set(false);
                                 } else {
-                                    msg.set("Puzzle loaded.".to_string());
-                                    is_ok.set(true);
+                                    let stuck_count = count_no_candidate_cells(&board);
+                                    if stuck_count > 0 {
+                                        msg.set(format!("Puzzle loaded. No candidates remain in {stuck_count} empty cells."));
+                                        is_ok.set(false);
+                                    } else {
+                                        msg.set("Puzzle loaded.".to_string());
+                                        is_ok.set(true);
+                                    }
                                 }
                                 focus_cell(0, 0);
                             }
@@ -134,12 +169,21 @@ fn app() -> Element {
                     "↑ Load text"
                 }
                 button {
+                    aria_pressed: "{show_candidates()}",
+                    onclick: move |_| show_candidates.set(!show_candidates()),
+                    "{candidate_toggle_label}"
+                }
+                button {
                     onclick: move |_| {
                         let mut solver_mtx = *mtx.read();
                         let conflict_count = count_conflict_cells(&solver_mtx);
+                        let stuck_count = count_no_candidate_cells(&solver_mtx);
 
                         if conflict_count > 0 {
                             msg.set(format!("Resolve conflicts in {conflict_count} highlighted cells before solving."));
+                            is_ok.set(false);
+                        } else if stuck_count > 0 {
+                            msg.set(format!("No candidates remain in {stuck_count} empty cells."));
                             is_ok.set(false);
                         } else {
                             let window = web_sys::window().unwrap();
@@ -217,7 +261,14 @@ fn cell_text(cell: u8) -> String {
     }
 }
 
-fn cell_classes(y: usize, x: usize, is_given: bool, is_conflict: bool) -> String {
+fn cell_classes(
+    y: usize,
+    x: usize,
+    is_given: bool,
+    is_conflict: bool,
+    no_candidates: bool,
+    show_candidates: bool,
+) -> String {
     let shade = if ((y / 3) + (x / 3)) % 2 == 1 {
         "odd"
     } else {
@@ -225,7 +276,34 @@ fn cell_classes(y: usize, x: usize, is_given: bool, is_conflict: bool) -> String
     };
     let given = if is_given { " given" } else { "" };
     let conflict = if is_conflict { " conflict" } else { "" };
-    format!("cell {shade}{given}{conflict}")
+    let stuck = if no_candidates { " no-candidates" } else { "" };
+    let candidates = if show_candidates {
+        " with-candidates"
+    } else {
+        ""
+    };
+    format!("cell {shade}{given}{conflict}{stuck}{candidates}")
+}
+
+fn candidate_position(digit: u8) -> String {
+    let index = digit.saturating_sub(1);
+    format!("grid-area: {} / {}", index / 3 + 1, index % 3 + 1)
+}
+
+fn no_candidate_cells(board: &sudoku_solver::Matrix) -> [[bool; 9]; 9] {
+    std::array::from_fn(|y| {
+        std::array::from_fn(|x| {
+            !(1..=9).contains(&board[y][x]) && sudoku_solver::candidates_for(board, x, y).is_empty()
+        })
+    })
+}
+
+fn count_no_candidate_cells(board: &sudoku_solver::Matrix) -> usize {
+    no_candidate_cells(board)
+        .iter()
+        .flatten()
+        .filter(|&&has_no_candidates| has_no_candidates)
+        .count()
 }
 
 fn parse_puzzle(txt: &str) -> Result<sudoku_solver::Matrix, String> {

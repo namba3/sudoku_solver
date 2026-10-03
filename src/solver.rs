@@ -22,6 +22,28 @@ pub fn solve(mtx: &mut Matrix) -> bool {
     fill(mtx, &mut empty_cells, &mut manager)
 }
 
+/// Return the allowed digits for an empty cell at column `x`, row `y`.
+///
+/// Coordinates outside the 9×9 board and already-filled cells have no candidates.
+pub fn candidates_for(mtx: &Matrix, x: usize, y: usize) -> Vec<u8> {
+    if x >= 9 || y >= 9 || (1..=9).contains(&mtx[y][x]) {
+        return Vec::new();
+    }
+
+    let mut used = 0;
+    for i in 0..9 {
+        let box_y = (y / 3) * 3 + i / 3;
+        let box_x = (x / 3) * 3 + i % 3;
+        for value in [mtx[y][i], mtx[i][x], mtx[box_y][box_x]] {
+            if (1..=9).contains(&value) {
+                used |= StateManager::flag(value);
+            }
+        }
+    }
+
+    Candidates::new(used).collect()
+}
+
 /// Fill the Sudoku matrix with temporary placement method
 fn fill(
     mtx: &mut Matrix,
@@ -235,5 +257,25 @@ mod tests {
         manager.remove(0, 0, 1);
 
         assert!(manager.is_settable(0, 1, 1));
+    }
+
+    #[test]
+    fn candidates_for_excludes_digits_in_the_row_column_and_subgrid() {
+        let mut puzzle = [[0; 9]; 9];
+        puzzle[0][0] = 1;
+        puzzle[3][2] = 2;
+        puzzle[1][1] = 3;
+
+        assert_eq!(super::candidates_for(&puzzle, 2, 2), vec![4, 5, 6, 7, 8, 9]);
+    }
+
+    #[test]
+    fn candidates_for_returns_empty_for_filled_or_out_of_bounds_cells() {
+        let mut puzzle = [[0; 9]; 9];
+        puzzle[4][5] = 7;
+
+        assert!(super::candidates_for(&puzzle, 5, 4).is_empty());
+        assert!(super::candidates_for(&puzzle, 9, 4).is_empty());
+        assert!(super::candidates_for(&puzzle, 5, 9).is_empty());
     }
 }
