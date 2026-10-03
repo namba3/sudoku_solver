@@ -14,3 +14,15 @@ wasm-logger = "0.2.0"
 console_error_panic_hook = "0.1.7"
 log = "0.4.17"
 web-sys = { version = "0.3.60", features = ["Performance", "Window"] }
+
+[profile]
+
+[profile.wasm-dev]
+inherits = "dev"
+opt-level = 1
+
+[profile.server-dev]
+inherits = "dev"
+
+[profile.android-dev]
+inherits = "dev"
