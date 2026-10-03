@@ -77,6 +77,22 @@ pub fn search(job_id: u32, flat_board: Vec<u8>, max_solutions: u32, max_nodes: u
     }));
 }
 
+#[wasm_bindgen]
+pub fn generate(job_id: u32, seed: u32) {
+    let board = sudoku_solver::generator::generate_puzzle(u64::from(seed));
+    let clues = board
+        .iter()
+        .flatten()
+        .filter(|&&value| (1..=9).contains(&value))
+        .count();
+    post_message(serde_json::json!({
+        "type": "generated",
+        "job_id": job_id,
+        "board": board,
+        "clues": clues,
+    }));
+}
+
 fn post_message(message: serde_json::Value) {
     let scope: DedicatedWorkerGlobalScope = js_sys::global().unchecked_into();
     let _ = scope.post_message(&JsValue::from_str(&message.to_string()));

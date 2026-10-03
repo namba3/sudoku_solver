@@ -123,6 +123,7 @@ fn puzzle_loaded_message(
 #[derive(Clone, PartialEq)]
 enum SearchStatus {
     Starting,
+    Generating,
     Progress {
         solutions: u64,
         nodes: u64,
@@ -137,6 +138,17 @@ enum SearchStatus {
         solutions: usize,
         elapsed_seconds: f64,
     },
+    Generated {
+        clues: usize,
+        elapsed_seconds: f64,
+    },
+    GenerationCancelled {
+        elapsed_seconds: f64,
+    },
+    GenerationError {
+        message: String,
+        elapsed_seconds: f64,
+    },
     Error {
         message: String,
         elapsed_seconds: f64,
@@ -149,6 +161,7 @@ impl SearchStatus {
     fn text(&self, language: Language) -> String {
         match self {
             Self::Starting => tr(language, "解を探索しています…", "Starting solution search…").to_string(),
+            Self::Generating => tr(language, "一意解の問題を生成しています…", "Generating a unique puzzle…").to_string(),
             Self::Progress { solutions, nodes } => match language {
                 Language::Japanese => format!("探索中… {nodes} ノードを調べ、{solutions} 件の解が見つかりました。"),
                 Language::English => format!("Searching… {solutions} solutions found across {nodes} nodes."),
@@ -167,6 +180,18 @@ impl SearchStatus {
             Self::Cancelled { solutions, elapsed_seconds } => match language {
                 Language::Japanese => format!("解を {solutions} 件見つけた時点で探索を中断しました（{elapsed_seconds:.2} 秒）。"),
                 Language::English => format!("Search cancelled after finding {solutions} solutions in {elapsed_seconds:.2} s."),
+            },
+            Self::Generated { clues, elapsed_seconds } => match language {
+                Language::Japanese => format!("一意解の問題を生成しました（初期数字 {clues} 個、{elapsed_seconds:.2} 秒）。"),
+                Language::English => format!("Generated a unique puzzle with {clues} clues in {elapsed_seconds:.2} s."),
+            },
+            Self::GenerationCancelled { elapsed_seconds } => match language {
+                Language::Japanese => format!("問題の生成を中断しました（{elapsed_seconds:.2} 秒）。"),
+                Language::English => format!("Puzzle generation cancelled after {elapsed_seconds:.2} s."),
+            },
+            Self::GenerationError { message, elapsed_seconds } => match language {
+                Language::Japanese => format!("問題を生成できませんでした: {message}（{elapsed_seconds:.2} 秒）。"),
+                Language::English => format!("Puzzle generation failed: {message} ({elapsed_seconds:.2} s)."),
             },
             Self::Error { message, elapsed_seconds } => {
                 let message = localize_search_error(message, language);
@@ -234,6 +259,7 @@ fn app() -> Element {
     let mut search_status = use_signal(|| None::<SearchStatus>);
     let mut search_started_at = use_signal(|| 0.0f64);
     let mut is_searching = use_signal(|| false);
+    let mut is_generating = use_signal(|| false);
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
@@ -258,13 +284,17 @@ fn app() -> Element {
     let undo_label = format!("↶ {}", tr(lang, "元に戻す", "Undo"));
     let redo_label = format!("↷ {}", tr(lang, "やり直す", "Redo"));
     let load_text_label = tr(lang, "↑ テキストを読み込む", "↑ Load text");
-    let hint_button_label = tr(
-        lang,
-        "ヒント（一時停止中）",
-        "Get hint (temporarily unavailable)",
-    );
     let count_solutions_label = tr(lang, "解の数を調べる", "Count solutions");
-    let cancel_search_label = tr(lang, "探索を中断", "Cancel search");
+    let generate_puzzle_label = if is_generating() {
+        tr(lang, "生成中…", "Generating…")
+    } else {
+        tr(lang, "問題を生成", "Generate puzzle")
+    };
+    let cancel_task_label = if is_generating() {
+        tr(lang, "生成を中断", "Cancel generation")
+    } else {
+        tr(lang, "探索を中断", "Cancel search")
+    };
     let solve_label = tr(lang, "解く", "Solve");
     let clear_label = tr(lang, "クリア", "Clear");
     let save_text_label = tr(lang, "テキストに保存 ↓", "Save text ↓");
@@ -486,33 +516,146 @@ fn app() -> Element {
                     "{candidate_toggle_label}"
                 }
                 button {
-                    disabled: true,
+                    disabled: is_searching(),
                     onclick: move |_| {
-                        match sudoku_solver::find_hint(&board) {
-                            Ok(Some(hint)) => {
-                                msg.set(format_hint(hint, lang));
-                                is_ok.set(true);
-                                focus_cell(hint.y, hint.x);
+                        active_search.set(None);
+                        let job_id = search_job_id().wrapping_add(1);
+                        search_job_id.set(job_id);
+                        search_solutions.set(Vec::new());
+                        selected_solution.set(0);
+                        search_board.set(None);
+                        msg.set(String::new());
+                        is_ok.set(true);
+                        let started_at = web_sys::window()
+                            .and_then(|window| window.performance())
+                            .map(|performance| performance.now())
+                            .unwrap_or(0.0);
+                        search_started_at.set(started_at);
+                        search_status.set(Some(SearchStatus::Generating));
+                        is_searching.set(true);
+                        is_generating.set(true);
+
+                        match create_search_worker() {
+                            Ok(worker) => {
+                                let mut status = search_status;
+                                let mut searching = is_searching;
+                                let mut generating = is_generating;
+                                let current_job_id = search_job_id;
+                                let started_at = search_started_at();
+                                let mut board_signal = mtx;
+                                let mut givens_signal = givens;
+                                let mut text_signal = txt;
+                                let mut undo = undo_stack;
+                                let mut redo = redo_stack;
+                                let language_signal = language;
+                                let mut message = msg;
+                                let mut message_ok = is_ok;
+                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+                                    let Some(raw_message) = event.data().as_string() else {
+                                        return;
+                                    };
+                                    let Ok(response) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
+                                        return;
+                                    };
+                                    if response["job_id"].as_u64() != Some(job_id as u64)
+                                        || current_job_id() != job_id
+                                    {
+                                        return;
+                                    }
+
+                                    match response["type"].as_str() {
+                                        Some("generated") => {
+                                            let Some(generated_board) = parse_solution(&response["board"]) else {
+                                                status.set(Some(SearchStatus::GenerationError {
+                                                    message: "Invalid generated board.".to_string(),
+                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                }));
+                                                searching.set(false);
+                                                generating.set(false);
+                                                return;
+                                            };
+                                            let before = BoardSnapshot {
+                                                board: *board_signal.read(),
+                                                givens: *givens_signal.read(),
+                                            };
+                                            record_board_change(
+                                                &mut undo.write(),
+                                                &mut redo.write(),
+                                                before,
+                                                BoardSnapshot { board: generated_board, givens: generated_board },
+                                            );
+                                            board_signal.set(generated_board);
+                                            givens_signal.set(generated_board);
+                                            text_signal.set(to_txt(&generated_board));
+                                            message.set(tr(language_signal(), "問題を生成しました。", "Puzzle generated.").to_string());
+                                            message_ok.set(true);
+                                            status.set(Some(SearchStatus::Generated {
+                                                clues: response["clues"].as_u64().unwrap_or(0) as usize,
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            }));
+                                            searching.set(false);
+                                            generating.set(false);
+                                            focus_cell(0, 0);
+                                        }
+                                        Some("error") => {
+                                            status.set(Some(SearchStatus::GenerationError {
+                                                message: response["message"].as_str().unwrap_or("Unknown worker error.").to_string(),
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            }));
+                                            searching.set(false);
+                                            generating.set(false);
+                                        }
+                                        _ => {}
+                                    }
+                                });
+                                let mut error_status = search_status;
+                                let mut error_searching = is_searching;
+                                let mut error_generating = is_generating;
+                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
+                                    if current_job_id() == job_id {
+                                        error_status.set(Some(SearchStatus::GenerationError {
+                                            message: event.message(),
+                                            elapsed_seconds: elapsed_seconds_since(started_at),
+                                        }));
+                                        error_searching.set(false);
+                                        error_generating.set(false);
+                                    }
+                                });
+
+                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                                active_search.set(Some(ActiveSearch {
+                                    worker: worker.clone(),
+                                    _onmessage: onmessage,
+                                    _onerror: onerror,
+                                }));
+                                let seed = (js_sys::Math::random() * f64::from(u32::MAX)) as u32;
+                                let request = serde_json::json!({
+                                    "type": "generate",
+                                    "job_id": job_id,
+                                    "seed": seed,
+                                });
+                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
+                                    active_search.set(None);
+                                    search_status.set(Some(SearchStatus::GenerationError {
+                                        message: format!("{error:?}"),
+                                        elapsed_seconds: elapsed_seconds_since(started_at),
+                                    }));
+                                    is_searching.set(false);
+                                    is_generating.set(false);
+                                }
                             }
-                            Ok(None) if board.iter().flatten().all(|cell| (1..=9).contains(cell)) => {
-                                msg.set(tr(lang, "問題はすでに完成しています。", "The puzzle is already complete.").to_string());
-                                is_ok.set(true);
-                            }
-                            Ok(None) => {
-                                msg.set(tr(lang, "基本的なヒントは見つかりませんでした。より高度な解法を試すか、「解く」を使ってください。", "No single-step hint found. Try a more advanced technique or Solve.").to_string());
-                                is_ok.set(true);
-                            }
-                            Err(sudoku_solver::HintError::ConflictingValues) => {
-                                msg.set(tr(lang, "ヒントを表示する前に、重複している数字を修正してください。", "Resolve conflicts before asking for a hint.").to_string());
-                                is_ok.set(false);
-                            }
-                            Err(sudoku_solver::HintError::NoCandidates) => {
-                                msg.set(tr(lang, "候補がない空欄があります。強調表示されたセルを先に修正してください。", "No candidates remain in an empty cell. Resolve the highlighted cells first.").to_string());
-                                is_ok.set(false);
+                            Err(error) => {
+                                search_status.set(Some(SearchStatus::GenerationError {
+                                    message: format!("{error:?}"),
+                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                }));
+                                is_searching.set(false);
+                                is_generating.set(false);
                             }
                         }
                     },
-                    "{hint_button_label}"
+                    "{generate_puzzle_label}"
                 }
                 button {
                     disabled: is_searching(),
@@ -530,6 +673,7 @@ fn app() -> Element {
                         search_started_at.set(started_at);
                         search_status.set(Some(SearchStatus::Starting));
                         is_searching.set(true);
+                        is_generating.set(false);
 
                         match create_search_worker() {
                             Ok(worker) => {
@@ -622,14 +766,20 @@ fn app() -> Element {
                 if is_searching() {
                     button {
                         onclick: move |_| {
+                            let was_generating = is_generating();
                             search_job_id.set(search_job_id().wrapping_add(1));
                             active_search.set(None);
                             is_searching.set(false);
-                            let count = search_solutions.read().len();
+                            is_generating.set(false);
                             let elapsed_seconds = elapsed_seconds_since(search_started_at());
-                            search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
+                            if was_generating {
+                                search_status.set(Some(SearchStatus::GenerationCancelled { elapsed_seconds }));
+                            } else {
+                                let count = search_solutions.read().len();
+                                search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
+                            }
                         },
-                        "{cancel_search_label}"
+                        "{cancel_task_label}"
                     }
                 }
                 button {
@@ -1032,21 +1182,6 @@ fn set_board_message(
     } else {
         msg.set(success_message.to_string());
         is_ok.set(true);
-    }
-}
-
-fn format_hint(hint: sudoku_solver::Hint, language: Language) -> String {
-    let row = hint.y + 1;
-    let column = hint.x + 1;
-    match (language, hint.technique) {
-        (Language::Japanese, sudoku_solver::HintTechnique::NakedSingle) => format!("ヒント: {row} 行 {column} 列には候補が1つだけです。{} を入力してください。", hint.digit),
-        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleRow) => format!("ヒント: {} 行では {} を置けるのは {} 列だけです。", row, hint.digit, column),
-        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleColumn) => format!("ヒント: {} 列では {} を置けるのは {} 行だけです。", column, hint.digit, row),
-        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleBox) => format!("ヒント: この3×3ブロックでは {} 行 {} 列だけに {} を置けます。", row, column, hint.digit),
-        (Language::English, sudoku_solver::HintTechnique::NakedSingle) => format!("Hint: enter {} at row {row}, column {column}; this cell has only one candidate.", hint.digit),
-        (Language::English, sudoku_solver::HintTechnique::HiddenSingleRow) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its row.", hint.digit),
-        (Language::English, sudoku_solver::HintTechnique::HiddenSingleColumn) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its column.", hint.digit),
-        (Language::English, sudoku_solver::HintTechnique::HiddenSingleBox) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its 3×3 box.", hint.digit),
     }
 }
 

@@ -1,5 +1,13 @@
 /**
  * @param {number} job_id
+ * @param {number} seed
+ */
+export function generate(job_id, seed) {
+    wasm.generate(job_id, seed);
+}
+
+/**
+ * @param {number} job_id
  * @param {Uint8Array} flat_board
  * @param {number} max_solutions
  * @param {number} max_nodes
