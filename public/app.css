@@ -26,6 +26,33 @@ h1 {
     font-size: clamp(1.6rem, 6vw, 2.1rem);
 }
 
+.language-control {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 4px;
+}
+
+.language-control button {
+    min-height: 36px;
+    padding: 5px 11px;
+    border: 1px solid #b2c8f5;
+    border-radius: 7px;
+    background: #fff;
+    color: #1849a9;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.language-control button:hover {
+    background: #eff4ff;
+}
+
+.language-control button:focus-visible {
+    outline: 3px solid #84adff;
+    outline-offset: 2px;
+}
+
 .matrix {
     display: grid;
     grid-template-rows: repeat(9, 1fr);

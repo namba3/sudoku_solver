@@ -29,6 +29,182 @@ struct BoardSnapshot {
 const HISTORY_LIMIT: usize = 100;
 const UI_MAX_SOLUTIONS: usize = 100;
 
+#[derive(Clone, Copy, PartialEq)]
+enum Language {
+    Japanese,
+    English,
+}
+
+impl Language {
+    fn toggle(self) -> Self {
+        match self {
+            Self::Japanese => Self::English,
+            Self::English => Self::Japanese,
+        }
+    }
+
+    fn code(self) -> &'static str {
+        match self {
+            Self::Japanese => "ja",
+            Self::English => "en",
+        }
+    }
+}
+
+fn tr(language: Language, japanese: &'static str, english: &'static str) -> &'static str {
+    match language {
+        Language::Japanese => japanese,
+        Language::English => english,
+    }
+}
+
+fn cell_aria_label(language: Language, row: usize, column: usize) -> String {
+    match language {
+        Language::Japanese => format!("{} 行 {} 列", row + 1, column + 1),
+        Language::English => format!("Row {}, column {}", row + 1, column + 1),
+    }
+}
+
+fn solution_range_label(language: Language, selected: usize, total: usize) -> String {
+    match language {
+        Language::Japanese => format!("{total} 件中 {selected} 件目"),
+        Language::English => format!("Solution {selected} of {total}"),
+    }
+}
+
+fn solution_preview_label(language: Language, selected: usize) -> String {
+    match language {
+        Language::Japanese => format!("{selected} 件目の解のプレビュー"),
+        Language::English => format!("Preview of solution {selected}"),
+    }
+}
+
+fn conflict_message(language: Language, count: usize) -> String {
+    match language {
+        Language::Japanese => format!(
+            "重複する数字があるセルは {count} 個です。強調表示されたセルを修正してください。"
+        ),
+        Language::English => format!("Resolve conflicts in {count} highlighted cells."),
+    }
+}
+
+fn no_candidates_message(language: Language, count: usize) -> String {
+    match language {
+        Language::Japanese => {
+            format!("候補がない空欄が {count} 個あります。強調表示されたセルを修正してください。")
+        }
+        Language::English => format!("No candidates remain in {count} empty cells."),
+    }
+}
+
+fn puzzle_loaded_message(
+    language: Language,
+    conflicts: Option<usize>,
+    no_candidates: Option<usize>,
+) -> String {
+    match (language, conflicts, no_candidates) {
+        (Language::Japanese, Some(count), _) => {
+            format!("問題を読み込みました。重複する数字があるセルは {count} 個です。")
+        }
+        (Language::Japanese, _, Some(count)) => {
+            format!("問題を読み込みました。候補がない空欄が {count} 個あります。")
+        }
+        (Language::Japanese, _, _) => "問題を読み込みました。".to_string(),
+        (Language::English, Some(count), _) => {
+            format!("Puzzle loaded. Resolve conflicts in {count} highlighted cells.")
+        }
+        (Language::English, _, Some(count)) => {
+            format!("Puzzle loaded. No candidates remain in {count} empty cells.")
+        }
+        (Language::English, _, _) => "Puzzle loaded.".to_string(),
+    }
+}
+
+#[derive(Clone, PartialEq)]
+enum SearchStatus {
+    Starting,
+    Progress {
+        solutions: u64,
+        nodes: u64,
+    },
+    Finished {
+        solutions: u64,
+        nodes: u64,
+        termination: String,
+        elapsed_seconds: f64,
+    },
+    Cancelled {
+        solutions: usize,
+        elapsed_seconds: f64,
+    },
+    Error {
+        message: String,
+        elapsed_seconds: f64,
+    },
+    WorkerError(String),
+    StartError(String),
+}
+
+impl SearchStatus {
+    fn text(&self, language: Language) -> String {
+        match self {
+            Self::Starting => tr(language, "解を探索しています…", "Starting solution search…").to_string(),
+            Self::Progress { solutions, nodes } => match language {
+                Language::Japanese => format!("探索中… {nodes} ノードを調べ、{solutions} 件の解が見つかりました。"),
+                Language::English => format!("Searching… {solutions} solutions found across {nodes} nodes."),
+            },
+            Self::Finished { solutions, nodes, termination, elapsed_seconds } => {
+                let seconds = format!("{elapsed_seconds:.2}");
+                match (language, termination.as_str()) {
+                    (Language::Japanese, "solution_limit") => format!("{solutions} 件以上の解が見つかりました。{nodes} ノード、{seconds} 秒で解数上限に達しました。"),
+                    (Language::Japanese, "node_limit") => format!("{nodes} ノード、{seconds} 秒で探索を停止しました。{solutions} 件の解が見つかりましたが、正確な解数は不明です。"),
+                    (Language::Japanese, _) => format!("探索完了: {nodes} ノードを{seconds} 秒で調べ、解は {solutions} 件です。"),
+                    (Language::English, "solution_limit") => format!("At least {solutions} solutions found; the solution limit was reached after {nodes} nodes in {seconds} s."),
+                    (Language::English, "node_limit") => format!("Search stopped at {nodes} nodes after finding {solutions} solutions in {seconds} s. The exact count is unknown."),
+                    (Language::English, _) => format!("Search complete: exactly {solutions} solutions found across {nodes} nodes in {seconds} s."),
+                }
+            }
+            Self::Cancelled { solutions, elapsed_seconds } => match language {
+                Language::Japanese => format!("解を {solutions} 件見つけた時点で探索を中断しました（{elapsed_seconds:.2} 秒）。"),
+                Language::English => format!("Search cancelled after finding {solutions} solutions in {elapsed_seconds:.2} s."),
+            },
+            Self::Error { message, elapsed_seconds } => {
+                let message = localize_search_error(message, language);
+                match language {
+                    Language::Japanese => format!("{message}（{elapsed_seconds:.2} 秒）"),
+                    Language::English => format!("{message} ({elapsed_seconds:.2} s)"),
+                }
+            }
+            Self::WorkerError(message) => match language {
+                Language::Japanese => format!("検索ワーカーでエラーが発生しました: {message}"),
+                Language::English => format!("Solution worker failed: {message}"),
+            },
+            Self::StartError(message) => match language {
+                Language::Japanese => format!("解探索を開始できませんでした: {message}"),
+                Language::English => format!("Could not start solution search: {message}"),
+            },
+        }
+    }
+}
+
+fn localize_search_error(message: &str, language: Language) -> String {
+    match message {
+        "Conflicting values." => tr(
+            language,
+            "同じ行・列・ブロックに重複する数字があります。",
+            "Conflicting values.",
+        )
+        .to_string(),
+        "Expected 81 cell values and non-zero UI search limits." => tr(
+            language,
+            "盤面データまたは探索上限が不正です。",
+            "Invalid board data or search limits.",
+        )
+        .to_string(),
+        _ => message.to_string(),
+    }
+}
+
 struct ActiveSearch {
     worker: web_sys::Worker,
     _onmessage: Closure<dyn FnMut(web_sys::MessageEvent)>,
@@ -44,6 +220,7 @@ impl Drop for ActiveSearch {
 }
 
 fn app() -> Element {
+    let mut language = use_signal(|| Language::Japanese);
     let mut mtx = use_signal(|| INITIAL_MTX);
     let mut givens = use_signal(|| INITIAL_MTX);
     let mut txt = use_signal(|| to_txt(&INITIAL_MTX));
@@ -54,13 +231,14 @@ fn app() -> Element {
     let mut redo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut search_solutions = use_signal(Vec::<sudoku_solver::Matrix>::new);
     let mut search_board = use_signal(|| None::<sudoku_solver::Matrix>);
-    let mut search_status = use_signal(String::new);
+    let mut search_status = use_signal(|| None::<SearchStatus>);
     let mut search_started_at = use_signal(|| 0.0f64);
     let mut is_searching = use_signal(|| false);
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
 
+    let lang = language();
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
     let board = *mtx.read();
     let found_solutions = search_solutions.read();
@@ -71,19 +249,62 @@ fn app() -> Element {
     let conflicts = conflicting_cells(&board);
     let no_candidates = no_candidate_cells(&board);
     let candidate_toggle_label = if show_candidates() {
-        "Hide candidates"
+        tr(lang, "候補を隠す", "Hide candidates")
     } else {
-        "Show candidates"
+        tr(lang, "候補を表示", "Show candidates")
     };
+    let language_switch_label = tr(lang, "English", "日本語");
+    let input_help = tr(lang, "矢印キーで移動、数字キーで入力して次の空欄へ移動します。Ctrl/Cmd+Z: 元に戻す、Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z: やり直し。", "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo.");
+    let undo_label = format!("↶ {}", tr(lang, "元に戻す", "Undo"));
+    let redo_label = format!("↷ {}", tr(lang, "やり直す", "Redo"));
+    let load_text_label = tr(lang, "↑ テキストを読み込む", "↑ Load text");
+    let hint_button_label = tr(
+        lang,
+        "ヒント（一時停止中）",
+        "Get hint (temporarily unavailable)",
+    );
+    let count_solutions_label = tr(lang, "解の数を調べる", "Count solutions");
+    let cancel_search_label = tr(lang, "探索を中断", "Cancel search");
+    let solve_label = tr(lang, "解く", "Solve");
+    let clear_label = tr(lang, "クリア", "Clear");
+    let save_text_label = tr(lang, "テキストに保存 ↓", "Save text ↓");
+    let found_solutions_label = tr(lang, "見つかった解", "Found solutions");
+    let previous_solution_label = tr(lang, "前の解", "Previous solution");
+    let select_solution_label = tr(lang, "見つかった解を選択", "Select found solution");
+    let next_solution_label = tr(lang, "次の解", "Next solution");
+    let apply_solution_label = tr(lang, "選択した解を適用", "Use selected solution");
+    let puzzle_text_label = tr(lang, "問題のテキスト", "Puzzle text");
+    let puzzle_text_help = tr(
+        lang,
+        "9文字の行を9行入力してください。1〜9は初期数字、0・.・_は空欄です。",
+        "Enter exactly 9 lines of 9 characters. Digits 1–9 are clues; 0, ., and _ are blank cells.",
+    );
+    let stale_solution_message = tr(
+        lang,
+        "これらの解は以前の盤面から得られたため、現在の盤面には適用できません。",
+        "These solutions are from an earlier board and cannot be applied to the current board.",
+    );
 
     rsx! {
         div {
             class: "container",
+            lang: "{lang.code()}",
+            div {
+                class: "language-control",
+                button {
+                    aria_label: "Switch display language / 表示言語を切り替え",
+                    onclick: move |_| {
+                        language.set(language().toggle());
+                        msg.set(String::new());
+                    },
+                    "{language_switch_label}"
+                }
+            }
             h1 { "Sudoku Solver" }
             p { class: "{msg_class}", role: "status", " {msg} " }
             p {
                 class: "input-help",
-                "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo."
+                "{input_help}"
             }
             ul {
                 class: "matrix",
@@ -118,7 +339,7 @@ fn app() -> Element {
                                         min: "1",
                                         inputmode: "numeric",
                                         value: "{cell_text(cell)}",
-                                        aria_label: "Row {y + 1}, column {x + 1}",
+                                        aria_label: "{cell_aria_label(lang, y, x)}",
                                         aria_invalid: "{conflicts[y][x] || no_candidates[y][x]}",
                                         oninput: move |evt| {
                                             update_cell_value(
@@ -131,6 +352,7 @@ fn app() -> Element {
                                                 &mut redo_stack,
                                                 &mut msg,
                                                 &mut is_ok,
+                                                lang,
                                             );
                                         },
                                         onkeydown: move |evt| {
@@ -146,9 +368,9 @@ fn app() -> Element {
                                                 evt.prevent_default();
                                                 let is_redo = key.eq_ignore_ascii_case("y") || modifiers.contains(shift_key);
                                                 if is_redo {
-                                                    redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                                                    redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
                                                 } else {
-                                                    undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                                                    undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
                                                 }
                                                 return;
                                             }
@@ -173,6 +395,7 @@ fn app() -> Element {
                                                         &mut redo_stack,
                                                         &mut msg,
                                                         &mut is_ok,
+                                                        lang,
                                                     );
                                                     return;
                                                 }
@@ -205,21 +428,21 @@ fn app() -> Element {
                 button {
                     disabled: undo_stack.read().is_empty(),
                     onclick: move |_| {
-                        undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                        undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
                     },
-                    "↶ Undo"
+                    "{undo_label}"
                 }
                 button {
                     disabled: redo_stack.read().is_empty(),
                     onclick: move |_| {
-                        redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                        redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
                     },
-                    "↷ Redo"
+                    "{redo_label}"
                 }
                 button {
                     class: "left",
                     onclick: move |_| {
-                        match parse_puzzle(&txt.read()) {
+                        match parse_puzzle(&txt.read(), lang) {
                             Ok(board) => {
                                 let before = BoardSnapshot {
                                     board: *mtx.read(),
@@ -235,15 +458,15 @@ fn app() -> Element {
                                 givens.set(board);
                                 let conflict_count = count_conflict_cells(&board);
                                 if conflict_count > 0 {
-                                    msg.set(format!("Puzzle loaded. Resolve conflicts in {conflict_count} highlighted cells."));
+                                    msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
                                     is_ok.set(false);
                                 } else {
                                     let stuck_count = count_no_candidate_cells(&board);
                                     if stuck_count > 0 {
-                                        msg.set(format!("Puzzle loaded. No candidates remain in {stuck_count} empty cells."));
+                                        msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
                                         is_ok.set(false);
                                     } else {
-                                        msg.set("Puzzle loaded.".to_string());
+                                        msg.set(puzzle_loaded_message(lang, None, None));
                                         is_ok.set(true);
                                     }
                                 }
@@ -255,7 +478,7 @@ fn app() -> Element {
                             }
                         }
                     },
-                    "↑ Load text"
+                    "{load_text_label}"
                 }
                 button {
                     aria_pressed: "{show_candidates()}",
@@ -263,32 +486,33 @@ fn app() -> Element {
                     "{candidate_toggle_label}"
                 }
                 button {
+                    disabled: true,
                     onclick: move |_| {
                         match sudoku_solver::find_hint(&board) {
                             Ok(Some(hint)) => {
-                                msg.set(format_hint(hint));
+                                msg.set(format_hint(hint, lang));
                                 is_ok.set(true);
                                 focus_cell(hint.y, hint.x);
                             }
                             Ok(None) if board.iter().flatten().all(|cell| (1..=9).contains(cell)) => {
-                                msg.set("The puzzle is already complete.".to_string());
+                                msg.set(tr(lang, "問題はすでに完成しています。", "The puzzle is already complete.").to_string());
                                 is_ok.set(true);
                             }
                             Ok(None) => {
-                                msg.set("No single-step hint found. Try a more advanced technique or Solve.".to_string());
+                                msg.set(tr(lang, "基本的なヒントは見つかりませんでした。より高度な解法を試すか、「解く」を使ってください。", "No single-step hint found. Try a more advanced technique or Solve.").to_string());
                                 is_ok.set(true);
                             }
                             Err(sudoku_solver::HintError::ConflictingValues) => {
-                                msg.set("Resolve conflicts before asking for a hint.".to_string());
+                                msg.set(tr(lang, "ヒントを表示する前に、重複している数字を修正してください。", "Resolve conflicts before asking for a hint.").to_string());
                                 is_ok.set(false);
                             }
                             Err(sudoku_solver::HintError::NoCandidates) => {
-                                msg.set("No candidates remain in an empty cell. Resolve the highlighted cells first.".to_string());
+                                msg.set(tr(lang, "候補がない空欄があります。強調表示されたセルを先に修正してください。", "No candidates remain in an empty cell. Resolve the highlighted cells first.").to_string());
                                 is_ok.set(false);
                             }
                         }
                     },
-                    "Get hint"
+                    "{hint_button_label}"
                 }
                 button {
                     disabled: is_searching(),
@@ -304,7 +528,7 @@ fn app() -> Element {
                             .map(|performance| performance.now())
                             .unwrap_or(0.0);
                         search_started_at.set(started_at);
-                        search_status.set("Starting solution search…".to_string());
+                        search_status.set(Some(SearchStatus::Starting));
                         is_searching.set(true);
 
                         match create_search_worker() {
@@ -338,23 +562,22 @@ fn app() -> Element {
                                         Some("progress") => {
                                             let count = message["solutions_found"].as_u64().unwrap_or(0);
                                             let nodes = message["nodes"].as_u64().unwrap_or(0);
-                                            status.set(format!("Searching… {count} solutions found across {nodes} nodes."));
+                                            status.set(Some(SearchStatus::Progress { solutions: count, nodes }));
                                         }
                                         Some("finished") => {
-                                            let count = message["solutions_found"].as_u64().unwrap_or(0);
-                                            let nodes = message["explored_nodes"].as_u64().unwrap_or(0);
-                                            let elapsed_seconds = elapsed_seconds_since(started_at);
-                                            let description = match message["termination"].as_str() {
-                                                Some("solution_limit") => format!("At least {count} solutions found; the solution limit was reached after {nodes} nodes in {elapsed_seconds:.2} s."),
-                                                Some("node_limit") => format!("Search stopped at {nodes} nodes after finding {count} solutions in {elapsed_seconds:.2} s. The exact count is unknown."),
-                                                _ => format!("Search complete: exactly {count} solutions found across {nodes} nodes in {elapsed_seconds:.2} s."),
-                                            };
-                                            status.set(description);
+                                            status.set(Some(SearchStatus::Finished {
+                                                solutions: message["solutions_found"].as_u64().unwrap_or(0),
+                                                nodes: message["explored_nodes"].as_u64().unwrap_or(0),
+                                                termination: message["termination"].as_str().unwrap_or("exhausted").to_string(),
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            }));
                                             searching.set(false);
                                         }
                                         Some("error") => {
-                                            let elapsed_seconds = elapsed_seconds_since(started_at);
-                                            status.set(format!("{} ({elapsed_seconds:.2} s)", message["message"].as_str().unwrap_or("Solution search failed.")));
+                                            status.set(Some(SearchStatus::Error {
+                                                message: message["message"].as_str().unwrap_or("Solution search failed.").to_string(),
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            }));
                                             searching.set(false);
                                         }
                                         _ => {}
@@ -362,7 +585,7 @@ fn app() -> Element {
                                 });
                                 let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
                                     if current_job_id() == job_id {
-                                        error_status.set(format!("Solution worker failed: {}", event.message()));
+                                        error_status.set(Some(SearchStatus::WorkerError(event.message())));
                                         error_searching.set(false);
                                     }
                                 });
@@ -384,17 +607,17 @@ fn app() -> Element {
                                 });
                                 if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
                                     active_search.set(None);
-                                    search_status.set(format!("Could not start solution search: {error:?}"));
+                                    search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
                                     is_searching.set(false);
                                 }
                             }
                             Err(error) => {
-                                search_status.set(format!("Could not start solution worker: {error:?}"));
+                                search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
                                 is_searching.set(false);
                             }
                         }
                     },
-                    "Count solutions"
+                    "{count_solutions_label}"
                 }
                 if is_searching() {
                     button {
@@ -404,9 +627,9 @@ fn app() -> Element {
                             is_searching.set(false);
                             let count = search_solutions.read().len();
                             let elapsed_seconds = elapsed_seconds_since(search_started_at());
-                            search_status.set(format!("Search cancelled after finding {count} solutions in {elapsed_seconds:.2} s."));
+                            search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
                         },
-                        "Cancel search"
+                        "{cancel_search_label}"
                     }
                 }
                 button {
@@ -416,10 +639,10 @@ fn app() -> Element {
                         let stuck_count = count_no_candidate_cells(&solver_mtx);
 
                         if conflict_count > 0 {
-                            msg.set(format!("Resolve conflicts in {conflict_count} highlighted cells before solving."));
+                            msg.set(conflict_message(lang, conflict_count));
                             is_ok.set(false);
                         } else if stuck_count > 0 {
-                            msg.set(format!("No candidates remain in {stuck_count} empty cells."));
+                            msg.set(no_candidates_message(lang, stuck_count));
                             is_ok.set(false);
                         } else {
                             let window = web_sys::window().unwrap();
@@ -443,15 +666,21 @@ fn app() -> Element {
                                     },
                                 );
                                 mtx.set(solver_mtx);
-                                msg.set(format!("Solved in {ms:.0} ms!"));
+                                msg.set(match lang {
+                                    Language::Japanese => format!("解けました（{ms:.0} ミリ秒）。"),
+                                    Language::English => format!("Solved in {ms:.0} ms!"),
+                                });
                                 is_ok.set(true);
                             } else {
-                                msg.set(format!("No solution found, {ms:.0} ms."));
+                                msg.set(match lang {
+                                    Language::Japanese => format!("解が見つかりませんでした（{ms:.0} ミリ秒）。"),
+                                    Language::English => format!("No solution found, {ms:.0} ms."),
+                                });
                                 is_ok.set(false);
                             }
                         }
                     },
-                    "Solve"
+                    "{solve_label}"
                 }
                 button {
                     onclick: move |_| {
@@ -474,28 +703,28 @@ fn app() -> Element {
                         is_ok.set(true);
                         focus_cell(0, 0);
                     },
-                    "Clear"
+                    "{clear_label}"
                 }
                 button {
                     class: "right",
                     onclick: move |_| {
                         txt.set(to_txt(&mtx.read()));
                     },
-                    "Save text ↓"
+                    "{save_text_label}"
                 }
             }
-            if !search_status.read().is_empty() {
+            if let Some(status) = search_status() {
                 div {
                     class: "search-panel",
-                    p { role: "status", "{search_status}" }
+                    p { role: "status", "{status.text(lang)}" }
                     if !found_solutions.is_empty() {
                         div {
-                            p { class: "solution-heading", "Found solutions" }
+                            p { class: "solution-heading", "{found_solutions_label}" }
                             div {
                                 class: "solution-carousel-controls",
                                 button {
                                     class: "solution-step",
-                                    aria_label: "Previous solution",
+                                    aria_label: "{previous_solution_label}",
                                     disabled: selected_solution() == 0,
                                     onclick: move |_| {
                                         selected_solution.set(selected_solution().saturating_sub(1));
@@ -511,8 +740,8 @@ fn app() -> Element {
                                         max: "{solution_count - 1}",
                                         step: "1",
                                         value: "{selected_solution()}",
-                                        aria_label: "Select found solution",
-                                        aria_valuetext: "Solution {selected_solution() + 1} of {solution_count}",
+                                        aria_label: "{select_solution_label}",
+                                        aria_valuetext: "{solution_range_label(lang, selected_solution() + 1, solution_count)}",
                                         oninput: move |evt| {
                                             let index = evt.value().parse::<usize>().unwrap_or(0);
                                             selected_solution.set(index.min(solution_count - 1));
@@ -522,7 +751,7 @@ fn app() -> Element {
                                 },
                                 button {
                                     class: "solution-step",
-                                    aria_label: "Next solution",
+                                    aria_label: "{next_solution_label}",
                                     disabled: selected_solution() + 1 >= solution_count,
                                     onclick: move |_| {
                                         selected_solution.set((selected_solution() + 1).min(solution_count - 1));
@@ -536,7 +765,7 @@ fn app() -> Element {
                                     key: "solution-slide-{selected_solution()}",
                                     table {
                                         class: "solution-preview",
-                                        aria_label: "Preview of solution {selected_solution() + 1}",
+                                        aria_label: "{solution_preview_label(lang, selected_solution() + 1)}",
                                         tbody {
                                             for (row_index, row) in solution.iter().enumerate() {
                                                 tr {
@@ -571,14 +800,14 @@ fn app() -> Element {
                                             },
                                         );
                                         mtx.set(solution);
-                                        msg.set("Selected solution applied.".to_string());
+                                        msg.set(tr(lang, "選択した解を適用しました。", "Selected solution applied.").to_string());
                                         is_ok.set(true);
                                     }
                                 },
-                                "Use selected solution"
+                                "{apply_solution_label}"
                             }
                             if !can_apply_selected_solution {
-                                p { "These solutions are from an earlier board and cannot be applied to the current board." }
+                                p { "{stale_solution_message}" }
                             }
                         }
                     }
@@ -588,11 +817,11 @@ fn app() -> Element {
                 class: "text-panel",
                 label {
                     r#for: "puzzle-text",
-                    "Puzzle text"
+                    "{puzzle_text_label}"
                 }
                 p {
                     class: "text-help",
-                    "Enter exactly 9 lines of 9 characters. Digits 1–9 are clues; 0, ., and _ are blank cells."
+                    "{puzzle_text_help}"
                 }
                 textarea {
                     id: "puzzle-text",
@@ -624,6 +853,7 @@ fn update_cell_value(
     redo_stack: &mut Signal<Vec<BoardSnapshot>>,
     msg: &mut Signal<String>,
     is_ok: &mut Signal<bool>,
+    language: Language,
 ) {
     let before = BoardSnapshot {
         board: *mtx.read(),
@@ -649,16 +879,12 @@ fn update_cell_value(
 
     let conflict_count = count_conflict_cells(&board);
     if conflict_count > 0 {
-        msg.set(format!(
-            "Resolve conflicts in {conflict_count} highlighted cells."
-        ));
+        msg.set(conflict_message(language, conflict_count));
         is_ok.set(false);
     } else {
         let stuck_count = count_no_candidate_cells(&board);
         if stuck_count > 0 {
-            msg.set(format!(
-                "No candidates remain in {stuck_count} empty cells."
-            ));
+            msg.set(no_candidates_message(language, stuck_count));
             is_ok.set(false);
         } else {
             msg.set(String::new());
@@ -738,6 +964,7 @@ fn undo_board(
     givens: &mut Signal<sudoku_solver::Matrix>,
     msg: &mut Signal<String>,
     is_ok: &mut Signal<bool>,
+    language: Language,
 ) {
     if let Some(previous) = undo.write().pop() {
         let current = BoardSnapshot {
@@ -747,7 +974,13 @@ fn undo_board(
         redo.write().push(current);
         board.set(previous.board);
         givens.set(previous.givens);
-        set_board_message(msg, is_ok, &previous.board, "Change undone.");
+        set_board_message(
+            msg,
+            is_ok,
+            &previous.board,
+            tr(language, "変更を元に戻しました。", "Change undone."),
+            language,
+        );
     }
 }
 
@@ -758,6 +991,7 @@ fn redo_board(
     givens: &mut Signal<sudoku_solver::Matrix>,
     msg: &mut Signal<String>,
     is_ok: &mut Signal<bool>,
+    language: Language,
 ) {
     if let Some(next) = redo.write().pop() {
         let current = BoardSnapshot {
@@ -767,7 +1001,13 @@ fn redo_board(
         undo.write().push(current);
         board.set(next.board);
         givens.set(next.givens);
-        set_board_message(msg, is_ok, &next.board, "Change redone.");
+        set_board_message(
+            msg,
+            is_ok,
+            &next.board,
+            tr(language, "変更をやり直しました。", "Change redone."),
+            language,
+        );
     }
 }
 
@@ -776,21 +1016,18 @@ fn set_board_message(
     is_ok: &mut Signal<bool>,
     board: &sudoku_solver::Matrix,
     success_message: &str,
+    language: Language,
 ) {
     let conflict_count = count_conflict_cells(board);
     if conflict_count > 0 {
-        msg.set(format!(
-            "Resolve conflicts in {conflict_count} highlighted cells."
-        ));
+        msg.set(conflict_message(language, conflict_count));
         is_ok.set(false);
         return;
     }
 
     let stuck_count = count_no_candidate_cells(board);
     if stuck_count > 0 {
-        msg.set(format!(
-            "No candidates remain in {stuck_count} empty cells."
-        ));
+        msg.set(no_candidates_message(language, stuck_count));
         is_ok.set(false);
     } else {
         msg.set(success_message.to_string());
@@ -798,25 +1035,19 @@ fn set_board_message(
     }
 }
 
-fn format_hint(hint: sudoku_solver::Hint) -> String {
+fn format_hint(hint: sudoku_solver::Hint, language: Language) -> String {
     let row = hint.y + 1;
     let column = hint.x + 1;
-    let reason = match hint.technique {
-        sudoku_solver::HintTechnique::NakedSingle => "this cell has only one candidate",
-        sudoku_solver::HintTechnique::HiddenSingleRow => {
-            "this digit fits only this cell in its row"
-        }
-        sudoku_solver::HintTechnique::HiddenSingleColumn => {
-            "this digit fits only this cell in its column"
-        }
-        sudoku_solver::HintTechnique::HiddenSingleBox => {
-            "this digit fits only this cell in its 3×3 box"
-        }
-    };
-    format!(
-        "Hint: enter {} at row {row}, column {column}; {reason}.",
-        hint.digit
-    )
+    match (language, hint.technique) {
+        (Language::Japanese, sudoku_solver::HintTechnique::NakedSingle) => format!("ヒント: {row} 行 {column} 列には候補が1つだけです。{} を入力してください。", hint.digit),
+        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleRow) => format!("ヒント: {} 行では {} を置けるのは {} 列だけです。", row, hint.digit, column),
+        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleColumn) => format!("ヒント: {} 列では {} を置けるのは {} 行だけです。", column, hint.digit, row),
+        (Language::Japanese, sudoku_solver::HintTechnique::HiddenSingleBox) => format!("ヒント: この3×3ブロックでは {} 行 {} 列だけに {} を置けます。", row, column, hint.digit),
+        (Language::English, sudoku_solver::HintTechnique::NakedSingle) => format!("Hint: enter {} at row {row}, column {column}; this cell has only one candidate.", hint.digit),
+        (Language::English, sudoku_solver::HintTechnique::HiddenSingleRow) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its row.", hint.digit),
+        (Language::English, sudoku_solver::HintTechnique::HiddenSingleColumn) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its column.", hint.digit),
+        (Language::English, sudoku_solver::HintTechnique::HiddenSingleBox) => format!("Hint: enter {} at row {row}, column {column}; this digit fits only this cell in its 3×3 box.", hint.digit),
+    }
 }
 
 fn cell_text(cell: u8) -> String {
@@ -872,33 +1103,50 @@ fn count_no_candidate_cells(board: &sudoku_solver::Matrix) -> usize {
         .count()
 }
 
-fn parse_puzzle(txt: &str) -> Result<sudoku_solver::Matrix, String> {
+fn parse_puzzle(txt: &str, language: Language) -> Result<sudoku_solver::Matrix, String> {
     let mut mtx = sudoku_solver::Matrix::default();
     let content = txt.trim_end_matches(|ch| ch == '\n' || ch == '\r');
     let lines: Vec<_> = content.lines().collect();
     if lines.len() != 9 {
-        return Err(format!("Expected 9 lines, found {}.", lines.len()));
+        return Err(match language {
+            Language::Japanese => format!("9行必要ですが、{}行あります。", lines.len()),
+            Language::English => format!("Expected 9 lines, found {}.", lines.len()),
+        });
     }
 
     for (y, line) in lines.iter().enumerate() {
         let chars: Vec<_> = line.chars().collect();
         if chars.len() != 9 {
-            return Err(format!(
-                "Line {} must contain 9 characters, found {}.",
-                y + 1,
-                chars.len()
-            ));
+            return Err(match language {
+                Language::Japanese => format!(
+                    "{} 行目は9文字必要ですが、{}文字あります。",
+                    y + 1,
+                    chars.len()
+                ),
+                Language::English => format!(
+                    "Line {} must contain 9 characters, found {}.",
+                    y + 1,
+                    chars.len()
+                ),
+            });
         }
         for (x, ch) in chars.into_iter().enumerate() {
             mtx[y][x] = match ch {
                 '1'..='9' => ch as u8 - b'0',
                 '0' | '.' | '_' => 0,
                 _ => {
-                    return Err(format!(
-                        "Unsupported character at row {}, column {}. Use digits, 0, . or _.",
-                        y + 1,
-                        x + 1
-                    ));
+                    return Err(match language {
+                        Language::Japanese => format!(
+                            "{} 行 {} 列に使えない文字があります。数字、0、.、_を使ってください。",
+                            y + 1,
+                            x + 1
+                        ),
+                        Language::English => format!(
+                            "Unsupported character at row {}, column {}. Use digits, 0, . or _.",
+                            y + 1,
+                            x + 1
+                        ),
+                    });
                 }
             };
         }
