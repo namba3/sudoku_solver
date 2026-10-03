@@ -17,6 +17,7 @@ asset_dir = "public"
 
 # HTML title tag content
 title = "Sudoku Solver"
+base_path = "/sudoku_solver/"
 
 [web.watcher]
 

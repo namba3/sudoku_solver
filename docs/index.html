@@ -1,23 +1,13 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>数独ソルバー | Sudoku Solver</title>
   <meta content="text/html;charset=utf-8" http-equiv="Content-Type" />
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta charset="UTF-8" />
-  <link rel="stylesheet" href="app.css">
-
-</head>
+<link rel="stylesheet" href="app.css">
+<link rel="preload" as="script" href="/sudoku_solver/assets/sudoku_solver-dxhc883718e47bf6627.js" crossorigin></head>
 <body>
   <div id="main"></div>
-  <script type="module">
-    import init from "./assets/dioxus/sudoku_solver.js";
-    init("./assets/dioxus/sudoku_solver_bg.wasm").then(wasm => {
-      if (wasm.__wbindgen_start == undefined) {
-        wasm.main();
-      }
-    });
-  </script>
-  
-</body>
+<script type="module" async src="/sudoku_solver/assets/sudoku_solver-dxhc883718e47bf6627.js"></script>
+            </body>
 </html>

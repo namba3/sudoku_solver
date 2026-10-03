@@ -1,10 +1,9 @@
 use dioxus::prelude::*;
+
 fn main() {
-    // init debug tool for WebAssembly
     wasm_logger::init(wasm_logger::Config::default());
     console_error_panic_hook::set_once();
-
-    dioxus_web::launch(app);
+    dioxus::launch(app);
 }
 
 const INITIAL_MTX: sudoku_solver::Matrix = [
@@ -19,137 +18,121 @@ const INITIAL_MTX: sudoku_solver::Matrix = [
     [1, 5, 0, 0, 0, 0, 0, 9, 0],
 ];
 
-fn app(cx: Scope) -> Element {
-    let mtx: Vec<Vec<_>> = (0..9)
-        .into_iter()
-        .map(|y| {
-            (0..9)
-                .into_iter()
-                .map(|x| use_state(&cx, || INITIAL_MTX[y][x]))
-                .collect()
-        })
-        .collect();
-    let mtx = std::rc::Rc::new(mtx);
-    let txt = use_state(&cx, || to_txt(&mtx));
-    let msg = use_state(&cx, || String::new());
-    let is_ok = use_state(&cx, || true);
+fn app() -> Element {
+    let mut mtx = use_signal(|| INITIAL_MTX);
+    let mut txt = use_signal(|| to_txt(&INITIAL_MTX));
+    let mut msg = use_signal(String::new);
+    let mut is_ok = use_signal(|| true);
 
-    let msg_class = if **is_ok { "msg ok" } else { "msg error" };
+    let msg_class = if is_ok() { "msg ok" } else { "msg error" };
 
-    cx.render(rsx! {
+    rsx! {
         div {
             class: "container",
             h1 { "Sudoku Solver" }
             p { class: "{msg_class}", " {msg} " }
-            ul { class: "matrix", mtx.iter().enumerate().map(|(y, row)| rsx! {
-                li {
-                    key: "{y}",
-                    ul { class: "row", row.iter().copied().enumerate().map(|(x, c)| {
-                        let val = if (1..=9u8).contains(c) { format!("{c}") } else { String::from(" ") };
-                        let odd_even = if ((y/3)+x/3) % 2 == 1 {
-                            "odd"
-                        } else {
-                            "even"
-                        };
-
-                        rsx! {
-                            li {
-                                class: "cell {odd_even}",
-                                key: "{y}-{x}",
-                                input {
-                                    r#type: "number",
-                                    max: "9",
-                                    min: "1",
-                                    value: "{val}",
-                                    oninput: move |evt| {
-                                        let val = cell_value(&evt.value);
-                                        c.set(val);
-                                        msg.set(String::new());
-                                        is_ok.set(true);
-                                    },
+            ul {
+                class: "matrix",
+                for (y, row) in mtx.read().iter().enumerate() {
+                    li {
+                        key: "{y}",
+                        ul {
+                            class: "row",
+                            for (x, cell) in row.iter().copied().enumerate() {
+                                li {
+                                    class: "cell {cell_class(y, x)}",
+                                    key: "{y}-{x}",
+                                    input {
+                                        r#type: "number",
+                                        max: "9",
+                                        min: "1",
+                                        value: "{cell_text(cell)}",
+                                        oninput: move |evt| {
+                                            mtx.write()[y][x] = cell_value(&evt.value());
+                                            msg.set(String::new());
+                                            is_ok.set(true);
+                                        },
+                                    }
                                 }
                             }
                         }
-                    })}
+                    }
                 }
-            })}
+            }
             div {
                 class: "buttons",
                 button {
-                    class: "allow-up left",
-                    onclick: {
-                        let mtx = mtx.clone();
-                        move |_evt| {
-                            from_txt(&mtx, txt);
-                            msg.set(String::new());
-                            is_ok.set(true);
-                        }
+                    class: "left",
+                    onclick: move |_| {
+                        mtx.set(from_txt(&txt.read()));
+                        msg.set(String::new());
+                        is_ok.set(true);
                     },
-                    "↑"
+                    "↑ Load text"
                 }
                 button {
-                    onclick: {
-                        let mtx = mtx.clone();
-                        move |_evt| {
-                            let mut solver_mtx = translate(&mtx);
+                    onclick: move |_| {
+                        let mut solver_mtx = *mtx.read();
 
-                            let window = web_sys::window().unwrap();
-                            let performance = window.performance().unwrap();
-                            let t_start = performance.now();
-                            let succeeded = sudoku_solver::solve(&mut solver_mtx);
-                            let ms = performance.now() - t_start;
-                            log::debug!("time: {ms:.0} ms");
+                        let window = web_sys::window().unwrap();
+                        let performance = window.performance().unwrap();
+                        let t_start = performance.now();
+                        let succeeded = sudoku_solver::solve(&mut solver_mtx);
+                        let ms = performance.now() - t_start;
+                        log::debug!("time: {ms:.0} ms");
 
-                            if  succeeded {
-                                write_back(&mtx, &solver_mtx);
-                                msg.set(format!("Solved in {ms:.0} ms!"));
-                                is_ok.set(true);
-                            }
-                            else {
-                                msg.set(format!("Failed to solve, {ms:.0} ms"));
-                                is_ok.set(false);
-                            }
+                        if succeeded {
+                            mtx.set(solver_mtx);
+                            msg.set(format!("Solved in {ms:.0} ms!"));
+                            is_ok.set(true);
+                        } else {
+                            msg.set(format!("Failed to solve, {ms:.0} ms"));
+                            is_ok.set(false);
                         }
                     },
                     "Solve"
                 }
                 button {
-                    onclick: {
-                        let mtx = mtx.clone();
-                        move |_evt| {
-                            clear(&mtx);
-                            msg.set(String::new());
-                            is_ok.set(true);
-                        }
+                    onclick: move |_| {
+                        mtx.set([[0; 9]; 9]);
+                        msg.set(String::new());
+                        is_ok.set(true);
                     },
                     "Clear"
                 }
                 button {
-                    class: "arrow-down right",
-                    onclick: {
-                        let mtx = mtx.clone();
-                        move |_evt| {
-                            txt.set(to_txt(&mtx));
-                        }
+                    class: "right",
+                    onclick: move |_| {
+                        txt.set(to_txt(&mtx.read()));
                     },
-                    "↓"
+                    "Save text ↓"
                 }
             }
             div {
+                class: "text-panel",
+                label {
+                    r#for: "puzzle-text",
+                    "Puzzle text"
+                }
+                p {
+                    class: "text-help",
+                    "Use 9 lines of 9 characters. Digits are clues; other characters are blank cells."
+                }
                 textarea {
+                    id: "puzzle-text",
                     class: "text",
                     value: "{txt}",
                     onchange: move |evt| {
-                        txt.set(evt.value.clone());
+                        txt.set(evt.value());
                     }
                 }
             }
         }
-    })
+    }
 }
 
 fn cell_value(s: &str) -> u8 {
-    let val = match s.as_bytes().get(0) {
+    let val = match s.as_bytes().first() {
         Some(ch) if ch.is_ascii_digit() => *ch - b'0',
         _ => 0,
     };
@@ -160,37 +143,23 @@ fn cell_value(s: &str) -> u8 {
     }
 }
 
-fn translate(ui_mtx: &Vec<Vec<&UseState<u8>>>) -> sudoku_solver::Matrix {
-    let mut mtx = sudoku_solver::Matrix::default();
-    for y in 0..9 {
-        for x in 0..9 {
-            mtx[y][x] = **ui_mtx[y][x];
-        }
-    }
-    mtx
-}
-
-fn write_back(ui_mtx: &Vec<Vec<&UseState<u8>>>, solver_mtx: &sudoku_solver::Matrix) {
-    for y in 0..9 {
-        for x in 0..9 {
-            ui_mtx[y][x].set(solver_mtx[y][x]);
-        }
+fn cell_text(cell: u8) -> String {
+    if (1..=9).contains(&cell) {
+        cell.to_string()
+    } else {
+        String::new()
     }
 }
 
-fn clear(ui_mtx: &Vec<Vec<&UseState<u8>>>) {
-    for row in ui_mtx.iter() {
-        for cell in row.iter() {
-            cell.set(0);
-        }
+fn cell_class(y: usize, x: usize) -> &'static str {
+    if ((y / 3) + (x / 3)) % 2 == 1 {
+        "odd"
+    } else {
+        "even"
     }
 }
 
-fn from_txt(ui_mtx: &Vec<Vec<&UseState<u8>>>, txt: &str) {
-    if txt.is_empty() {
-        return;
-    }
-
+fn from_txt(txt: &str) -> sudoku_solver::Matrix {
     let mut mtx = sudoku_solver::Matrix::default();
     for (y, line) in txt.lines().take(9).enumerate() {
         for (x, ch) in line.chars().take(9).enumerate() {
@@ -201,18 +170,17 @@ fn from_txt(ui_mtx: &Vec<Vec<&UseState<u8>>>, txt: &str) {
             };
         }
     }
-    write_back(ui_mtx, &mtx);
+    mtx
 }
 
-fn to_txt(ui_mtx: &Vec<Vec<&UseState<u8>>>) -> String {
+fn to_txt(mtx: &sudoku_solver::Matrix) -> String {
     let mut s = String::with_capacity((9 + 1) * 9);
-    for row in ui_mtx.iter() {
-        for &cell in row.iter() {
-            let ch = match **cell {
-                1..=9 => **cell + b'0',
-                _ => b'_',
-            };
-            s.push(char::from_u32(ch as u32).unwrap());
+    for row in mtx {
+        for &cell in row {
+            s.push(match cell {
+                1..=9 => char::from(b'0' + cell),
+                _ => '_',
+            });
         }
         s.push('\n');
     }
