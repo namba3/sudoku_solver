@@ -252,6 +252,39 @@ h1 {
     font: inherit;
 }
 
+.solution-preview {
+    width: min(100%, 270px);
+    margin: 12px auto 4px;
+    border: 2px solid #667085;
+    border-collapse: collapse;
+    table-layout: fixed;
+    background: #fff;
+    color: #175cd3;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: clamp(0.8rem, 4vw, 1rem);
+    font-weight: 650;
+    text-align: center;
+}
+
+.solution-preview td {
+    width: 11.11%;
+    padding: 0;
+    border-right: 1px solid #d0d5dd;
+    border-bottom: 1px solid #d0d5dd;
+}
+
+.solution-preview tr {
+    height: 30px;
+}
+
+.solution-preview td:nth-child(3n) {
+    border-right: 2px solid #667085;
+}
+
+.solution-preview tr:nth-child(3n) td {
+    border-bottom: 2px solid #667085;
+}
+
 .search-panel button {
     min-height: 40px;
     margin: 8px 8px 0 0;

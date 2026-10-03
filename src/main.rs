@@ -55,6 +55,7 @@ fn app() -> Element {
     let mut search_solutions = use_signal(Vec::<sudoku_solver::Matrix>::new);
     let mut search_board = use_signal(|| None::<sudoku_solver::Matrix>);
     let mut search_status = use_signal(String::new);
+    let mut search_started_at = use_signal(|| 0.0f64);
     let mut is_searching = use_signal(|| false);
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
@@ -62,6 +63,9 @@ fn app() -> Element {
 
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
     let board = *mtx.read();
+    let found_solutions = search_solutions.read();
+    let can_apply_selected_solution =
+        search_board.read().as_ref() == Some(&board) || found_solutions.contains(&board);
     let conflicts = conflicting_cells(&board);
     let no_candidates = no_candidate_cells(&board);
     let candidate_toggle_label = if show_candidates() {
@@ -293,6 +297,11 @@ fn app() -> Element {
                         search_solutions.set(Vec::new());
                         selected_solution.set(0);
                         search_board.set(Some(board));
+                        let started_at = web_sys::window()
+                            .and_then(|window| window.performance())
+                            .map(|performance| performance.now())
+                            .unwrap_or(0.0);
+                        search_started_at.set(started_at);
                         search_status.set("Starting solution search…".to_string());
                         is_searching.set(true);
 
@@ -304,6 +313,7 @@ fn app() -> Element {
                                 let current_job_id = search_job_id;
                                 let mut error_status = search_status;
                                 let mut error_searching = is_searching;
+                                let started_at = search_started_at();
                                 let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
                                     let Some(raw_message) = event.data().as_string() else {
                                         return;
@@ -331,16 +341,18 @@ fn app() -> Element {
                                         Some("finished") => {
                                             let count = message["solutions_found"].as_u64().unwrap_or(0);
                                             let nodes = message["explored_nodes"].as_u64().unwrap_or(0);
+                                            let elapsed_seconds = elapsed_seconds_since(started_at);
                                             let description = match message["termination"].as_str() {
-                                                Some("solution_limit") => format!("At least {count} solutions found; the solution limit was reached after {nodes} nodes."),
-                                                Some("node_limit") => format!("Search stopped at {nodes} nodes after finding {count} solutions. The exact count is unknown."),
-                                                _ => format!("Search complete: exactly {count} solutions found across {nodes} nodes."),
+                                                Some("solution_limit") => format!("At least {count} solutions found; the solution limit was reached after {nodes} nodes in {elapsed_seconds:.2} s."),
+                                                Some("node_limit") => format!("Search stopped at {nodes} nodes after finding {count} solutions in {elapsed_seconds:.2} s. The exact count is unknown."),
+                                                _ => format!("Search complete: exactly {count} solutions found across {nodes} nodes in {elapsed_seconds:.2} s."),
                                             };
                                             status.set(description);
                                             searching.set(false);
                                         }
                                         Some("error") => {
-                                            status.set(message["message"].as_str().unwrap_or("Solution search failed.").to_string());
+                                            let elapsed_seconds = elapsed_seconds_since(started_at);
+                                            status.set(format!("{} ({elapsed_seconds:.2} s)", message["message"].as_str().unwrap_or("Solution search failed.")));
                                             searching.set(false);
                                         }
                                         _ => {}
@@ -389,7 +401,8 @@ fn app() -> Element {
                             active_search.set(None);
                             is_searching.set(false);
                             let count = search_solutions.read().len();
-                            search_status.set(format!("Search cancelled after finding {count} solutions."));
+                            let elapsed_seconds = elapsed_seconds_since(search_started_at());
+                            search_status.set(format!("Search cancelled after finding {count} solutions in {elapsed_seconds:.2} s."));
                         },
                         "Cancel search"
                     }
@@ -473,51 +486,70 @@ fn app() -> Element {
                 div {
                     class: "search-panel",
                     p { role: "status", "{search_status}" }
-                    if !search_solutions.read().is_empty() {
-                        if search_board.read().as_ref() == Some(&board) {
-                            div {
-                                label {
-                                    r#for: "solution-choice",
-                                    "Found solutions"
+                    if !found_solutions.is_empty() {
+                        div {
+                            label {
+                                r#for: "solution-choice",
+                                "Found solutions"
+                            }
+                            select {
+                                id: "solution-choice",
+                                value: "{selected_solution()}",
+                                onchange: move |evt| {
+                                    selected_solution.set(evt.value().parse().unwrap_or(0));
+                                },
+                                for (index, _) in found_solutions.iter().enumerate() {
+                                    option {
+                                        value: "{index}",
+                                        "Solution {index + 1}"
+                                    }
                                 }
-                                select {
-                                    id: "solution-choice",
-                                    value: "{selected_solution()}",
-                                    onchange: move |evt| {
-                                        selected_solution.set(evt.value().parse().unwrap_or(0));
-                                    },
-                                    for (index, _) in search_solutions.read().iter().enumerate() {
-                                        option {
-                                            value: "{index}",
-                                            "Solution {index + 1}"
+                            }
+                            if let Some(solution) = found_solutions.get(selected_solution()) {
+                                table {
+                                    class: "solution-preview",
+                                    aria_label: "Preview of solution {selected_solution() + 1}",
+                                    tbody {
+                                        for (row_index, row) in solution.iter().enumerate() {
+                                            tr {
+                                                key: "preview-row-{row_index}",
+                                                for (column_index, value) in row.iter().enumerate() {
+                                                    td {
+                                                        key: "preview-cell-{row_index}-{column_index}",
+                                                        "{value}"
+                                                    }
+                                                }
+                                            }
                                         }
                                     }
                                 }
-                                button {
-                                    onclick: move |_| {
-                                        if let Some(solution) = search_solutions.read().get(selected_solution()).copied() {
-                                            record_board_change(
-                                                &mut undo_stack.write(),
-                                                &mut redo_stack.write(),
-                                                BoardSnapshot {
-                                                    board: *mtx.read(),
-                                                    givens: *givens.read(),
-                                                },
-                                                BoardSnapshot {
-                                                    board: solution,
-                                                    givens: *givens.read(),
-                                                },
-                                            );
-                                            mtx.set(solution);
-                                            msg.set("Selected solution applied.".to_string());
-                                            is_ok.set(true);
-                                        }
-                                    },
-                                    "Use selected solution"
-                                }
                             }
-                        } else {
-                            p { "These solutions are from an earlier board and cannot be applied." }
+                            button {
+                                disabled: !can_apply_selected_solution,
+                                onclick: move |_| {
+                                    if let Some(solution) = search_solutions.read().get(selected_solution()).copied() {
+                                        record_board_change(
+                                            &mut undo_stack.write(),
+                                            &mut redo_stack.write(),
+                                            BoardSnapshot {
+                                                board: *mtx.read(),
+                                                givens: *givens.read(),
+                                            },
+                                            BoardSnapshot {
+                                                board: solution,
+                                                givens: *givens.read(),
+                                            },
+                                        );
+                                        mtx.set(solution);
+                                        msg.set("Selected solution applied.".to_string());
+                                        is_ok.set(true);
+                                    }
+                                },
+                                "Use selected solution"
+                            }
+                            if !can_apply_selected_solution {
+                                p { "These solutions are from an earlier board and cannot be applied to the current board." }
+                            }
                         }
                     }
                 }
@@ -642,6 +674,14 @@ fn parse_solution(value: &serde_json::Value) -> Option<sudoku_solver::Matrix> {
         }
     }
     Some(board)
+}
+
+fn elapsed_seconds_since(started_at: f64) -> f64 {
+    let now = web_sys::window()
+        .and_then(|window| window.performance())
+        .map(|performance| performance.now())
+        .unwrap_or(started_at);
+    (now - started_at).max(0.0) / 1000.0
 }
 
 fn record_board_change(
