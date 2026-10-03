@@ -115,48 +115,17 @@ fn app() -> Element {
                                         aria_label: "Row {y + 1}, column {x + 1}",
                                         aria_invalid: "{conflicts[y][x] || no_candidates[y][x]}",
                                         oninput: move |evt| {
-                                            let before = BoardSnapshot {
-                                                board: *mtx.read(),
-                                                givens: *givens.read(),
-                                            };
-                                            let mut board = *mtx.read();
-                                            board[y][x] = cell_value(&evt.value());
-
-                                            let mut original_clues = *givens.read();
-                                            original_clues[y][x] = 0;
-
-                                            record_board_change(
-                                                &mut undo_stack.write(),
-                                                &mut redo_stack.write(),
-                                                before,
-                                                BoardSnapshot {
-                                                    board,
-                                                    givens: original_clues,
-                                                },
+                                            update_cell_value(
+                                                y,
+                                                x,
+                                                cell_value(&evt.value()),
+                                                &mut mtx,
+                                                &mut givens,
+                                                &mut undo_stack,
+                                                &mut redo_stack,
+                                                &mut msg,
+                                                &mut is_ok,
                                             );
-                                            mtx.set(board);
-                                            givens.set(original_clues);
-
-                                            let conflict_count = count_conflict_cells(&board);
-                                            if conflict_count > 0 {
-                                                msg.set(format!("Resolve conflicts in {conflict_count} highlighted cells."));
-                                                is_ok.set(false);
-                                            } else {
-                                                let stuck_count = count_no_candidate_cells(&board);
-                                                if stuck_count > 0 {
-                                                    msg.set(format!("No candidates remain in {stuck_count} empty cells."));
-                                                    is_ok.set(false);
-                                                } else {
-                                                    msg.set(String::new());
-                                                    is_ok.set(true);
-                                                }
-                                            }
-
-                                            if board[y][x] != 0 {
-                                                if let Some((next_y, next_x)) = next_empty_cell(&board, (y, x)) {
-                                                    focus_cell(next_y, next_x);
-                                                }
-                                            }
                                         },
                                         onkeydown: move |evt| {
                                             let key = evt.key().to_string();
@@ -164,6 +133,7 @@ fn app() -> Element {
                                             let command_key = dioxus::html::input_data::keyboard_types::Modifiers::CONTROL;
                                             let meta_key = dioxus::html::input_data::keyboard_types::Modifiers::META;
                                             let shift_key = dioxus::html::input_data::keyboard_types::Modifiers::SHIFT;
+                                            let alt_key = dioxus::html::input_data::keyboard_types::Modifiers::ALT;
                                             if (modifiers.contains(command_key) || modifiers.contains(meta_key))
                                                 && matches!(key.to_lowercase().as_str(), "z" | "y")
                                             {
@@ -175,6 +145,31 @@ fn app() -> Element {
                                                     undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
                                                 }
                                                 return;
+                                            }
+
+                                            if !modifiers.contains(command_key)
+                                                && !modifiers.contains(meta_key)
+                                                && !modifiers.contains(alt_key)
+                                            {
+                                                if let Some(digit) = key
+                                                    .parse::<u8>()
+                                                    .ok()
+                                                    .filter(|digit| (1..=9).contains(digit))
+                                                {
+                                                    evt.prevent_default();
+                                                    update_cell_value(
+                                                        y,
+                                                        x,
+                                                        digit,
+                                                        &mut mtx,
+                                                        &mut givens,
+                                                        &mut undo_stack,
+                                                        &mut redo_stack,
+                                                        &mut msg,
+                                                        &mut is_ok,
+                                                    );
+                                                    return;
+                                                }
                                             }
 
                                             let movement = match key.as_str() {
@@ -555,6 +550,65 @@ fn cell_value(s: &str) -> u8 {
         .ok()
         .filter(|value| (1..=9).contains(value))
         .unwrap_or(0)
+}
+
+fn update_cell_value(
+    y: usize,
+    x: usize,
+    value: u8,
+    mtx: &mut Signal<sudoku_solver::Matrix>,
+    givens: &mut Signal<sudoku_solver::Matrix>,
+    undo_stack: &mut Signal<Vec<BoardSnapshot>>,
+    redo_stack: &mut Signal<Vec<BoardSnapshot>>,
+    msg: &mut Signal<String>,
+    is_ok: &mut Signal<bool>,
+) {
+    let before = BoardSnapshot {
+        board: *mtx.read(),
+        givens: *givens.read(),
+    };
+    let mut board = *mtx.read();
+    board[y][x] = value;
+
+    let mut original_clues = *givens.read();
+    original_clues[y][x] = 0;
+
+    record_board_change(
+        &mut undo_stack.write(),
+        &mut redo_stack.write(),
+        before,
+        BoardSnapshot {
+            board,
+            givens: original_clues,
+        },
+    );
+    mtx.set(board);
+    givens.set(original_clues);
+
+    let conflict_count = count_conflict_cells(&board);
+    if conflict_count > 0 {
+        msg.set(format!(
+            "Resolve conflicts in {conflict_count} highlighted cells."
+        ));
+        is_ok.set(false);
+    } else {
+        let stuck_count = count_no_candidate_cells(&board);
+        if stuck_count > 0 {
+            msg.set(format!(
+                "No candidates remain in {stuck_count} empty cells."
+            ));
+            is_ok.set(false);
+        } else {
+            msg.set(String::new());
+            is_ok.set(true);
+        }
+    }
+
+    if board[y][x] != 0 {
+        if let Some((next_y, next_x)) = next_empty_cell(&board, (y, x)) {
+            focus_cell(next_y, next_x);
+        }
+    }
 }
 
 fn create_search_worker() -> Result<web_sys::Worker, wasm_bindgen::JsValue> {
