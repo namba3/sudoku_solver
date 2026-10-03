@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
 fn main() {
@@ -26,6 +27,21 @@ struct BoardSnapshot {
 }
 
 const HISTORY_LIMIT: usize = 100;
+const UI_MAX_SOLUTIONS: usize = 100;
+
+struct ActiveSearch {
+    worker: web_sys::Worker,
+    _onmessage: Closure<dyn FnMut(web_sys::MessageEvent)>,
+    _onerror: Closure<dyn FnMut(web_sys::ErrorEvent)>,
+}
+
+impl Drop for ActiveSearch {
+    fn drop(&mut self) {
+        self.worker.set_onmessage(None);
+        self.worker.set_onerror(None);
+        self.worker.terminate();
+    }
+}
 
 fn app() -> Element {
     let mut mtx = use_signal(|| INITIAL_MTX);
@@ -36,6 +52,13 @@ fn app() -> Element {
     let mut show_candidates = use_signal(|| false);
     let mut undo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut redo_stack = use_signal(Vec::<BoardSnapshot>::new);
+    let mut search_solutions = use_signal(Vec::<sudoku_solver::Matrix>::new);
+    let mut search_board = use_signal(|| None::<sudoku_solver::Matrix>);
+    let mut search_status = use_signal(String::new);
+    let mut is_searching = use_signal(|| false);
+    let mut search_job_id = use_signal(|| 0u32);
+    let mut active_search = use_signal(|| None::<ActiveSearch>);
+    let mut selected_solution = use_signal(|| 0usize);
 
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
     let board = *mtx.read();
@@ -240,6 +263,144 @@ fn app() -> Element {
                 }
                 button {
                     onclick: move |_| {
+                        match sudoku_solver::find_hint(&board) {
+                            Ok(Some(hint)) => {
+                                msg.set(format_hint(hint));
+                                is_ok.set(true);
+                                focus_cell(hint.y, hint.x);
+                            }
+                            Ok(None) if board.iter().flatten().all(|cell| (1..=9).contains(cell)) => {
+                                msg.set("The puzzle is already complete.".to_string());
+                                is_ok.set(true);
+                            }
+                            Ok(None) => {
+                                msg.set("No single-step hint found. Try a more advanced technique or Solve.".to_string());
+                                is_ok.set(true);
+                            }
+                            Err(sudoku_solver::HintError::ConflictingValues) => {
+                                msg.set("Resolve conflicts before asking for a hint.".to_string());
+                                is_ok.set(false);
+                            }
+                            Err(sudoku_solver::HintError::NoCandidates) => {
+                                msg.set("No candidates remain in an empty cell. Resolve the highlighted cells first.".to_string());
+                                is_ok.set(false);
+                            }
+                        }
+                    },
+                    "Get hint"
+                }
+                button {
+                    disabled: is_searching(),
+                    onclick: move |_| {
+                        active_search.set(None);
+                        let job_id = search_job_id().wrapping_add(1);
+                        search_job_id.set(job_id);
+                        search_solutions.set(Vec::new());
+                        selected_solution.set(0);
+                        search_board.set(Some(board));
+                        search_status.set("Starting solution search…".to_string());
+                        is_searching.set(true);
+
+                        match create_search_worker() {
+                            Ok(worker) => {
+                                let mut solutions = search_solutions;
+                                let mut status = search_status;
+                                let mut searching = is_searching;
+                                let current_job_id = search_job_id;
+                                let mut error_status = search_status;
+                                let mut error_searching = is_searching;
+                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+                                    let Some(raw_message) = event.data().as_string() else {
+                                        return;
+                                    };
+                                    let Ok(message) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
+                                        return;
+                                    };
+                                    if message["job_id"].as_u64() != Some(job_id as u64)
+                                        || current_job_id() != job_id
+                                    {
+                                        return;
+                                    }
+
+                                    match message["type"].as_str() {
+                                        Some("solution") => {
+                                            if let Some(solution) = parse_solution(&message["board"]) {
+                                                solutions.write().push(solution);
+                                            }
+                                        }
+                                        Some("progress") => {
+                                            let count = message["solutions_found"].as_u64().unwrap_or(0);
+                                            let nodes = message["nodes"].as_u64().unwrap_or(0);
+                                            status.set(format!("Searching… {count} solutions found across {nodes} nodes."));
+                                        }
+                                        Some("finished") => {
+                                            let count = message["solutions_found"].as_u64().unwrap_or(0);
+                                            let nodes = message["explored_nodes"].as_u64().unwrap_or(0);
+                                            let description = match message["termination"].as_str() {
+                                                Some("solution_limit") => format!("At least {count} solutions found; the solution limit was reached after {nodes} nodes."),
+                                                Some("node_limit") => format!("Search stopped at {nodes} nodes after finding {count} solutions. The exact count is unknown."),
+                                                _ => format!("Search complete: exactly {count} solutions found across {nodes} nodes."),
+                                            };
+                                            status.set(description);
+                                            searching.set(false);
+                                        }
+                                        Some("error") => {
+                                            status.set(message["message"].as_str().unwrap_or("Solution search failed.").to_string());
+                                            searching.set(false);
+                                        }
+                                        _ => {}
+                                    }
+                                });
+                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
+                                    if current_job_id() == job_id {
+                                        error_status.set(format!("Solution worker failed: {}", event.message()));
+                                        error_searching.set(false);
+                                    }
+                                });
+
+                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                                active_search.set(Some(ActiveSearch {
+                                    worker: worker.clone(),
+                                    _onmessage: onmessage,
+                                    _onerror: onerror,
+                                }));
+
+                                let request = serde_json::json!({
+                                    "type": "start",
+                                    "job_id": job_id,
+                                    "board": board.iter().flatten().copied().collect::<Vec<_>>(),
+                                    "max_solutions": UI_MAX_SOLUTIONS,
+                                    "max_nodes": 500_000u32,
+                                });
+                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
+                                    active_search.set(None);
+                                    search_status.set(format!("Could not start solution search: {error:?}"));
+                                    is_searching.set(false);
+                                }
+                            }
+                            Err(error) => {
+                                search_status.set(format!("Could not start solution worker: {error:?}"));
+                                is_searching.set(false);
+                            }
+                        }
+                    },
+                    "Count solutions"
+                }
+                if is_searching() {
+                    button {
+                        onclick: move |_| {
+                            search_job_id.set(search_job_id().wrapping_add(1));
+                            active_search.set(None);
+                            is_searching.set(false);
+                            let count = search_solutions.read().len();
+                            search_status.set(format!("Search cancelled after finding {count} solutions."));
+                        },
+                        "Cancel search"
+                    }
+                }
+                button {
+                    onclick: move |_| {
                         let mut solver_mtx = *mtx.read();
                         let conflict_count = count_conflict_cells(&solver_mtx);
                         let stuck_count = count_no_candidate_cells(&solver_mtx);
@@ -313,6 +474,59 @@ fn app() -> Element {
                     "Save text ↓"
                 }
             }
+            if !search_status.read().is_empty() {
+                div {
+                    class: "search-panel",
+                    p { role: "status", "{search_status}" }
+                    if !search_solutions.read().is_empty() {
+                        if search_board.read().as_ref() == Some(&board) {
+                            div {
+                                label {
+                                    r#for: "solution-choice",
+                                    "Found solutions"
+                                }
+                                select {
+                                    id: "solution-choice",
+                                    value: "{selected_solution()}",
+                                    onchange: move |evt| {
+                                        selected_solution.set(evt.value().parse().unwrap_or(0));
+                                    },
+                                    for (index, _) in search_solutions.read().iter().enumerate() {
+                                        option {
+                                            value: "{index}",
+                                            "Solution {index + 1}"
+                                        }
+                                    }
+                                }
+                                button {
+                                    onclick: move |_| {
+                                        if let Some(solution) = search_solutions.read().get(selected_solution()).copied() {
+                                            record_board_change(
+                                                &mut undo_stack.write(),
+                                                &mut redo_stack.write(),
+                                                BoardSnapshot {
+                                                    board: *mtx.read(),
+                                                    givens: *givens.read(),
+                                                },
+                                                BoardSnapshot {
+                                                    board: solution,
+                                                    givens: *givens.read(),
+                                                },
+                                            );
+                                            mtx.set(solution);
+                                            msg.set("Selected solution applied.".to_string());
+                                            is_ok.set(true);
+                                        }
+                                    },
+                                    "Use selected solution"
+                                }
+                            }
+                        } else {
+                            p { "These solutions are from an earlier board and cannot be applied." }
+                        }
+                    }
+                }
+            }
             div {
                 class: "text-panel",
                 label {
@@ -341,6 +555,39 @@ fn cell_value(s: &str) -> u8 {
         .ok()
         .filter(|value| (1..=9).contains(value))
         .unwrap_or(0)
+}
+
+fn create_search_worker() -> Result<web_sys::Worker, wasm_bindgen::JsValue> {
+    let window = web_sys::window()
+        .ok_or_else(|| wasm_bindgen::JsValue::from_str("Window is unavailable"))?;
+    let pathname = window.location().pathname()?;
+    let base_path = if pathname == "/sudoku_solver" || pathname.starts_with("/sudoku_solver/") {
+        "/sudoku_solver"
+    } else {
+        ""
+    };
+    let options = web_sys::WorkerOptions::new();
+    options.set_type(web_sys::WorkerType::Module);
+    web_sys::Worker::new_with_options(&format!("{base_path}/worker/entry.js"), &options)
+}
+
+fn parse_solution(value: &serde_json::Value) -> Option<sudoku_solver::Matrix> {
+    let rows = value.as_array()?;
+    if rows.len() != 9 {
+        return None;
+    }
+
+    let mut board = [[0; 9]; 9];
+    for (y, row) in rows.iter().enumerate() {
+        let cells = row.as_array()?;
+        if cells.len() != 9 {
+            return None;
+        }
+        for (x, cell) in cells.iter().enumerate() {
+            board[y][x] = u8::try_from(cell.as_u64()?).ok()?;
+        }
+    }
+    Some(board)
 }
 
 fn record_board_change(
@@ -425,6 +672,27 @@ fn set_board_message(
         msg.set(success_message.to_string());
         is_ok.set(true);
     }
+}
+
+fn format_hint(hint: sudoku_solver::Hint) -> String {
+    let row = hint.y + 1;
+    let column = hint.x + 1;
+    let reason = match hint.technique {
+        sudoku_solver::HintTechnique::NakedSingle => "this cell has only one candidate",
+        sudoku_solver::HintTechnique::HiddenSingleRow => {
+            "this digit fits only this cell in its row"
+        }
+        sudoku_solver::HintTechnique::HiddenSingleColumn => {
+            "this digit fits only this cell in its column"
+        }
+        sudoku_solver::HintTechnique::HiddenSingleBox => {
+            "this digit fits only this cell in its 3×3 box"
+        }
+    };
+    format!(
+        "Hint: enter {} at row {row}, column {column}; {reason}.",
+        hint.digit
+    )
 }
 
 fn cell_text(cell: u8) -> String {

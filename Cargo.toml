@@ -12,8 +12,18 @@ dioxus = { version = "0.7.10", features = ["web"] }
 wasm-logger = "0.2.0"
 console_error_panic_hook = "0.1.7"
 log = "0.4.34"
+js-sys = "0.3.106"
 wasm-bindgen = "0.2.129"
-web-sys = { version = "0.3.105", features = ["Document", "Element", "HtmlElement", "HtmlInputElement", "Performance", "Window"] }
+serde_json = "1"
+web-sys = { version = "0.3.105", features = ["DedicatedWorkerGlobalScope", "Document", "Element", "ErrorEvent", "Event", "HtmlElement", "HtmlInputElement", "Location", "MessageEvent", "Performance", "Window", "Worker", "WorkerOptions", "WorkerType"] }
+
+[features]
+search-worker = []
+
+[[bin]]
+name = "sudoku_search_worker"
+path = "src/bin/sudoku_search_worker.rs"
+required-features = ["search-worker"]
 
 [profile]
 

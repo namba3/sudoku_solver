@@ -5,6 +5,7 @@
 - Rust toolchain（Edition 2021対応）
 - Dioxus CLI（プロジェクトのDioxus依存と同じ0.7系）
 - WebAssembly target `wasm32-unknown-unknown`（WASM向けチェックやビルドに必要）
+- `wasm-bindgen` CLI（`Cargo.lock`内のwasm-bindgenと同じバージョン。検索Workerのビルドに必要）
 
 ## ローカル開発
 
@@ -30,12 +31,12 @@ cargo check --target wasm32-unknown-unknown
 
 `Dioxus.toml`の`web.app.base_path`は、GitHub PagesのプロジェクトURLに合わせて`/sudoku_solver/`になっています。公開資材は`docs/`直下に置きます。
 
-`dx build --platform web --release`は通常のWebビルド確認に使えます。公開用バンドルは次のコマンドで作れます。
+`dx build --platform web --release`は通常のWebビルド確認に使えます。公開用バンドルは次のコマンドで作れます。解探索WorkerのWASM生成、Dioxusバンドル、GitHub Pages用の配置をまとめて行います。
 
 ```sh
-dx bundle --platform web --release --out-dir docs
+bash scripts/build_pages.sh
 ```
 
-Dioxus CLI 0.7はバンドルを`docs/public/`に作成します。このリポジトリではGitHub Pagesの公開ルートが`docs/`なので、生成後に配信対象の`index.html`、CSS、ハッシュ付きJS/WASMを`docs/`直下の構成へ反映し、不要になった古いハッシュ付き資材を整理してください。`docs/`を丸ごと消してから生成すると、現在の公開ルートやGit管理ファイルを誤って失う可能性があります。
+Dioxus CLI 0.7はバンドルを`docs/public/`に作成します。スクリプトは参照中のindex、CSS、ハッシュ付きJS/WASMと検索Workerだけを`docs/`公開ルートへ反映し、不要になった生成資材を整理します。
 
-RustやUIのソースを変更しても、既にある`docs/`のWeb資材は自動では更新されません。公開資材の更新後は`docs/index.html`が参照するJSとWASM、および`/sudoku_solver/`のbase pathを確認します。
+RustやUIのソースを変更しても、既にある`docs/`のWeb資材は自動では更新されません。公開資材の更新後は`docs/index.html`が参照するJSとWASM、`docs/worker/`内のWorkerファイル、および`/sudoku_solver/`のbase pathを確認します。
