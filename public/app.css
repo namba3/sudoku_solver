@@ -65,6 +65,16 @@ h1 {
     background-color: #fff;
 }
 
+.given input {
+    color: #344054;
+    font-weight: 750;
+}
+
+.conflict input {
+    background-color: #fee4e2;
+    color: #b42318;
+}
+
 .cell input {
     display: block;
     width: 100%;
@@ -178,6 +188,12 @@ h1 {
     margin: 0;
     font-size: 1rem;
     font-weight: 600;
+}
+
+.input-help {
+    margin: 2px 0 10px;
+    color: #475467;
+    font-size: 0.9rem;
 }
 
 .ok {

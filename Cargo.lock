@@ -2627,6 +2627,7 @@ dependencies = [
  "console_error_panic_hook",
  "dioxus",
  "log",
+ "wasm-bindgen",
  "wasm-logger",
  "web-sys",
 ]
