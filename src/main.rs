@@ -54,7 +54,7 @@ fn app() -> Element {
             p { class: "{msg_class}", role: "status", " {msg} " }
             p {
                 class: "input-help",
-                "Use the arrow keys to move. Enter a digit to jump to the next empty cell."
+                "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo."
             }
             ul {
                 class: "matrix",
@@ -137,6 +137,23 @@ fn app() -> Element {
                                         },
                                         onkeydown: move |evt| {
                                             let key = evt.key().to_string();
+                                            let modifiers = evt.modifiers();
+                                            let command_key = dioxus::html::input_data::keyboard_types::Modifiers::CONTROL;
+                                            let meta_key = dioxus::html::input_data::keyboard_types::Modifiers::META;
+                                            let shift_key = dioxus::html::input_data::keyboard_types::Modifiers::SHIFT;
+                                            if (modifiers.contains(command_key) || modifiers.contains(meta_key))
+                                                && matches!(key.to_lowercase().as_str(), "z" | "y")
+                                            {
+                                                evt.prevent_default();
+                                                let is_redo = key.eq_ignore_ascii_case("y") || modifiers.contains(shift_key);
+                                                if is_redo {
+                                                    redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                                                } else {
+                                                    undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
+                                                }
+                                                return;
+                                            }
+
                                             let movement = match key.as_str() {
                                                 "ArrowUp" => Some((-1, 0)),
                                                 "ArrowDown" => Some((1, 0)),
@@ -164,32 +181,14 @@ fn app() -> Element {
                 button {
                     disabled: undo_stack.read().is_empty(),
                     onclick: move |_| {
-                        if let Some(previous) = undo_stack.write().pop() {
-                            let current = BoardSnapshot {
-                                board: *mtx.read(),
-                                givens: *givens.read(),
-                            };
-                            redo_stack.write().push(current);
-                            mtx.set(previous.board);
-                            givens.set(previous.givens);
-                            set_board_message(&mut msg, &mut is_ok, &previous.board, "Change undone.");
-                        }
+                        undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
                     },
                     "↶ Undo"
                 }
                 button {
                     disabled: redo_stack.read().is_empty(),
                     onclick: move |_| {
-                        if let Some(next) = redo_stack.write().pop() {
-                            let current = BoardSnapshot {
-                                board: *mtx.read(),
-                                givens: *givens.read(),
-                            };
-                            undo_stack.write().push(current);
-                            mtx.set(next.board);
-                            givens.set(next.givens);
-                            set_board_message(&mut msg, &mut is_ok, &next.board, "Change redone.");
-                        }
+                        redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok);
                     },
                     "↷ Redo"
                 }
@@ -359,6 +358,46 @@ fn record_board_change(
         undo.remove(0);
     }
     redo.clear();
+}
+
+fn undo_board(
+    undo: &mut Signal<Vec<BoardSnapshot>>,
+    redo: &mut Signal<Vec<BoardSnapshot>>,
+    board: &mut Signal<sudoku_solver::Matrix>,
+    givens: &mut Signal<sudoku_solver::Matrix>,
+    msg: &mut Signal<String>,
+    is_ok: &mut Signal<bool>,
+) {
+    if let Some(previous) = undo.write().pop() {
+        let current = BoardSnapshot {
+            board: *board.read(),
+            givens: *givens.read(),
+        };
+        redo.write().push(current);
+        board.set(previous.board);
+        givens.set(previous.givens);
+        set_board_message(msg, is_ok, &previous.board, "Change undone.");
+    }
+}
+
+fn redo_board(
+    undo: &mut Signal<Vec<BoardSnapshot>>,
+    redo: &mut Signal<Vec<BoardSnapshot>>,
+    board: &mut Signal<sudoku_solver::Matrix>,
+    givens: &mut Signal<sudoku_solver::Matrix>,
+    msg: &mut Signal<String>,
+    is_ok: &mut Signal<bool>,
+) {
+    if let Some(next) = redo.write().pop() {
+        let current = BoardSnapshot {
+            board: *board.read(),
+            givens: *givens.read(),
+        };
+        undo.write().push(current);
+        board.set(next.board);
+        givens.set(next.givens);
+        set_board_message(msg, is_ok, &next.board, "Change redone.");
+    }
 }
 
 fn set_board_message(

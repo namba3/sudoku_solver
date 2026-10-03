@@ -90,7 +90,7 @@ h1 {
 
 .candidate-grid {
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     inset: 2px;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -146,6 +146,25 @@ h1 {
     outline: 3px solid #84adff;
     outline-offset: -3px;
     background-color: #eff8ff;
+}
+
+.cell.with-candidates input:focus {
+    caret-color: transparent;
+    background-color: transparent;
+    animation: candidate-focus-pulse 1s steps(2, start) infinite;
+}
+
+@keyframes candidate-focus-pulse {
+    50% {
+        outline-color: transparent;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cell.with-candidates input:focus {
+        animation: none;
+        outline-color: #175cd3;
+    }
 }
 
 .cell input::-webkit-outer-spin-button,
