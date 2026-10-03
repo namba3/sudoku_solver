@@ -19,6 +19,14 @@ const INITIAL_MTX: sudoku_solver::Matrix = [
     [1, 5, 0, 0, 0, 0, 0, 9, 0],
 ];
 
+#[derive(Clone, Copy, PartialEq)]
+struct BoardSnapshot {
+    board: sudoku_solver::Matrix,
+    givens: sudoku_solver::Matrix,
+}
+
+const HISTORY_LIMIT: usize = 100;
+
 fn app() -> Element {
     let mut mtx = use_signal(|| INITIAL_MTX);
     let mut givens = use_signal(|| INITIAL_MTX);
@@ -26,6 +34,8 @@ fn app() -> Element {
     let mut msg = use_signal(String::new);
     let mut is_ok = use_signal(|| true);
     let mut show_candidates = use_signal(|| false);
+    let mut undo_stack = use_signal(Vec::<BoardSnapshot>::new);
+    let mut redo_stack = use_signal(Vec::<BoardSnapshot>::new);
 
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
     let board = *mtx.read();
@@ -82,12 +92,26 @@ fn app() -> Element {
                                         aria_label: "Row {y + 1}, column {x + 1}",
                                         aria_invalid: "{conflicts[y][x] || no_candidates[y][x]}",
                                         oninput: move |evt| {
+                                            let before = BoardSnapshot {
+                                                board: *mtx.read(),
+                                                givens: *givens.read(),
+                                            };
                                             let mut board = *mtx.read();
                                             board[y][x] = cell_value(&evt.value());
-                                            mtx.set(board);
 
                                             let mut original_clues = *givens.read();
                                             original_clues[y][x] = 0;
+
+                                            record_board_change(
+                                                &mut undo_stack.write(),
+                                                &mut redo_stack.write(),
+                                                before,
+                                                BoardSnapshot {
+                                                    board,
+                                                    givens: original_clues,
+                                                },
+                                            );
+                                            mtx.set(board);
                                             givens.set(original_clues);
 
                                             let conflict_count = count_conflict_cells(&board);
@@ -138,10 +162,52 @@ fn app() -> Element {
             div {
                 class: "buttons",
                 button {
+                    disabled: undo_stack.read().is_empty(),
+                    onclick: move |_| {
+                        if let Some(previous) = undo_stack.write().pop() {
+                            let current = BoardSnapshot {
+                                board: *mtx.read(),
+                                givens: *givens.read(),
+                            };
+                            redo_stack.write().push(current);
+                            mtx.set(previous.board);
+                            givens.set(previous.givens);
+                            set_board_message(&mut msg, &mut is_ok, &previous.board, "Change undone.");
+                        }
+                    },
+                    "↶ Undo"
+                }
+                button {
+                    disabled: redo_stack.read().is_empty(),
+                    onclick: move |_| {
+                        if let Some(next) = redo_stack.write().pop() {
+                            let current = BoardSnapshot {
+                                board: *mtx.read(),
+                                givens: *givens.read(),
+                            };
+                            undo_stack.write().push(current);
+                            mtx.set(next.board);
+                            givens.set(next.givens);
+                            set_board_message(&mut msg, &mut is_ok, &next.board, "Change redone.");
+                        }
+                    },
+                    "↷ Redo"
+                }
+                button {
                     class: "left",
                     onclick: move |_| {
                         match parse_puzzle(&txt.read()) {
                             Ok(board) => {
+                                let before = BoardSnapshot {
+                                    board: *mtx.read(),
+                                    givens: *givens.read(),
+                                };
+                                record_board_change(
+                                    &mut undo_stack.write(),
+                                    &mut redo_stack.write(),
+                                    before,
+                                    BoardSnapshot { board, givens: board },
+                                );
                                 mtx.set(board);
                                 givens.set(board);
                                 let conflict_count = count_conflict_cells(&board);
@@ -194,6 +260,18 @@ fn app() -> Element {
                             log::debug!("time: {ms:.0} ms");
 
                             if succeeded {
+                                record_board_change(
+                                    &mut undo_stack.write(),
+                                    &mut redo_stack.write(),
+                                    BoardSnapshot {
+                                        board: *mtx.read(),
+                                        givens: *givens.read(),
+                                    },
+                                    BoardSnapshot {
+                                        board: solver_mtx,
+                                        givens: *givens.read(),
+                                    },
+                                );
                                 mtx.set(solver_mtx);
                                 msg.set(format!("Solved in {ms:.0} ms!"));
                                 is_ok.set(true);
@@ -207,6 +285,19 @@ fn app() -> Element {
                 }
                 button {
                     onclick: move |_| {
+                        let before = BoardSnapshot {
+                            board: *mtx.read(),
+                            givens: *givens.read(),
+                        };
+                        record_board_change(
+                            &mut undo_stack.write(),
+                            &mut redo_stack.write(),
+                            before,
+                            BoardSnapshot {
+                                board: [[0; 9]; 9],
+                                givens: [[0; 9]; 9],
+                            },
+                        );
                         mtx.set([[0; 9]; 9]);
                         givens.set([[0; 9]; 9]);
                         msg.set(String::new());
@@ -251,6 +342,50 @@ fn cell_value(s: &str) -> u8 {
         .ok()
         .filter(|value| (1..=9).contains(value))
         .unwrap_or(0)
+}
+
+fn record_board_change(
+    undo: &mut Vec<BoardSnapshot>,
+    redo: &mut Vec<BoardSnapshot>,
+    before: BoardSnapshot,
+    after: BoardSnapshot,
+) {
+    if before == after {
+        return;
+    }
+
+    undo.push(before);
+    if undo.len() > HISTORY_LIMIT {
+        undo.remove(0);
+    }
+    redo.clear();
+}
+
+fn set_board_message(
+    msg: &mut Signal<String>,
+    is_ok: &mut Signal<bool>,
+    board: &sudoku_solver::Matrix,
+    success_message: &str,
+) {
+    let conflict_count = count_conflict_cells(board);
+    if conflict_count > 0 {
+        msg.set(format!(
+            "Resolve conflicts in {conflict_count} highlighted cells."
+        ));
+        is_ok.set(false);
+        return;
+    }
+
+    let stuck_count = count_no_candidate_cells(board);
+    if stuck_count > 0 {
+        msg.set(format!(
+            "No candidates remain in {stuck_count} empty cells."
+        ));
+        is_ok.set(false);
+    } else {
+        msg.set(success_message.to_string());
+        is_ok.set(true);
+    }
 }
 
 fn cell_text(cell: u8) -> String {

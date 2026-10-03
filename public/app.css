@@ -181,6 +181,13 @@ h1 {
     background: #eff4ff;
 }
 
+.buttons button:disabled {
+    border-color: #d0d5dd;
+    background: #f2f4f7;
+    color: #98a2b3;
+    cursor: not-allowed;
+}
+
 .buttons button:focus-visible,
 .text:focus-visible {
     outline: 3px solid #84adff;
