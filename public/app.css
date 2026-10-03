@@ -150,7 +150,7 @@ h1 {
 
 .cell.with-candidates input:focus {
     caret-color: transparent;
-    background-color: transparent;
+    background-color: #fff1c2;
     animation: candidate-focus-pulse 1s steps(2, start) infinite;
 }
 
