@@ -64,6 +64,8 @@ fn app() -> Element {
     let msg_class = if is_ok() { "msg ok" } else { "msg error" };
     let board = *mtx.read();
     let found_solutions = search_solutions.read();
+    let solution_source_board = *search_board.read();
+    let solution_count = found_solutions.len();
     let can_apply_selected_solution =
         search_board.read().as_ref() == Some(&board) || found_solutions.contains(&board);
     let conflicts = conflicting_cells(&board);
@@ -488,35 +490,63 @@ fn app() -> Element {
                     p { role: "status", "{search_status}" }
                     if !found_solutions.is_empty() {
                         div {
-                            label {
-                                r#for: "solution-choice",
-                                "Found solutions"
-                            }
-                            select {
-                                id: "solution-choice",
-                                value: "{selected_solution()}",
-                                onchange: move |evt| {
-                                    selected_solution.set(evt.value().parse().unwrap_or(0));
-                                },
-                                for (index, _) in found_solutions.iter().enumerate() {
-                                    option {
-                                        value: "{index}",
-                                        "Solution {index + 1}"
+                            p { class: "solution-heading", "Found solutions" }
+                            div {
+                                class: "solution-carousel-controls",
+                                button {
+                                    class: "solution-step",
+                                    aria_label: "Previous solution",
+                                    disabled: selected_solution() == 0,
+                                    onclick: move |_| {
+                                        selected_solution.set(selected_solution().saturating_sub(1));
+                                    },
+                                    "‹"
+                                }
+                                div {
+                                    class: "solution-range-control",
+                                    input {
+                                        id: "solution-range",
+                                        r#type: "range",
+                                        min: "0",
+                                        max: "{solution_count - 1}",
+                                        step: "1",
+                                        value: "{selected_solution()}",
+                                        aria_label: "Select found solution",
+                                        aria_valuetext: "Solution {selected_solution() + 1} of {solution_count}",
+                                        oninput: move |evt| {
+                                            let index = evt.value().parse::<usize>().unwrap_or(0);
+                                            selected_solution.set(index.min(solution_count - 1));
+                                        }
                                     }
+                                    output { "{selected_solution() + 1} / {solution_count}" }
+                                },
+                                button {
+                                    class: "solution-step",
+                                    aria_label: "Next solution",
+                                    disabled: selected_solution() + 1 >= solution_count,
+                                    onclick: move |_| {
+                                        selected_solution.set((selected_solution() + 1).min(solution_count - 1));
+                                    },
+                                    "›"
                                 }
                             }
                             if let Some(solution) = found_solutions.get(selected_solution()) {
-                                table {
-                                    class: "solution-preview",
-                                    aria_label: "Preview of solution {selected_solution() + 1}",
-                                    tbody {
-                                        for (row_index, row) in solution.iter().enumerate() {
-                                            tr {
-                                                key: "preview-row-{row_index}",
-                                                for (column_index, value) in row.iter().enumerate() {
-                                                    td {
-                                                        key: "preview-cell-{row_index}-{column_index}",
-                                                        "{value}"
+                                div {
+                                    class: "solution-slide",
+                                    key: "solution-slide-{selected_solution()}",
+                                    table {
+                                        class: "solution-preview",
+                                        aria_label: "Preview of solution {selected_solution() + 1}",
+                                        tbody {
+                                            for (row_index, row) in solution.iter().enumerate() {
+                                                tr {
+                                                    key: "preview-row-{row_index}",
+                                                    for (column_index, value) in row.iter().enumerate() {
+                                                        td {
+                                                            key: "preview-cell-{row_index}-{column_index}",
+                                                            class: if solution_source_board.is_some_and(|source| source[row_index][column_index] != 0) { "solution-preview-given" } else { "" },
+                                                            "{value}"
+                                                        }
                                                     }
                                                 }
                                             }
