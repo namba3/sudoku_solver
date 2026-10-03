@@ -80,6 +80,14 @@ used(x, y) = row[y] | col[x] | block[y / 3][x / 3]
 
 ブラウザーUIは専用Web Worker内でIteratorを消費し、最大100解・約500,000ノードというUI向け上限を適用します。ノード上限は進捗イベントの間隔で確認するため、実際の訪問数は上限を最大2,047ノード超える場合があります。これらの上限はSolver APIには含めません。Workerの終了でも探索をキャンセルできます。
 
+## 7. 問題生成と最小初期数字数
+
+一意解を持つ9×9数独の初期数字数は最低17個です。McGuire、Tugemann、Civarioの論文は、全ての完成盤面を対象に16個の初期数字で一意解になる問題が存在しないことを計算機で網羅的に示しています。
+
+この下限を問題生成UIの最小値に使っています。生成器は一意解を持つ17数字の盤面に数独の対称変換を適用し、同じ解から指定数まで数字を追加します。論文の証明で使われたヒッティングセット列挙器は、このアプリの生成処理では使っていません。
+
+参考文献: Gary McGuire, Bastian Tugemann, Gilles Civario, [*There is no 16-Clue Sudoku: Solving the Sudoku Minimum Number of Clues Problem via Hitting Set Enumeration*](https://arxiv.org/abs/1201.0749), 2013.
+
 ## 計算量と実装上の範囲
 
 候補が多い盤面では探索分岐が増えるため、バックトラック探索の最悪時の計算量は指数的です。MRVとビットマスクは探索や候補計算を効率化しますが、最悪計算量そのものを多項式にはしません。
@@ -88,6 +96,7 @@ Solver本体は候補の仮置きと制約チェックで解きます。単独�
 
 ## 関連コード
 
+- [初期数字数を指定する問題生成器](../src/generator.rs)
 - [`solve`と再帰探索](../src/solver.rs)
 - [`candidates_for`](../src/solver.rs)
 - [`StateManager`と`Candidates`](../src/solver.rs)

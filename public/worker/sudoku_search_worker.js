@@ -1,9 +1,10 @@
 /**
  * @param {number} job_id
  * @param {number} seed
+ * @param {number} clue_count
  */
-export function generate(job_id, seed) {
-    wasm.generate(job_id, seed);
+export function generate(job_id, seed, clue_count) {
+    wasm.generate(job_id, seed, clue_count);
 }
 
 /**

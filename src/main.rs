@@ -260,6 +260,7 @@ fn app() -> Element {
     let mut search_started_at = use_signal(|| 0.0f64);
     let mut is_searching = use_signal(|| false);
     let mut is_generating = use_signal(|| false);
+    let mut generation_clue_count = use_signal(|| "30".to_string());
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
@@ -291,6 +292,13 @@ fn app() -> Element {
     } else {
         tr(lang, "問題を生成", "Generate puzzle")
     };
+    let generation_clue_count_label = tr(lang, "初期数字数", "Clues");
+    let generation_clue_count_help = tr(lang, "17〜81個", "17–81");
+    let invalid_generation_clue_count = tr(
+        lang,
+        "初期数字数は17〜81の範囲で指定してください。",
+        "Enter a clue count between 17 and 81.",
+    );
     let cancel_task_label = if is_generating() {
         tr(lang, "生成を中断", "Cancel generation")
     } else {
@@ -305,6 +313,10 @@ fn app() -> Element {
     let next_solution_label = tr(lang, "次の解", "Next solution");
     let apply_solution_label = tr(lang, "選択した解を適用", "Use selected solution");
     let puzzle_text_label = tr(lang, "問題のテキスト", "Puzzle text");
+    let history_group_label = tr(lang, "履歴", "History");
+    let board_group_label = tr(lang, "盤面", "Board");
+    let solve_group_label = tr(lang, "解く・確認", "Solve & inspect");
+    let text_group_label = tr(lang, "テキスト", "Text");
     let puzzle_text_help = tr(
         lang,
         "9文字の行を9行入力してください。1〜9は初期数字、0・.・_は空欄です。",
@@ -455,70 +467,108 @@ fn app() -> Element {
                 }
             }
             div {
-                class: "buttons",
-                button {
-                    disabled: undo_stack.read().is_empty(),
-                    onclick: move |_| {
-                        undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
-                    },
-                    "{undo_label}"
+                class: "action-groups",
+                div {
+                    class: "button-group",
+                    role: "group",
+                    aria_label: "{history_group_label}",
+                    h2 { class: "button-group-title", "{history_group_label}" }
+                    button {
+                        disabled: undo_stack.read().is_empty(),
+                        onclick: move |_| {
+                            undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
+                        },
+                        "{undo_label}"
+                    }
+                    button {
+                        disabled: redo_stack.read().is_empty(),
+                        onclick: move |_| {
+                            redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
+                        },
+                        "{redo_label}"
+                    }
                 }
-                button {
-                    disabled: redo_stack.read().is_empty(),
-                    onclick: move |_| {
-                        redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
-                    },
-                    "{redo_label}"
-                }
-                button {
-                    class: "left",
-                    onclick: move |_| {
-                        match parse_puzzle(&txt.read(), lang) {
-                            Ok(board) => {
-                                let before = BoardSnapshot {
-                                    board: *mtx.read(),
-                                    givens: *givens.read(),
-                                };
-                                record_board_change(
-                                    &mut undo_stack.write(),
-                                    &mut redo_stack.write(),
-                                    before,
-                                    BoardSnapshot { board, givens: board },
-                                );
-                                mtx.set(board);
-                                givens.set(board);
-                                let conflict_count = count_conflict_cells(&board);
-                                if conflict_count > 0 {
-                                    msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
-                                    is_ok.set(false);
-                                } else {
-                                    let stuck_count = count_no_candidate_cells(&board);
-                                    if stuck_count > 0 {
-                                        msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
+                div {
+                    class: "button-group",
+                    role: "group",
+                    aria_label: "{board_group_label}",
+                    h2 { class: "button-group-title", "{board_group_label}" }
+                    button {
+                        onclick: move |_| {
+                            match parse_puzzle(&txt.read(), lang) {
+                                Ok(board) => {
+                                    let before = BoardSnapshot {
+                                        board: *mtx.read(),
+                                        givens: *givens.read(),
+                                    };
+                                    record_board_change(
+                                        &mut undo_stack.write(),
+                                        &mut redo_stack.write(),
+                                        before,
+                                        BoardSnapshot { board, givens: board },
+                                    );
+                                    mtx.set(board);
+                                    givens.set(board);
+                                    let conflict_count = count_conflict_cells(&board);
+                                    if conflict_count > 0 {
+                                        msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
                                         is_ok.set(false);
                                     } else {
-                                        msg.set(puzzle_loaded_message(lang, None, None));
-                                        is_ok.set(true);
+                                        let stuck_count = count_no_candidate_cells(&board);
+                                        if stuck_count > 0 {
+                                            msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
+                                            is_ok.set(false);
+                                        } else {
+                                            msg.set(puzzle_loaded_message(lang, None, None));
+                                            is_ok.set(true);
+                                        }
                                     }
+                                    focus_cell(0, 0);
                                 }
-                                focus_cell(0, 0);
+                                Err(error) => {
+                                    msg.set(error);
+                                    is_ok.set(false);
+                                }
                             }
-                            Err(error) => {
-                                msg.set(error);
-                                is_ok.set(false);
-                            }
+                        },
+                        "{load_text_label}"
+                    }
+                    button {
+                        aria_pressed: "{show_candidates()}",
+                        onclick: move |_| show_candidates.set(!show_candidates()),
+                        "{candidate_toggle_label}"
+                    }
+                    div {
+                        class: "generator-options",
+                        label {
+                            r#for: "generation-clue-count",
+                            "{generation_clue_count_label}"
                         }
-                    },
-                    "{load_text_label}"
-                }
-                button {
-                    aria_pressed: "{show_candidates()}",
-                    onclick: move |_| show_candidates.set(!show_candidates()),
-                    "{candidate_toggle_label}"
-                }
+                        input {
+                            id: "generation-clue-count",
+                            r#type: "number",
+                            min: "17",
+                            max: "81",
+                            step: "1",
+                            value: "{generation_clue_count}",
+                            aria_label: "{generation_clue_count_label}",
+                            oninput: move |event| generation_clue_count.set(event.value()),
+                        }
+                        span { "{generation_clue_count_help}" }
+                    }
                 button {
                     disabled: is_searching(),
                     onclick: move |_| {
+                        let Some(clue_count) = generation_clue_count()
+                            .parse::<usize>()
+                            .ok()
+                            .filter(|count| (17..=81).contains(count))
+                        else {
+                            msg.set(invalid_generation_clue_count.to_string());
+                            is_ok.set(false);
+                            return;
+                        };
+
                         active_search.set(None);
                         let job_id = search_job_id().wrapping_add(1);
                         search_job_id.set(job_id);
@@ -635,6 +685,7 @@ fn app() -> Element {
                                     "type": "generate",
                                     "job_id": job_id,
                                     "seed": seed,
+                                    "clue_count": clue_count,
                                 });
                                 if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
                                     active_search.set(None);
@@ -658,6 +709,35 @@ fn app() -> Element {
                     },
                     "{generate_puzzle_label}"
                 }
+                button {
+                    onclick: move |_| {
+                        let before = BoardSnapshot {
+                            board: *mtx.read(),
+                            givens: *givens.read(),
+                        };
+                        record_board_change(
+                            &mut undo_stack.write(),
+                            &mut redo_stack.write(),
+                            before,
+                            BoardSnapshot {
+                                board: [[0; 9]; 9],
+                                givens: [[0; 9]; 9],
+                            },
+                        );
+                        mtx.set([[0; 9]; 9]);
+                        givens.set([[0; 9]; 9]);
+                        msg.set(String::new());
+                        is_ok.set(true);
+                        focus_cell(0, 0);
+                    },
+                    "{clear_label}"
+                }
+                }
+                div {
+                    class: "button-group",
+                    role: "group",
+                    aria_label: "{solve_group_label}",
+                    h2 { class: "button-group-title", "{solve_group_label}" }
                 button {
                     disabled: is_searching(),
                     onclick: move |_| {
@@ -833,35 +913,18 @@ fn app() -> Element {
                     },
                     "{solve_label}"
                 }
-                button {
-                    onclick: move |_| {
-                        let before = BoardSnapshot {
-                            board: *mtx.read(),
-                            givens: *givens.read(),
-                        };
-                        record_board_change(
-                            &mut undo_stack.write(),
-                            &mut redo_stack.write(),
-                            before,
-                            BoardSnapshot {
-                                board: [[0; 9]; 9],
-                                givens: [[0; 9]; 9],
-                            },
-                        );
-                        mtx.set([[0; 9]; 9]);
-                        givens.set([[0; 9]; 9]);
-                        msg.set(String::new());
-                        is_ok.set(true);
-                        focus_cell(0, 0);
-                    },
-                    "{clear_label}"
                 }
+                div {
+                    class: "button-group",
+                    role: "group",
+                    aria_label: "{text_group_label}",
+                    h2 { class: "button-group-title", "{text_group_label}" }
                 button {
-                    class: "right",
                     onclick: move |_| {
                         txt.set(to_txt(&mtx.read()));
                     },
                     "{save_text_label}"
+                }
                 }
             }
             if let Some(status) = search_status() {

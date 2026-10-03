@@ -1,82 +1,114 @@
-use crate::solver::{SearchEvent, SolutionSearch};
+use crate::solver::solve;
 use crate::Matrix;
 
-const UNIQUENESS_NODE_LIMIT: u64 = 100_000;
+pub const MIN_CLUE_COUNT: usize = 17;
+pub const MAX_CLUE_COUNT: usize = 81;
+pub const DEFAULT_CLUE_COUNT: usize = 30;
 
-/// Generate a randomized puzzle with exactly one solution.
-///
-/// The seed makes output reproducible. Clues are removed only when the
-/// solution iterator proves that the remaining board has exactly one
-/// solution. A bounded uniqueness check keeps generation work predictable;
-/// when its node limit is reached, the clue is retained.
+const MINIMAL_PUZZLE: Matrix = [
+    [0, 0, 0, 0, 0, 0, 0, 1, 0],
+    [4, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 2, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 5, 0, 4, 0, 7],
+    [0, 0, 8, 0, 0, 0, 3, 0, 0],
+    [0, 0, 1, 0, 9, 0, 0, 0, 0],
+    [3, 0, 0, 4, 0, 0, 2, 0, 0],
+    [0, 5, 0, 1, 0, 0, 0, 0, 0],
+    [0, 0, 0, 8, 0, 6, 0, 0, 0],
+];
+
+/// Generate a randomized uniquely solvable puzzle with the default 30 clues.
 pub fn generate_puzzle(seed: u64) -> Matrix {
-    let mut rng = SplitMix64(seed);
-    let mut puzzle = randomized_solution(&mut rng);
+    generate_puzzle_with_clues(seed, DEFAULT_CLUE_COUNT).expect("the default clue count is valid")
+}
 
-    let mut positions: Vec<usize> = (0..81).collect();
-    rng.shuffle(&mut positions);
-    for position in positions {
+/// Generate a randomized uniquely solvable puzzle with exactly `clue_count` clues.
+///
+/// The supported range is 17 through 81. The randomized puzzle starts from a
+/// transformed 17-clue unique puzzle, then adds digits from its solution. Adding
+/// clues preserves uniqueness while guaranteeing the requested clue count.
+pub fn generate_puzzle_with_clues(seed: u64, clue_count: usize) -> Result<Matrix, &'static str> {
+    if !(MIN_CLUE_COUNT..=MAX_CLUE_COUNT).contains(&clue_count) {
+        return Err("clue count must be between 17 and 81");
+    }
+
+    let mut rng = SplitMix64(seed);
+    let transform = SudokuTransform::random(&mut rng);
+
+    let mut solution = MINIMAL_PUZZLE;
+    assert!(
+        solve(&mut solution),
+        "the generator base puzzle must be solvable"
+    );
+
+    let mut puzzle = transform.apply(&MINIMAL_PUZZLE);
+    let solution = transform.apply(&solution);
+
+    let mut empty_positions: Vec<usize> = (0..81)
+        .filter(|&position| puzzle[position / 9][position % 9] == 0)
+        .collect();
+    rng.shuffle(&mut empty_positions);
+    for position in empty_positions
+        .into_iter()
+        .take(clue_count - MIN_CLUE_COUNT)
+    {
         let y = position / 9;
         let x = position % 9;
-        let clue = puzzle[y][x];
-        puzzle[y][x] = 0;
-        if !has_exactly_one_solution(&puzzle) {
-            puzzle[y][x] = clue;
+        puzzle[y][x] = solution[y][x];
+    }
+
+    Ok(puzzle)
+}
+
+struct SudokuTransform {
+    rows: [usize; 9],
+    columns: [usize; 9],
+    digits: [u8; 10],
+    transpose: bool,
+}
+
+impl SudokuTransform {
+    fn random(rng: &mut SplitMix64) -> Self {
+        let mut digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
+        rng.shuffle(&mut digits);
+        let mut digit_map = [0; 10];
+        for (digit, mapped_digit) in (1..=9).zip(digits) {
+            digit_map[digit] = mapped_digit;
+        }
+
+        Self {
+            rows: grouped_permutation(rng),
+            columns: grouped_permutation(rng),
+            digits: digit_map,
+            transpose: rng.next() & 1 == 1,
         }
     }
 
-    puzzle
-}
+    fn apply(&self, board: &Matrix) -> Matrix {
+        let mut transformed = [[0; 9]; 9];
+        for y in 0..9 {
+            for x in 0..9 {
+                let value = board[self.rows[y]][self.columns[x]];
+                transformed[y][x] = if value == 0 {
+                    0
+                } else {
+                    self.digits[value as usize]
+                };
+            }
+        }
 
-fn has_exactly_one_solution(board: &Matrix) -> bool {
-    let Ok(search) = SolutionSearch::new(board) else {
-        return false;
-    };
-
-    let mut solutions = 0;
-    for event in search {
-        match event {
-            SearchEvent::SolutionFound { .. } => {
-                solutions += 1;
-                if solutions > 1 {
-                    return false;
+        if self.transpose {
+            let mut transposed = [[0; 9]; 9];
+            for y in 0..9 {
+                for x in 0..9 {
+                    transposed[x][y] = transformed[y][x];
                 }
             }
-            SearchEvent::Progress { nodes, .. } if nodes >= UNIQUENESS_NODE_LIMIT => {
-                return false;
-            }
-            SearchEvent::Progress { .. } => {}
+            transposed
+        } else {
+            transformed
         }
     }
-    solutions == 1
-}
-
-fn randomized_solution(rng: &mut SplitMix64) -> Matrix {
-    let rows = grouped_permutation(rng);
-    let columns = grouped_permutation(rng);
-    let mut digits = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-    rng.shuffle(&mut digits);
-
-    let mut board = [[0; 9]; 9];
-    for y in 0..9 {
-        for x in 0..9 {
-            let source_row = rows[y];
-            let source_column = columns[x];
-            let base_digit = (source_row * 3 + source_row / 3 + source_column) % 9;
-            board[y][x] = digits[base_digit];
-        }
-    }
-
-    if rng.next() & 1 == 1 {
-        for y in 0..9 {
-            for x in (y + 1)..9 {
-                let value = board[y][x];
-                board[y][x] = board[x][y];
-                board[x][y] = value;
-            }
-        }
-    }
-    board
 }
 
 fn grouped_permutation(rng: &mut SplitMix64) -> [usize; 9] {
@@ -114,7 +146,10 @@ impl SplitMix64 {
 
 #[cfg(test)]
 mod tests {
-    use super::generate_puzzle;
+    use super::{
+        generate_puzzle, generate_puzzle_with_clues, DEFAULT_CLUE_COUNT, MAX_CLUE_COUNT,
+        MIN_CLUE_COUNT,
+    };
     use crate::{SearchEvent, SolutionSearch};
 
     fn clue_count(board: &crate::Matrix) -> usize {
@@ -125,25 +160,40 @@ mod tests {
             .count()
     }
 
+    fn solution_count(board: &crate::Matrix) -> usize {
+        SolutionSearch::new(board)
+            .unwrap()
+            .filter(|event| matches!(event, SearchEvent::SolutionFound { .. }))
+            .count()
+    }
+
     #[test]
-    fn generation_is_reproducible_for_a_seed() {
-        assert_eq!(generate_puzzle(42), generate_puzzle(42));
+    fn generation_is_reproducible_for_a_seed_and_clue_count() {
+        assert_eq!(
+            generate_puzzle_with_clues(42, 30),
+            generate_puzzle_with_clues(42, 30)
+        );
     }
 
     #[test]
     fn generated_puzzle_has_one_solution_and_removes_clues() {
         let puzzle = generate_puzzle(7);
-        assert!(clue_count(&puzzle) < 81);
+        assert_eq!(clue_count(&puzzle), DEFAULT_CLUE_COUNT);
+        assert_eq!(solution_count(&puzzle), 1);
+    }
 
-        let mut solution_count = 0;
-        for event in SolutionSearch::new(&puzzle).unwrap() {
-            if matches!(event, SearchEvent::SolutionFound { .. }) {
-                solution_count += 1;
-                if solution_count > 1 {
-                    break;
-                }
-            }
+    #[test]
+    fn requested_clue_counts_are_exact_and_uniquely_solvable() {
+        for requested_count in [MIN_CLUE_COUNT, 30, MAX_CLUE_COUNT] {
+            let puzzle = generate_puzzle_with_clues(7, requested_count).unwrap();
+            assert_eq!(clue_count(&puzzle), requested_count);
+            assert_eq!(solution_count(&puzzle), 1);
         }
-        assert_eq!(solution_count, 1);
+    }
+
+    #[test]
+    fn rejects_clue_counts_outside_the_supported_range() {
+        assert!(generate_puzzle_with_clues(7, MIN_CLUE_COUNT - 1).is_err());
+        assert!(generate_puzzle_with_clues(7, MAX_CLUE_COUNT + 1).is_err());
     }
 }
