@@ -494,46 +494,6 @@ fn app() -> Element {
                     aria_label: "{board_group_label}",
                     h2 { class: "button-group-title", "{board_group_label}" }
                     button {
-                        onclick: move |_| {
-                            match parse_puzzle(&txt.read(), lang) {
-                                Ok(board) => {
-                                    let before = BoardSnapshot {
-                                        board: *mtx.read(),
-                                        givens: *givens.read(),
-                                    };
-                                    record_board_change(
-                                        &mut undo_stack.write(),
-                                        &mut redo_stack.write(),
-                                        before,
-                                        BoardSnapshot { board, givens: board },
-                                    );
-                                    mtx.set(board);
-                                    givens.set(board);
-                                    let conflict_count = count_conflict_cells(&board);
-                                    if conflict_count > 0 {
-                                        msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
-                                        is_ok.set(false);
-                                    } else {
-                                        let stuck_count = count_no_candidate_cells(&board);
-                                        if stuck_count > 0 {
-                                            msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
-                                            is_ok.set(false);
-                                        } else {
-                                            msg.set(puzzle_loaded_message(lang, None, None));
-                                            is_ok.set(true);
-                                        }
-                                    }
-                                    focus_cell(0, 0);
-                                }
-                                Err(error) => {
-                                    msg.set(error);
-                                    is_ok.set(false);
-                                }
-                            }
-                        },
-                        "{load_text_label}"
-                    }
-                    button {
                         aria_pressed: "{show_candidates()}",
                         onclick: move |_| show_candidates.set(!show_candidates()),
                         "{candidate_toggle_label}"
@@ -919,6 +879,46 @@ fn app() -> Element {
                     role: "group",
                     aria_label: "{text_group_label}",
                     h2 { class: "button-group-title", "{text_group_label}" }
+                button {
+                    onclick: move |_| {
+                        match parse_puzzle(&txt.read(), lang) {
+                            Ok(board) => {
+                                let before = BoardSnapshot {
+                                    board: *mtx.read(),
+                                    givens: *givens.read(),
+                                };
+                                record_board_change(
+                                    &mut undo_stack.write(),
+                                    &mut redo_stack.write(),
+                                    before,
+                                    BoardSnapshot { board, givens: board },
+                                );
+                                mtx.set(board);
+                                givens.set(board);
+                                let conflict_count = count_conflict_cells(&board);
+                                if conflict_count > 0 {
+                                    msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
+                                    is_ok.set(false);
+                                } else {
+                                    let stuck_count = count_no_candidate_cells(&board);
+                                    if stuck_count > 0 {
+                                        msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
+                                        is_ok.set(false);
+                                    } else {
+                                        msg.set(puzzle_loaded_message(lang, None, None));
+                                        is_ok.set(true);
+                                    }
+                                }
+                                focus_cell(0, 0);
+                            }
+                            Err(error) => {
+                                msg.set(error);
+                                is_ok.set(false);
+                            }
+                        }
+                    },
+                    "{load_text_label}"
+                }
                 button {
                     onclick: move |_| {
                         txt.set(to_txt(&mtx.read()));
