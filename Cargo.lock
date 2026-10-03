@@ -2630,6 +2630,7 @@ dependencies = [
  "log",
  "serde_json",
  "wasm-bindgen",
+ "wasm-bindgen-futures",
  "wasm-logger",
  "web-sys",
 ]

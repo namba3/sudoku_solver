@@ -28,12 +28,17 @@ js_name = re.search(r'/sudoku_solver/assets/([^" ]+\.js)', index).group(1)
 js_text = (generated / "assets" / js_name).read_text()
 wasm_name = re.search(r'/sudoku_solver/assets/([^" ]+\.wasm)', js_text).group(1)
 
+favicon_link = '<link rel="icon" type="image/svg+xml" href="/sudoku_solver/favicon.svg">'
+if 'rel="icon"' not in index:
+    index = index.replace("</head>", f"{favicon_link}\n</head>")
+
 assets = docs / "assets"
 assets.mkdir(exist_ok=True)
 for name in (js_name, wasm_name):
     shutil.copy2(generated / "assets" / name, assets / name)
 (docs / "index.html").write_text(index)
 shutil.copy2(generated / "app.css", docs / "app.css")
+shutil.copy2(root / "public" / "favicon.svg", docs / "favicon.svg")
 
 worker_source = generated / "worker"
 worker_target = docs / "worker"

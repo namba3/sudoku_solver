@@ -258,6 +258,7 @@ fn app() -> Element {
     let mut search_board = use_signal(|| None::<sudoku_solver::Matrix>);
     let mut search_status = use_signal(|| None::<SearchStatus>);
     let mut search_started_at = use_signal(|| 0.0f64);
+    let mut copy_feedback = use_signal(|| None::<bool>);
     let mut is_searching = use_signal(|| false);
     let mut is_generating = use_signal(|| false);
     let mut generation_clue_count = use_signal(|| "30".to_string());
@@ -319,6 +320,9 @@ fn app() -> Element {
     let next_solution_label = tr(lang, "次の解", "Next solution");
     let apply_solution_label = tr(lang, "選択した解を適用", "Use selected solution");
     let puzzle_text_label = tr(lang, "問題のテキスト", "Puzzle text");
+    let copy_text_label = tr(lang, "テキストをコピー", "Copy text");
+    let copy_success_label = tr(lang, "コピーしました。", "Copied to clipboard.");
+    let copy_error_label = tr(lang, "コピーできませんでした。", "Could not copy the text.");
     let history_group_label = tr(lang, "履歴", "History");
     let board_group_label = tr(lang, "盤面", "Board");
     let solve_group_label = tr(lang, "解く・確認", "Solve & inspect");
@@ -335,6 +339,11 @@ fn app() -> Element {
     );
 
     rsx! {
+        document::Link {
+            rel: "icon",
+            href: "favicon.svg",
+            r#type: "image/svg+xml",
+        }
         div {
             class: "container",
             lang: "{lang.code()}",
@@ -1058,9 +1067,52 @@ fn app() -> Element {
             }
             div {
                 class: "text-panel",
-                label {
-                    r#for: "puzzle-text",
-                    "{puzzle_text_label}"
+                div {
+                    class: "text-label-row",
+                    label {
+                        r#for: "puzzle-text",
+                        "{puzzle_text_label}"
+                    }
+                    button {
+                        class: "copy-button",
+                        r#type: "button",
+                        aria_label: "{copy_text_label}",
+                        title: "{copy_text_label}",
+                        onclick: move |_| {
+                            copy_feedback.set(None);
+                            let text_to_copy = txt.read().clone();
+                            let mut feedback = copy_feedback;
+                            spawn(async move {
+                                let result = async {
+                                    let window = web_sys::window()
+                                        .ok_or_else(|| wasm_bindgen::JsValue::from_str("Window is unavailable"))?;
+                                    let clipboard = window.navigator().clipboard();
+                                    wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text_to_copy))
+                                        .await
+                                        .map(|_| ())
+                                }
+                                .await;
+                                feedback.set(Some(result.is_ok()));
+                            });
+                        },
+                        svg {
+                            view_box: "0 0 24 24",
+                            fill: "none",
+                            stroke: "currentColor",
+                            stroke_width: "2",
+                            stroke_linecap: "round",
+                            stroke_linejoin: "round",
+                            rect { x: "8", y: "8", width: "13", height: "13", rx: "2" }
+                            path { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }
+                        }
+                    }
+                }
+                if let Some(copied) = copy_feedback() {
+                    p {
+                        class: "copy-feedback",
+                        role: "status",
+                        if copied { "{copy_success_label}" } else { "{copy_error_label}" }
+                    }
                 }
                 p {
                     class: "text-help",
