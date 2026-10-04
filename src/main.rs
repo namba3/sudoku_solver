@@ -58,6 +58,20 @@ fn tr(language: Language, japanese: &'static str, english: &'static str) -> &'st
     }
 }
 
+fn random_seed() -> u32 {
+    let mut bytes = [0_u8; 4];
+    let crypto_seed = web_sys::window()
+        .and_then(|window| window.crypto().ok())
+        .and_then(|crypto| {
+            crypto
+                .get_random_values_with_u8_array(&mut bytes)
+                .ok()
+                .map(|_| u32::from_ne_bytes(bytes))
+        });
+
+    crypto_seed.unwrap_or_else(|| (js_sys::Math::random() * (f64::from(u32::MAX) + 1.0)) as u32)
+}
+
 fn cell_aria_label(language: Language, row: usize, column: usize) -> String {
     match language {
         Language::Japanese => format!("{} 行 {} 列", row + 1, column + 1),
@@ -660,7 +674,7 @@ fn app() -> Element {
                                     _onmessage: onmessage,
                                     _onerror: onerror,
                                 }));
-                                let seed = (js_sys::Math::random() * f64::from(u32::MAX)) as u32;
+                                let seed = random_seed();
                                 let request = serde_json::json!({
                                     "type": "generate",
                                     "job_id": job_id,

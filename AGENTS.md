@@ -13,6 +13,7 @@
 ## Editing and documentation
 
 - Write repository explanations in Japanese unless a specific artifact needs another language.
+- Do not add personal information or machine-specific absolute file paths to repository files. Use generic placeholders or repository-relative paths in examples; before publishing generated assets, check that they do not expose local build paths or other personal data.
 - Keep `README.md` as a short project overview and navigation page. Put detailed algorithm, architecture, usage, and development guidance in `documentation/`.
 - Update `documentation/` when behavior, public APIs, formats, or build steps change.
 - When rebuilding the Pages site, run `bash scripts/build_pages.sh`; preserve its root layout and the `/sudoku_solver/` base path. The script builds the worker and Dioxus bundle, then synchronizes only referenced generated assets into `docs/`.
