@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rust:
+    name: Rust checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain and WebAssembly target
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+          components: rustfmt
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+
+      - name: Check formatting
+        run: cargo fmt --check
+
+      - name: Run unit tests
+        run: cargo test --locked
+
+      - name: Check web application for WebAssembly
+        run: cargo check --locked --target wasm32-unknown-unknown
+
+      - name: Check search worker for WebAssembly
+        run: cargo check --locked --target wasm32-unknown-unknown --features search-worker --bin sudoku_search_worker

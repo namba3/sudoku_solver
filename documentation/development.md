@@ -27,6 +27,16 @@ cargo check --target wasm32-unknown-unknown
 - `cargo test`はソルバーの単体テストを実行します。
 - WASM向け`cargo check`はWeb targetとしてRustコードがコンパイルできるかを確認します。実ブラウザーでの操作確認とは別です。
 
+## GitHub Actions
+
+`.github/workflows/ci.yml`はpushとpull requestで次の確認を実行します。
+
+- `cargo fmt --check`でRustコードの整形状態を確認します。
+- `cargo test --locked`で単体テストを実行します。
+- `wasm32-unknown-unknown`向けにWebアプリと検索Workerをそれぞれコンパイルします。
+
+このCIはコンパイルと単体テストを確認します。ブラウザー上の操作確認やGitHub Pagesへの公開は行いません。
+
 ## GitHub Pages資材
 
 `Dioxus.toml`の`web.app.base_path`は、GitHub PagesのプロジェクトURLに合わせて`/sudoku_solver/`になっています。公開資材は`docs/`直下に置きます。

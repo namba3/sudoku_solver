@@ -555,6 +555,29 @@ mod tests {
     }
 
     #[test]
+    fn solve_treats_values_outside_one_through_nine_as_empty() {
+        let mut puzzle = PUZZLE;
+        puzzle[0][2] = 10;
+        puzzle[0][3] = u8::MAX;
+
+        assert!(solve(&mut puzzle));
+        assert_eq!(puzzle, SOLUTION);
+    }
+
+    #[test]
+    fn solve_returns_false_for_a_conflict_free_unsolvable_board() {
+        let mut puzzle = [[0; 9]; 9];
+        puzzle[0][1..9].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        for (y, value) in [4, 5, 2, 3, 6, 7, 8, 9].into_iter().enumerate() {
+            puzzle[y + 1][0] = value;
+        }
+        let original = puzzle;
+
+        assert!(!solve(&mut puzzle));
+        assert_eq!(puzzle, original);
+    }
+
+    #[test]
     fn rejects_duplicate_givens_in_a_row() {
         let mut puzzle = [[0; 9]; 9];
         puzzle[0][0] = 4;
@@ -738,6 +761,41 @@ mod tests {
         assert!(search.is_exhausted());
         assert_eq!(found, vec![SOLUTION]);
         assert_eq!(PUZZLE, original);
+    }
+
+    #[test]
+    fn search_yields_a_completed_board_once_and_then_stays_exhausted() {
+        let mut search = SolutionSearch::new(&SOLUTION).unwrap();
+
+        assert_eq!(
+            search.next(),
+            Some(SearchEvent::SolutionFound {
+                index: 1,
+                board: SOLUTION,
+            })
+        );
+        assert_eq!(search.solutions_found(), 1);
+        assert_eq!(search.next(), None);
+        assert!(search.is_exhausted());
+        assert_eq!(search.next(), None);
+    }
+
+    #[test]
+    fn search_exhausts_a_conflict_free_board_with_no_solutions() {
+        let mut puzzle = [[0; 9]; 9];
+        puzzle[0][1..9].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        for (y, value) in [4, 5, 2, 3, 6, 7, 8, 9].into_iter().enumerate() {
+            puzzle[y + 1][0] = value;
+        }
+        let original = puzzle;
+        let mut search = SolutionSearch::new(&puzzle).unwrap();
+
+        assert_eq!(search.next(), None);
+        assert_eq!(search.solutions_found(), 0);
+        assert_eq!(search.explored_nodes(), 1);
+        assert!(search.is_exhausted());
+        assert_eq!(search.next(), None);
+        assert_eq!(puzzle, original);
     }
 
     #[test]
