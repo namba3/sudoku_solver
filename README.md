@@ -25,3 +25,7 @@ dx serve --platform web
 ```
 
 GitHub Pages用の生成物は`docs/`に置きます。ここは公開用Web資材の出力先であり、解説資料の置き場ではありません。資料の編集先は`documentation/`です。
+
+## ライセンス
+
+このプロジェクトは [MIT License](LICENSE-MIT) または [Apache License 2.0](LICENSE-APACHE) の条件で利用できます。MIT Licenseの著作権表示にある `namba3` は[GitHubアカウント](https://github.com/namba3)です。

@@ -25,3 +25,7 @@ dx serve --platform web
 ```
 
 Generated GitHub Pages assets go in `docs/`. Edit explanatory documentation in `documentation/` instead.
+
+## License
+
+This project is available under the terms of either the [MIT License](LICENSE-MIT) or the [Apache License 2.0](LICENSE-APACHE). The `namba3` named in the MIT copyright notice is the [GitHub account](https://github.com/namba3).
