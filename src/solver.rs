@@ -626,6 +626,21 @@ mod tests {
     }
 
     #[test]
+    fn state_manager_rejects_conflicts_without_corrupting_masks() {
+        let mut manager = StateManager::new();
+        assert!(manager.set(0, 0, 5));
+
+        assert!(!manager.set(1, 0, 5));
+        assert!(!manager.set(0, 1, 5));
+        assert!(!manager.set(1, 1, 5));
+
+        manager.remove(0, 0, 5);
+        for (x, y) in [(1, 0), (0, 1), (1, 1)] {
+            assert!(manager.is_settable(x, y, 5));
+        }
+    }
+
+    #[test]
     fn candidates_for_excludes_digits_in_the_row_column_and_subgrid() {
         let mut puzzle = [[0; 9]; 9];
         puzzle[0][0] = 1;
@@ -643,6 +658,19 @@ mod tests {
         assert!(super::candidates_for(&puzzle, 5, 4).is_empty());
         assert!(super::candidates_for(&puzzle, 9, 4).is_empty());
         assert!(super::candidates_for(&puzzle, 5, 9).is_empty());
+    }
+
+    #[test]
+    fn candidates_for_ignores_values_outside_the_digit_range() {
+        let mut puzzle = [[0; 9]; 9];
+        puzzle[0][0] = 0;
+        puzzle[0][1] = 10;
+        puzzle[1][0] = u8::MAX;
+
+        assert_eq!(
+            super::candidates_for(&puzzle, 0, 0),
+            (1..=9).collect::<Vec<_>>()
+        );
     }
 
     #[test]
@@ -763,6 +791,23 @@ mod tests {
         assert!(search.is_exhausted());
         assert_eq!(found, vec![SOLUTION]);
         assert_eq!(PUZZLE, original);
+    }
+
+    #[test]
+    fn solution_search_normalizes_invalid_values_without_mutating_its_input() {
+        let mut puzzle = PUZZLE;
+        puzzle[0][2] = u8::MAX;
+        let original = puzzle;
+        let found: Vec<_> = SolutionSearch::new(&puzzle)
+            .unwrap()
+            .filter_map(|event| match event {
+                SearchEvent::SolutionFound { board, .. } => Some(board),
+                SearchEvent::Progress { .. } => None,
+            })
+            .collect();
+
+        assert_eq!(found, vec![SOLUTION]);
+        assert_eq!(puzzle, original);
     }
 
     #[test]

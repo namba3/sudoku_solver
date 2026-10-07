@@ -159,8 +159,8 @@ impl SplitMix64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        generate_puzzle, generate_puzzle_with_clues, SudokuTransform, DEFAULT_CLUE_COUNT,
-        MAX_CLUE_COUNT, MINIMAL_PUZZLE, MINIMAL_SOLUTION, MIN_CLUE_COUNT,
+        generate_puzzle, generate_puzzle_with_clues, SplitMix64, SudokuTransform,
+        DEFAULT_CLUE_COUNT, MAX_CLUE_COUNT, MINIMAL_PUZZLE, MINIMAL_SOLUTION, MIN_CLUE_COUNT,
     };
     use crate::{solve, SearchEvent, SolutionSearch};
 
@@ -260,6 +260,34 @@ mod tests {
         for y in 0..9 {
             for x in 0..9 {
                 assert_eq!(transformed[x][y], MINIMAL_SOLUTION[y][x]);
+            }
+        }
+    }
+
+    #[test]
+    fn randomized_group_permutations_preserve_completed_sudoku_boards() {
+        for seed in 0..256 {
+            let mut rng = SplitMix64(seed);
+            let transform = SudokuTransform::random(&mut rng);
+            let mut transformed = transform.apply(&MINIMAL_SOLUTION);
+            let expected = transformed;
+
+            assert!(solve(&mut transformed), "seed={seed}");
+            assert_eq!(transformed, expected, "seed={seed}");
+
+            for permutation in [&transform.rows, &transform.columns] {
+                let mut source_groups = [0; 3];
+                for (destination_group, triple) in permutation.chunks_exact(3).enumerate() {
+                    let source_group = triple[0] / 3;
+                    source_groups[destination_group] = source_group;
+                    assert!(triple.iter().all(|index| index / 3 == source_group));
+
+                    let mut offsets = [triple[0] % 3, triple[1] % 3, triple[2] % 3];
+                    offsets.sort_unstable();
+                    assert_eq!(offsets, [0, 1, 2]);
+                }
+                source_groups.sort_unstable();
+                assert_eq!(source_groups, [0, 1, 2]);
             }
         }
     }

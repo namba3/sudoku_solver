@@ -21,10 +21,13 @@ CLIはDioxus本体と同じバージョン系列を使います。異なる世�
 cargo fmt --check
 cargo test
 cargo check --target wasm32-unknown-unknown
+# Optional: report native source coverage when cargo-llvm-cov is installed
+cargo llvm-cov --summary-only
 ```
 
 - `cargo fmt --check`はRustコードの整形状態を確認します。
 - `cargo test`はソルバー・問題生成ライブラリの単体テストに加え、アプリの翻訳処理とテキスト盤面パーサーの単体テストを実行します。
+- `cargo llvm-cov --summary-only`は、利用可能な場合にnative単体テストのソースカバレッジを表示します。WASM Workerや実ブラウザー上のDOM・操作はこの計測に含まれません。
 - WASM向け`cargo check`はWeb targetとしてRustコードがコンパイルできるかを確認します。実ブラウザーでの操作確認とは別です。
 
 ## GitHub Actions

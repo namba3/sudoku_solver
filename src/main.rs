@@ -1254,7 +1254,11 @@ fn parse_solution(value: &serde_json::Value) -> Option<sudoku_solver::Matrix> {
             return None;
         }
         for (x, cell) in cells.iter().enumerate() {
-            board[y][x] = u8::try_from(cell.as_u64()?).ok()?;
+            let value = u8::try_from(cell.as_u64()?).ok()?;
+            if value > 9 {
+                return None;
+            }
+            board[y][x] = value;
         }
     }
     Some(board)
@@ -1584,7 +1588,12 @@ fn focus_cell(y: usize, x: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{candidate_digits, is_cell_locked, parse_puzzle, to_txt, BoardAnalysis, Language};
+    use super::{
+        candidate_digits, cell_classes, cell_text, cell_value, is_cell_locked, moved_cell,
+        next_empty_cell, parse_puzzle, parse_solution, to_txt, BoardAnalysis, Language,
+        SearchStatus,
+    };
+    use serde_json::json;
     use sudoku_solver::Matrix;
 
     const SOLVED_TEXT: &str = concat!(
@@ -1607,6 +1616,208 @@ mod tests {
         assert!(is_cell_locked(true, givens, 0, 0));
         assert!(!is_cell_locked(false, givens, 0, 0));
         assert!(!is_cell_locked(true, givens, 0, 1));
+    }
+
+    #[test]
+    fn cell_value_accepts_only_single_digits_from_one_through_nine() {
+        for (text, expected) in [
+            ("1", 1),
+            ("9", 9),
+            ("", 0),
+            ("0", 0),
+            ("10", 0),
+            ("-1", 0),
+            ("x", 0),
+        ] {
+            assert_eq!(cell_value(text), expected, "input={text:?}");
+        }
+    }
+
+    #[test]
+    fn cell_text_hides_values_outside_the_supported_digit_range() {
+        assert_eq!(cell_text(1), "1");
+        assert_eq!(cell_text(9), "9");
+        assert_eq!(cell_text(0), "");
+        assert_eq!(cell_text(10), "");
+    }
+
+    #[test]
+    fn cell_classes_include_each_requested_visual_state() {
+        assert_eq!(
+            cell_classes(0, 0, true, true, true, true),
+            "cell even given conflict no-candidates with-candidates"
+        );
+        assert_eq!(cell_classes(0, 3, false, false, false, false), "cell odd");
+    }
+
+    #[test]
+    fn cell_movement_stops_at_board_edges() {
+        assert_eq!(moved_cell(0, 0, -1, 0), None);
+        assert_eq!(moved_cell(0, 0, 0, -1), None);
+        assert_eq!(moved_cell(8, 8, 1, 0), None);
+        assert_eq!(moved_cell(8, 8, 0, 1), None);
+        assert_eq!(moved_cell(4, 4, -1, 1), Some((3, 5)));
+    }
+
+    #[test]
+    fn next_empty_cell_searches_forward_and_wraps_once() {
+        let mut board = [[1; 9]; 9];
+        board[0][2] = 0;
+        board[8][8] = 0;
+
+        assert_eq!(next_empty_cell(&board, (0, 0)), Some((0, 2)));
+        assert_eq!(next_empty_cell(&board, (0, 3)), Some((8, 8)));
+        assert_eq!(next_empty_cell(&board, (8, 8)), Some((0, 2)));
+
+        board[0][2] = 1;
+        assert_eq!(next_empty_cell(&board, (8, 8)), None);
+    }
+
+    #[test]
+    fn parses_worker_boards_only_when_the_shape_and_values_are_valid() {
+        let mut valid = json!([
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0]
+        ]);
+        valid[0][0] = json!(1);
+        valid[8][8] = json!(9);
+        let board = parse_solution(&valid).unwrap();
+        assert_eq!(board[0][0], 1);
+        assert_eq!(board[8][8], 9);
+
+        assert!(parse_solution(&json!([])).is_none());
+        assert!(parse_solution(&json!([[0]])).is_none());
+
+        let mut short_row = valid.clone();
+        short_row[0] = json!([0, 0, 0, 0, 0, 0, 0, 0]);
+        assert!(parse_solution(&short_row).is_none());
+
+        let mut invalid_cell = valid.clone();
+        invalid_cell[0][0] = json!("1");
+        assert!(parse_solution(&invalid_cell).is_none());
+
+        let mut out_of_range = valid;
+        out_of_range[0][0] = json!(10);
+        assert!(parse_solution(&out_of_range).is_none());
+    }
+
+    #[test]
+    fn search_status_formats_limits_and_localizes_known_errors() {
+        let solution_limit = SearchStatus::Finished {
+            solutions: 100,
+            nodes: 500_000,
+            termination: "solution_limit".to_owned(),
+            elapsed_seconds: 1.25,
+        }
+        .text(Language::English);
+        assert!(solution_limit.contains("At least 100 solutions"));
+        assert!(solution_limit.contains("500000 nodes in 1.25 s"));
+
+        let node_limit = SearchStatus::Finished {
+            solutions: 2,
+            nodes: 500_000,
+            termination: "node_limit".to_owned(),
+            elapsed_seconds: 1.25,
+        }
+        .text(Language::English);
+        assert!(node_limit.contains("exact count is unknown"));
+
+        let complete = SearchStatus::Finished {
+            solutions: 1,
+            nodes: 42,
+            termination: "exhausted".to_owned(),
+            elapsed_seconds: 0.5,
+        }
+        .text(Language::Japanese);
+        assert!(complete.contains("探索完了"));
+
+        let localized = SearchStatus::Error {
+            message: "Conflicting values.".to_owned(),
+            elapsed_seconds: 0.25,
+        }
+        .text(Language::Japanese);
+        assert!(localized.contains("同じ行・列・ブロック"));
+
+        let unknown = SearchStatus::Error {
+            message: "unknown worker error".to_owned(),
+            elapsed_seconds: 0.25,
+        }
+        .text(Language::English);
+        assert!(unknown.contains("unknown worker error"));
+    }
+
+    #[test]
+    fn search_status_formats_progress_with_locale_specific_plural_rules() {
+        let singular = SearchStatus::Progress {
+            solutions: 1,
+            nodes: 2048,
+        }
+        .text(Language::English);
+        assert!(singular.contains("1 solution found"));
+        assert!(singular.contains("2048 nodes"));
+
+        let plural = SearchStatus::Progress {
+            solutions: 2,
+            nodes: 4096,
+        }
+        .text(Language::English);
+        assert!(plural.contains("2 solutions found"));
+
+        let japanese = SearchStatus::Progress {
+            solutions: 2,
+            nodes: 4096,
+        }
+        .text(Language::Japanese);
+        assert!(japanese.contains("4096 ノード"));
+        assert!(japanese.contains("2 件の解"));
+    }
+
+    #[test]
+    fn search_status_formats_generation_cancellation_and_failures() {
+        assert_eq!(
+            SearchStatus::Starting.text(Language::English),
+            "Starting solution search…"
+        );
+        assert_eq!(
+            SearchStatus::Generating.text(Language::English),
+            "Generating a unique puzzle…"
+        );
+        assert!(SearchStatus::Cancelled {
+            solutions: 2,
+            elapsed_seconds: 1.5,
+        }
+        .text(Language::English)
+        .contains("2 solutions"));
+        assert!(SearchStatus::Generated {
+            clues: 30,
+            elapsed_seconds: 0.5,
+        }
+        .text(Language::English)
+        .contains("30 clues"));
+        assert!(SearchStatus::GenerationCancelled {
+            elapsed_seconds: 0.5,
+        }
+        .text(Language::Japanese)
+        .contains("問題の生成を中断"));
+        assert!(SearchStatus::GenerationError {
+            message: "test failure".to_owned(),
+            elapsed_seconds: 0.5,
+        }
+        .text(Language::English)
+        .contains("test failure"));
+        assert!(SearchStatus::WorkerError("worker failed".to_owned())
+            .text(Language::English)
+            .contains("worker failed"));
+        assert!(SearchStatus::StartError("startup failed".to_owned())
+            .text(Language::English)
+            .contains("startup failed"));
     }
 
     #[test]
@@ -1635,6 +1846,18 @@ mod tests {
 
         assert_eq!(to_txt(&board), SOLVED_TEXT);
         assert_eq!(parse_puzzle(&to_txt(&board), Language::English), Ok(board));
+    }
+
+    #[test]
+    fn parses_crlf_input_and_rejects_whitespace() {
+        let text = SOLVED_TEXT.replace('\n', "\r\n");
+        let parsed = parse_puzzle(&text, Language::English).unwrap();
+        assert_eq!(to_txt(&parsed), SOLVED_TEXT);
+
+        let text_with_space = SOLVED_TEXT.replacen('5', " ", 1);
+        assert!(parse_puzzle(&text_with_space, Language::English)
+            .unwrap_err()
+            .contains("Unsupported character"));
     }
 
     #[test]
