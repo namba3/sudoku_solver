@@ -1,0 +1,93 @@
+{
+  "language.switch": "English",
+  "app.title": "数独ソルバー",
+  "help.input": "矢印キーで移動、数字キーで入力して次の空欄へ移動します。Ctrl/Cmd+Z: 元に戻す、Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z: やり直し。",
+  "action.undo": "元に戻す",
+  "action.redo": "やり直す",
+  "action.load_text": "↑ テキストを読み込む",
+  "action.count_solutions": "解の数を調べる",
+  "action.generate": "問題を生成",
+  "action.generating": "生成中…",
+  "action.cancel_generation": "生成を中断",
+  "action.cancel_search": "探索を中断",
+  "action.solve": "解く",
+  "action.reset": "リセット",
+  "action.clear": "クリア",
+  "action.save_text": "テキストに保存 ↓",
+  "action.show_candidates": "候補を表示",
+  "action.hide_candidates": "候補を隠す",
+  "action.previous_solution": "前の解",
+  "action.select_solution": "見つかった解を選択",
+  "action.next_solution": "次の解",
+  "action.apply_solution": "選択した解を適用",
+  "action.copy_text": "テキストをコピー",
+  "group.history": "履歴",
+  "group.board": "盤面",
+  "group.solve": "解く・確認",
+  "group.text": "テキスト",
+  "label.clues": "初期数字数",
+  "label.clue_range": "17〜81個",
+  "label.found_solutions": "見つかった解",
+  "label.puzzle_text": "問題のテキスト",
+  "help.puzzle_text": "9文字の行を9行入力してください。1〜9は初期数字、0・.・_は空欄です。",
+  "message.invalid_clue_count": "初期数字数は17〜81の範囲で指定してください。",
+  "message.reset": "初期数字を残して盤面をリセットしました。",
+  "message.copied": "コピーしました。",
+  "message.copy_failed": "コピーできませんでした。",
+  "message.stale_solutions": "これらの解は以前の盤面から得られたため、現在の盤面には適用できません。",
+  "message.puzzle_generated": "問題を生成しました。",
+  "worker.error.unknown_generation": "問題生成ワーカーで不明なエラーが発生しました。",
+  "worker.error.invalid_board": "生成された盤面データが不正です。",
+  "worker.error.search_failed": "解の探索に失敗しました。",
+  "message.solution_range": "{total} 件中 {selected} 件目",
+  "message.solution_preview": "{selected} 件目の解のプレビュー",
+  "message.cell_aria": "{row} 行 {column} 列",
+  "message.conflicts": {
+    "other": "重複する数字があるセルは {count} 個です。強調表示されたセルを修正してください。"
+  },
+  "message.no_candidates": {
+    "other": "候補がない空欄が {count} 個あります。強調表示されたセルを修正してください。"
+  },
+  "message.puzzle_loaded": "問題を読み込みました。",
+  "message.puzzle_loaded_conflicts": {
+    "other": "問題を読み込みました。重複する数字があるセルは {count} 個です。"
+  },
+  "message.puzzle_loaded_no_candidates": {
+    "other": "問題を読み込みました。候補がない空欄が {count} 個あります。"
+  },
+  "search.starting": "解を探索しています…",
+  "search.generating": "一意解の問題を生成しています…",
+  "search.progress": {
+    "other": "探索中… {nodes} ノードを調べ、{count} 件の解が見つかりました。"
+  },
+  "search.finished.solution_limit": {
+    "other": "{count} 件以上の解が見つかりました。{nodes} ノード、{seconds} 秒で解数上限に達しました。"
+  },
+  "search.finished.node_limit": {
+    "other": "{nodes} ノード、{seconds} 秒で探索を停止しました。{count} 件の解が見つかりましたが、正確な解数は不明です。"
+  },
+  "search.finished.complete": {
+    "other": "探索完了: {nodes} ノードを{seconds} 秒で調べ、解は {count} 件です。"
+  },
+  "search.cancelled": {
+    "other": "解を {count} 件見つけた時点で探索を中断しました（{seconds} 秒）。"
+  },
+  "search.generated": {
+    "other": "一意解の問題を生成しました（初期数字 {count} 個、{seconds} 秒）。"
+  },
+  "search.generation_cancelled": "問題の生成を中断しました（{seconds} 秒）。",
+  "search.generation_error": "問題を生成できませんでした: {message}（{seconds} 秒）。",
+  "search.error": "{message}（{seconds} 秒）",
+  "search.worker_error": "検索ワーカーでエラーが発生しました: {message}",
+  "search.start_error": "解探索を開始できませんでした: {message}",
+  "search.error.conflict": "同じ行・列・ブロックに重複する数字があります。",
+  "search.error.invalid_request": "盤面データまたは探索上限が不正です。",
+  "solve.success": "解けました（{milliseconds} ミリ秒）。",
+  "solve.no_solution": "解が見つかりませんでした（{milliseconds} ミリ秒）。",
+  "message.solution_applied": "選択した解を適用しました。",
+  "message.undo": "変更を元に戻しました。",
+  "message.redo": "変更をやり直しました。",
+  "parse.line_count": "9行必要ですが、{actual}行あります。",
+  "parse.line_length": "{row} 行目は9文字必要ですが、{actual}文字あります。",
+  "parse.invalid_character": "{row} 行 {column} 列に使えない文字があります。数字、0、.、_を使ってください。"
+}

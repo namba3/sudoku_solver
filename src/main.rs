@@ -2,6 +2,10 @@ use dioxus::prelude::*;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
+mod i18n;
+
+use i18n::{t, t_args, t_plural, Language};
+
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
     console_error_panic_hook::set_once();
@@ -29,35 +33,6 @@ struct BoardSnapshot {
 const HISTORY_LIMIT: usize = 100;
 const UI_MAX_SOLUTIONS: usize = 100;
 
-#[derive(Clone, Copy, PartialEq)]
-enum Language {
-    Japanese,
-    English,
-}
-
-impl Language {
-    fn toggle(self) -> Self {
-        match self {
-            Self::Japanese => Self::English,
-            Self::English => Self::Japanese,
-        }
-    }
-
-    fn code(self) -> &'static str {
-        match self {
-            Self::Japanese => "ja",
-            Self::English => "en",
-        }
-    }
-}
-
-fn tr(language: Language, japanese: &'static str, english: &'static str) -> &'static str {
-    match language {
-        Language::Japanese => japanese,
-        Language::English => english,
-    }
-}
-
 fn random_seed() -> u32 {
     let mut bytes = [0_u8; 4];
     let crypto_seed = web_sys::window()
@@ -73,42 +48,41 @@ fn random_seed() -> u32 {
 }
 
 fn cell_aria_label(language: Language, row: usize, column: usize) -> String {
-    match language {
-        Language::Japanese => format!("{} 行 {} 列", row + 1, column + 1),
-        Language::English => format!("Row {}, column {}", row + 1, column + 1),
-    }
+    t_args(
+        language,
+        "message.cell_aria",
+        &[
+            ("row", (row + 1).to_string()),
+            ("column", (column + 1).to_string()),
+        ],
+    )
 }
 
 fn solution_range_label(language: Language, selected: usize, total: usize) -> String {
-    match language {
-        Language::Japanese => format!("{total} 件中 {selected} 件目"),
-        Language::English => format!("Solution {selected} of {total}"),
-    }
+    t_args(
+        language,
+        "message.solution_range",
+        &[
+            ("selected", selected.to_string()),
+            ("total", total.to_string()),
+        ],
+    )
 }
 
 fn solution_preview_label(language: Language, selected: usize) -> String {
-    match language {
-        Language::Japanese => format!("{selected} 件目の解のプレビュー"),
-        Language::English => format!("Preview of solution {selected}"),
-    }
+    t_args(
+        language,
+        "message.solution_preview",
+        &[("selected", selected.to_string())],
+    )
 }
 
 fn conflict_message(language: Language, count: usize) -> String {
-    match language {
-        Language::Japanese => format!(
-            "重複する数字があるセルは {count} 個です。強調表示されたセルを修正してください。"
-        ),
-        Language::English => format!("Resolve conflicts in {count} highlighted cells."),
-    }
+    t_plural(language, "message.conflicts", count as u64, &[])
 }
 
 fn no_candidates_message(language: Language, count: usize) -> String {
-    match language {
-        Language::Japanese => {
-            format!("候補がない空欄が {count} 個あります。強調表示されたセルを修正してください。")
-        }
-        Language::English => format!("No candidates remain in {count} empty cells."),
-    }
+    t_plural(language, "message.no_candidates", count as u64, &[])
 }
 
 fn puzzle_loaded_message(
@@ -116,21 +90,20 @@ fn puzzle_loaded_message(
     conflicts: Option<usize>,
     no_candidates: Option<usize>,
 ) -> String {
-    match (language, conflicts, no_candidates) {
-        (Language::Japanese, Some(count), _) => {
-            format!("問題を読み込みました。重複する数字があるセルは {count} 個です。")
-        }
-        (Language::Japanese, _, Some(count)) => {
-            format!("問題を読み込みました。候補がない空欄が {count} 個あります。")
-        }
-        (Language::Japanese, _, _) => "問題を読み込みました。".to_string(),
-        (Language::English, Some(count), _) => {
-            format!("Puzzle loaded. Resolve conflicts in {count} highlighted cells.")
-        }
-        (Language::English, _, Some(count)) => {
-            format!("Puzzle loaded. No candidates remain in {count} empty cells.")
-        }
-        (Language::English, _, _) => "Puzzle loaded.".to_string(),
+    match (conflicts, no_candidates) {
+        (Some(count), _) => t_plural(
+            language,
+            "message.puzzle_loaded_conflicts",
+            count as u64,
+            &[],
+        ),
+        (_, Some(count)) => t_plural(
+            language,
+            "message.puzzle_loaded_no_candidates",
+            count as u64,
+            &[],
+        ),
+        _ => t(language, "message.puzzle_loaded"),
     }
 }
 
@@ -174,72 +147,101 @@ enum SearchStatus {
 impl SearchStatus {
     fn text(&self, language: Language) -> String {
         match self {
-            Self::Starting => tr(language, "解を探索しています…", "Starting solution search…").to_string(),
-            Self::Generating => tr(language, "一意解の問題を生成しています…", "Generating a unique puzzle…").to_string(),
-            Self::Progress { solutions, nodes } => match language {
-                Language::Japanese => format!("探索中… {nodes} ノードを調べ、{solutions} 件の解が見つかりました。"),
-                Language::English => format!("Searching… {solutions} solutions found across {nodes} nodes."),
-            },
-            Self::Finished { solutions, nodes, termination, elapsed_seconds } => {
+            Self::Starting => t(language, "search.starting"),
+            Self::Generating => t(language, "search.generating"),
+            Self::Progress { solutions, nodes } => t_plural(
+                language,
+                "search.progress",
+                *solutions,
+                &[("nodes", nodes.to_string())],
+            ),
+            Self::Finished {
+                solutions,
+                nodes,
+                termination,
+                elapsed_seconds,
+            } => {
                 let seconds = format!("{elapsed_seconds:.2}");
-                match (language, termination.as_str()) {
-                    (Language::Japanese, "solution_limit") => format!("{solutions} 件以上の解が見つかりました。{nodes} ノード、{seconds} 秒で解数上限に達しました。"),
-                    (Language::Japanese, "node_limit") => format!("{nodes} ノード、{seconds} 秒で探索を停止しました。{solutions} 件の解が見つかりましたが、正確な解数は不明です。"),
-                    (Language::Japanese, _) => format!("探索完了: {nodes} ノードを{seconds} 秒で調べ、解は {solutions} 件です。"),
-                    (Language::English, "solution_limit") => format!("At least {solutions} solutions found; the solution limit was reached after {nodes} nodes in {seconds} s."),
-                    (Language::English, "node_limit") => format!("Search stopped at {nodes} nodes after finding {solutions} solutions in {seconds} s. The exact count is unknown."),
-                    (Language::English, _) => format!("Search complete: exactly {solutions} solutions found across {nodes} nodes in {seconds} s."),
-                }
+                let key = match termination.as_str() {
+                    "solution_limit" => "search.finished.solution_limit",
+                    "node_limit" => "search.finished.node_limit",
+                    _ => "search.finished.complete",
+                };
+                t_plural(
+                    language,
+                    key,
+                    *solutions,
+                    &[("nodes", nodes.to_string()), ("seconds", seconds)],
+                )
             }
-            Self::Cancelled { solutions, elapsed_seconds } => match language {
-                Language::Japanese => format!("解を {solutions} 件見つけた時点で探索を中断しました（{elapsed_seconds:.2} 秒）。"),
-                Language::English => format!("Search cancelled after finding {solutions} solutions in {elapsed_seconds:.2} s."),
-            },
-            Self::Generated { clues, elapsed_seconds } => match language {
-                Language::Japanese => format!("一意解の問題を生成しました（初期数字 {clues} 個、{elapsed_seconds:.2} 秒）。"),
-                Language::English => format!("Generated a unique puzzle with {clues} clues in {elapsed_seconds:.2} s."),
-            },
-            Self::GenerationCancelled { elapsed_seconds } => match language {
-                Language::Japanese => format!("問題の生成を中断しました（{elapsed_seconds:.2} 秒）。"),
-                Language::English => format!("Puzzle generation cancelled after {elapsed_seconds:.2} s."),
-            },
-            Self::GenerationError { message, elapsed_seconds } => match language {
-                Language::Japanese => format!("問題を生成できませんでした: {message}（{elapsed_seconds:.2} 秒）。"),
-                Language::English => format!("Puzzle generation failed: {message} ({elapsed_seconds:.2} s)."),
-            },
-            Self::Error { message, elapsed_seconds } => {
+            Self::Cancelled {
+                solutions,
+                elapsed_seconds,
+            } => t_plural(
+                language,
+                "search.cancelled",
+                *solutions as u64,
+                &[("seconds", format!("{elapsed_seconds:.2}"))],
+            ),
+            Self::Generated {
+                clues,
+                elapsed_seconds,
+            } => t_plural(
+                language,
+                "search.generated",
+                *clues as u64,
+                &[("seconds", format!("{elapsed_seconds:.2}"))],
+            ),
+            Self::GenerationCancelled { elapsed_seconds } => t_args(
+                language,
+                "search.generation_cancelled",
+                &[("seconds", format!("{elapsed_seconds:.2}"))],
+            ),
+            Self::GenerationError {
+                message,
+                elapsed_seconds,
+            } => t_args(
+                language,
+                "search.generation_error",
+                &[
+                    ("message", message.clone()),
+                    ("seconds", format!("{elapsed_seconds:.2}")),
+                ],
+            ),
+            Self::Error {
+                message,
+                elapsed_seconds,
+            } => {
                 let message = localize_search_error(message, language);
-                match language {
-                    Language::Japanese => format!("{message}（{elapsed_seconds:.2} 秒）"),
-                    Language::English => format!("{message} ({elapsed_seconds:.2} s)"),
-                }
+                t_args(
+                    language,
+                    "search.error",
+                    &[
+                        ("message", message),
+                        ("seconds", format!("{elapsed_seconds:.2}")),
+                    ],
+                )
             }
-            Self::WorkerError(message) => match language {
-                Language::Japanese => format!("検索ワーカーでエラーが発生しました: {message}"),
-                Language::English => format!("Solution worker failed: {message}"),
-            },
-            Self::StartError(message) => match language {
-                Language::Japanese => format!("解探索を開始できませんでした: {message}"),
-                Language::English => format!("Could not start solution search: {message}"),
-            },
+            Self::WorkerError(message) => t_args(
+                language,
+                "search.worker_error",
+                &[("message", message.clone())],
+            ),
+            Self::StartError(message) => t_args(
+                language,
+                "search.start_error",
+                &[("message", message.clone())],
+            ),
         }
     }
 }
 
 fn localize_search_error(message: &str, language: Language) -> String {
     match message {
-        "Conflicting values." => tr(
-            language,
-            "同じ行・列・ブロックに重複する数字があります。",
-            "Conflicting values.",
-        )
-        .to_string(),
-        "Expected 81 cell values and non-zero UI search limits." => tr(
-            language,
-            "盤面データまたは探索上限が不正です。",
-            "Invalid board data or search limits.",
-        )
-        .to_string(),
+        "Conflicting values." => t(language, "search.error.conflict"),
+        "Expected 81 cell values and non-zero UI search limits." => {
+            t(language, "search.error.invalid_request")
+        }
         _ => message.to_string(),
     }
 }
@@ -291,66 +293,50 @@ fn app() -> Element {
     let conflicts = conflicting_cells(&board);
     let no_candidates = no_candidate_cells(&board);
     let candidate_toggle_label = if show_candidates() {
-        tr(lang, "候補を隠す", "Hide candidates")
+        t(lang, "action.hide_candidates")
     } else {
-        tr(lang, "候補を表示", "Show candidates")
+        t(lang, "action.show_candidates")
     };
-    let language_switch_label = tr(lang, "English", "日本語");
-    let title_label = tr(lang, "数独ソルバー", "Sudoku Solver");
-    let input_help = tr(lang, "矢印キーで移動、数字キーで入力して次の空欄へ移動します。Ctrl/Cmd+Z: 元に戻す、Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z: やり直し。", "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo.");
-    let undo_label = format!("↶ {}", tr(lang, "元に戻す", "Undo"));
-    let redo_label = format!("↷ {}", tr(lang, "やり直す", "Redo"));
-    let load_text_label = tr(lang, "↑ テキストを読み込む", "↑ Load text");
-    let count_solutions_label = tr(lang, "解の数を調べる", "Count solutions");
+    let language_switch_label = t(lang, "language.switch");
+    let title_label = t(lang, "app.title");
+    let input_help = t(lang, "help.input");
+    let undo_label = format!("↶ {}", t(lang, "action.undo"));
+    let redo_label = format!("↷ {}", t(lang, "action.redo"));
+    let load_text_label = t(lang, "action.load_text");
+    let count_solutions_label = t(lang, "action.count_solutions");
     let generate_puzzle_label = if is_generating() {
-        tr(lang, "生成中…", "Generating…")
+        t(lang, "action.generating")
     } else {
-        tr(lang, "問題を生成", "Generate puzzle")
+        t(lang, "action.generate")
     };
-    let generation_clue_count_label = tr(lang, "初期数字数", "Clues");
-    let generation_clue_count_help = tr(lang, "17〜81個", "17–81");
-    let invalid_generation_clue_count = tr(
-        lang,
-        "初期数字数は17〜81の範囲で指定してください。",
-        "Enter a clue count between 17 and 81.",
-    );
+    let generation_clue_count_label = t(lang, "label.clues");
+    let generation_clue_count_help = t(lang, "label.clue_range");
+    let invalid_generation_clue_count = t(lang, "message.invalid_clue_count");
     let cancel_task_label = if is_generating() {
-        tr(lang, "生成を中断", "Cancel generation")
+        t(lang, "action.cancel_generation")
     } else {
-        tr(lang, "探索を中断", "Cancel search")
+        t(lang, "action.cancel_search")
     };
-    let solve_label = tr(lang, "解く", "Solve");
-    let reset_label = tr(lang, "リセット", "Reset");
-    let clear_label = tr(lang, "クリア", "Clear");
-    let reset_message = tr(
-        lang,
-        "初期数字を残して盤面をリセットしました。",
-        "Board reset to its given clues.",
-    );
-    let save_text_label = tr(lang, "テキストに保存 ↓", "Save text ↓");
-    let found_solutions_label = tr(lang, "見つかった解", "Found solutions");
-    let previous_solution_label = tr(lang, "前の解", "Previous solution");
-    let select_solution_label = tr(lang, "見つかった解を選択", "Select found solution");
-    let next_solution_label = tr(lang, "次の解", "Next solution");
-    let apply_solution_label = tr(lang, "選択した解を適用", "Use selected solution");
-    let puzzle_text_label = tr(lang, "問題のテキスト", "Puzzle text");
-    let copy_text_label = tr(lang, "テキストをコピー", "Copy text");
-    let copy_success_label = tr(lang, "コピーしました。", "Copied to clipboard.");
-    let copy_error_label = tr(lang, "コピーできませんでした。", "Could not copy the text.");
-    let history_group_label = tr(lang, "履歴", "History");
-    let board_group_label = tr(lang, "盤面", "Board");
-    let solve_group_label = tr(lang, "解く・確認", "Solve & inspect");
-    let text_group_label = tr(lang, "テキスト", "Text");
-    let puzzle_text_help = tr(
-        lang,
-        "9文字の行を9行入力してください。1〜9は初期数字、0・.・_は空欄です。",
-        "Enter exactly 9 lines of 9 characters. Digits 1–9 are clues; 0, ., and _ are blank cells.",
-    );
-    let stale_solution_message = tr(
-        lang,
-        "これらの解は以前の盤面から得られたため、現在の盤面には適用できません。",
-        "These solutions are from an earlier board and cannot be applied to the current board.",
-    );
+    let solve_label = t(lang, "action.solve");
+    let reset_label = t(lang, "action.reset");
+    let clear_label = t(lang, "action.clear");
+    let reset_message = t(lang, "message.reset");
+    let save_text_label = t(lang, "action.save_text");
+    let found_solutions_label = t(lang, "label.found_solutions");
+    let previous_solution_label = t(lang, "action.previous_solution");
+    let select_solution_label = t(lang, "action.select_solution");
+    let next_solution_label = t(lang, "action.next_solution");
+    let apply_solution_label = t(lang, "action.apply_solution");
+    let puzzle_text_label = t(lang, "label.puzzle_text");
+    let copy_text_label = t(lang, "action.copy_text");
+    let copy_success_label = t(lang, "message.copied");
+    let copy_error_label = t(lang, "message.copy_failed");
+    let history_group_label = t(lang, "group.history");
+    let board_group_label = t(lang, "group.board");
+    let solve_group_label = t(lang, "group.solve");
+    let text_group_label = t(lang, "group.text");
+    let puzzle_text_help = t(lang, "help.puzzle_text");
+    let stale_solution_message = t(lang, "message.stale_solutions");
 
     rsx! {
         document::Link {
@@ -612,7 +598,7 @@ fn app() -> Element {
                                         Some("generated") => {
                                             let Some(generated_board) = parse_solution(&response["board"]) else {
                                                 status.set(Some(SearchStatus::GenerationError {
-                                                    message: "Invalid generated board.".to_string(),
+                                                    message: t(language_signal(), "worker.error.invalid_board"),
                                                     elapsed_seconds: elapsed_seconds_since(started_at),
                                                 }));
                                                 searching.set(false);
@@ -632,7 +618,7 @@ fn app() -> Element {
                                             board_signal.set(generated_board);
                                             givens_signal.set(generated_board);
                                             text_signal.set(to_txt(&generated_board));
-                                            message.set(tr(language_signal(), "問題を生成しました。", "Puzzle generated.").to_string());
+                                            message.set(t(language_signal(), "message.puzzle_generated"));
                                             message_ok.set(true);
                                             status.set(Some(SearchStatus::Generated {
                                                 clues: response["clues"].as_u64().unwrap_or(0) as usize,
@@ -644,7 +630,10 @@ fn app() -> Element {
                                         }
                                         Some("error") => {
                                             status.set(Some(SearchStatus::GenerationError {
-                                                message: response["message"].as_str().unwrap_or("Unknown worker error.").to_string(),
+                                                message: response["message"].as_str().map_or_else(
+                                                    || t(language_signal(), "worker.error.unknown_generation"),
+                                                    str::to_owned,
+                                                ),
                                                 elapsed_seconds: elapsed_seconds_since(started_at),
                                             }));
                                             searching.set(false);
@@ -782,6 +771,7 @@ fn app() -> Element {
                                 let mut error_status = search_status;
                                 let mut error_searching = is_searching;
                                 let started_at = search_started_at();
+                                let language_for_worker = lang;
                                 let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
                                     let Some(raw_message) = event.data().as_string() else {
                                         return;
@@ -817,7 +807,10 @@ fn app() -> Element {
                                         }
                                         Some("error") => {
                                             status.set(Some(SearchStatus::Error {
-                                                message: message["message"].as_str().unwrap_or("Solution search failed.").to_string(),
+                                                message: message["message"].as_str().map_or_else(
+                                                    || t(language_for_worker, "worker.error.search_failed"),
+                                                    str::to_owned,
+                                                ),
                                                 elapsed_seconds: elapsed_seconds_since(started_at),
                                             }));
                                             searching.set(false);
@@ -914,16 +907,10 @@ fn app() -> Element {
                                     },
                                 );
                                 mtx.set(solver_mtx);
-                                msg.set(match lang {
-                                    Language::Japanese => format!("解けました（{ms:.0} ミリ秒）。"),
-                                    Language::English => format!("Solved in {ms:.0} ms!"),
-                                });
+                                msg.set(t_args(lang, "solve.success", &[("milliseconds", format!("{ms:.0}"))]));
                                 is_ok.set(true);
                             } else {
-                                msg.set(match lang {
-                                    Language::Japanese => format!("解が見つかりませんでした（{ms:.0} ミリ秒）。"),
-                                    Language::English => format!("No solution found, {ms:.0} ms."),
-                                });
+                                msg.set(t_args(lang, "solve.no_solution", &[("milliseconds", format!("{ms:.0}"))]));
                                 is_ok.set(false);
                             }
                         }
@@ -1071,7 +1058,7 @@ fn app() -> Element {
                                             },
                                         );
                                         mtx.set(solution);
-                                        msg.set(tr(lang, "選択した解を適用しました。", "Selected solution applied.").to_string());
+                                        msg.set(t(lang, "message.solution_applied"));
                                         is_ok.set(true);
                                     }
                                 },
@@ -1292,7 +1279,7 @@ fn undo_board(
             msg,
             is_ok,
             &previous.board,
-            tr(language, "変更を元に戻しました。", "Change undone."),
+            &t(language, "message.undo"),
             language,
         );
     }
@@ -1319,7 +1306,7 @@ fn redo_board(
             msg,
             is_ok,
             &next.board,
-            tr(language, "変更をやり直しました。", "Change redone."),
+            &t(language, "message.redo"),
             language,
         );
     }
@@ -1407,45 +1394,38 @@ fn parse_puzzle(txt: &str, language: Language) -> Result<sudoku_solver::Matrix, 
     let content = txt.trim_end_matches(|ch| ch == '\n' || ch == '\r');
     let lines: Vec<_> = content.lines().collect();
     if lines.len() != 9 {
-        return Err(match language {
-            Language::Japanese => format!("9行必要ですが、{}行あります。", lines.len()),
-            Language::English => format!("Expected 9 lines, found {}.", lines.len()),
-        });
+        return Err(t_args(
+            language,
+            "parse.line_count",
+            &[("actual", lines.len().to_string())],
+        ));
     }
 
     for (y, line) in lines.iter().enumerate() {
         let chars: Vec<_> = line.chars().collect();
         if chars.len() != 9 {
-            return Err(match language {
-                Language::Japanese => format!(
-                    "{} 行目は9文字必要ですが、{}文字あります。",
-                    y + 1,
-                    chars.len()
-                ),
-                Language::English => format!(
-                    "Line {} must contain 9 characters, found {}.",
-                    y + 1,
-                    chars.len()
-                ),
-            });
+            return Err(t_args(
+                language,
+                "parse.line_length",
+                &[
+                    ("row", (y + 1).to_string()),
+                    ("actual", chars.len().to_string()),
+                ],
+            ));
         }
         for (x, ch) in chars.into_iter().enumerate() {
             mtx[y][x] = match ch {
                 '1'..='9' => ch as u8 - b'0',
                 '0' | '.' | '_' => 0,
                 _ => {
-                    return Err(match language {
-                        Language::Japanese => format!(
-                            "{} 行 {} 列に使えない文字があります。数字、0、.、_を使ってください。",
-                            y + 1,
-                            x + 1
-                        ),
-                        Language::English => format!(
-                            "Unsupported character at row {}, column {}. Use digits, 0, . or _.",
-                            y + 1,
-                            x + 1
-                        ),
-                    });
+                    return Err(t_args(
+                        language,
+                        "parse.invalid_character",
+                        &[
+                            ("row", (y + 1).to_string()),
+                            ("column", (x + 1).to_string()),
+                        ],
+                    ));
                 }
             };
         }

@@ -1,0 +1,103 @@
+{
+  "language.switch": "日本語",
+  "app.title": "Sudoku Solver",
+  "help.input": "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo.",
+  "action.undo": "Undo",
+  "action.redo": "Redo",
+  "action.load_text": "↑ Load text",
+  "action.count_solutions": "Count solutions",
+  "action.generate": "Generate puzzle",
+  "action.generating": "Generating…",
+  "action.cancel_generation": "Cancel generation",
+  "action.cancel_search": "Cancel search",
+  "action.solve": "Solve",
+  "action.reset": "Reset",
+  "action.clear": "Clear",
+  "action.save_text": "Save text ↓",
+  "action.show_candidates": "Show candidates",
+  "action.hide_candidates": "Hide candidates",
+  "action.previous_solution": "Previous solution",
+  "action.select_solution": "Select found solution",
+  "action.next_solution": "Next solution",
+  "action.apply_solution": "Use selected solution",
+  "action.copy_text": "Copy text",
+  "group.history": "History",
+  "group.board": "Board",
+  "group.solve": "Solve & inspect",
+  "group.text": "Text",
+  "label.clues": "Clues",
+  "label.clue_range": "17–81",
+  "label.found_solutions": "Found solutions",
+  "label.puzzle_text": "Puzzle text",
+  "help.puzzle_text": "Enter exactly 9 lines of 9 characters. Digits 1–9 are clues; 0, ., and _ are blank cells.",
+  "message.invalid_clue_count": "Enter a clue count between 17 and 81.",
+  "message.reset": "Board reset to its given clues.",
+  "message.copied": "Copied to clipboard.",
+  "message.copy_failed": "Could not copy the text.",
+  "message.stale_solutions": "These solutions are from an earlier board and cannot be applied to the current board.",
+  "message.puzzle_generated": "Puzzle generated.",
+  "worker.error.unknown_generation": "The puzzle generation worker returned an unknown error.",
+  "worker.error.invalid_board": "The generated board data is invalid.",
+  "worker.error.search_failed": "Solution search failed.",
+  "message.solution_range": "Solution {selected} of {total}",
+  "message.solution_preview": "Preview of solution {selected}",
+  "message.cell_aria": "Row {row}, column {column}",
+  "message.conflicts": {
+    "one": "Resolve the conflict in {count} highlighted cell.",
+    "other": "Resolve conflicts in {count} highlighted cells."
+  },
+  "message.no_candidates": {
+    "one": "No candidates remain in {count} empty cell.",
+    "other": "No candidates remain in {count} empty cells."
+  },
+  "message.puzzle_loaded": "Puzzle loaded.",
+  "message.puzzle_loaded_conflicts": {
+    "one": "Puzzle loaded. Resolve the conflict in {count} highlighted cell.",
+    "other": "Puzzle loaded. Resolve conflicts in {count} highlighted cells."
+  },
+  "message.puzzle_loaded_no_candidates": {
+    "one": "Puzzle loaded. No candidates remain in {count} empty cell.",
+    "other": "Puzzle loaded. No candidates remain in {count} empty cells."
+  },
+  "search.starting": "Starting solution search…",
+  "search.generating": "Generating a unique puzzle…",
+  "search.progress": {
+    "one": "Searching… {count} solution found across {nodes} nodes.",
+    "other": "Searching… {count} solutions found across {nodes} nodes."
+  },
+  "search.finished.solution_limit": {
+    "one": "At least {count} solution found; the solution limit was reached after {nodes} nodes in {seconds} s.",
+    "other": "At least {count} solutions found; the solution limit was reached after {nodes} nodes in {seconds} s."
+  },
+  "search.finished.node_limit": {
+    "one": "Search stopped at {nodes} nodes after finding {count} solution in {seconds} s. The exact count is unknown.",
+    "other": "Search stopped at {nodes} nodes after finding {count} solutions in {seconds} s. The exact count is unknown."
+  },
+  "search.finished.complete": {
+    "one": "Search complete: exactly {count} solution found across {nodes} nodes in {seconds} s.",
+    "other": "Search complete: exactly {count} solutions found across {nodes} nodes in {seconds} s."
+  },
+  "search.cancelled": {
+    "one": "Search cancelled after finding {count} solution in {seconds} s.",
+    "other": "Search cancelled after finding {count} solutions in {seconds} s."
+  },
+  "search.generated": {
+    "one": "Generated a unique puzzle with {count} clue in {seconds} s.",
+    "other": "Generated a unique puzzle with {count} clues in {seconds} s."
+  },
+  "search.generation_cancelled": "Puzzle generation cancelled after {seconds} s.",
+  "search.generation_error": "Puzzle generation failed: {message} ({seconds} s).",
+  "search.error": "{message} ({seconds} s)",
+  "search.worker_error": "Solution worker failed: {message}",
+  "search.start_error": "Could not start solution search: {message}",
+  "search.error.conflict": "Conflicting values.",
+  "search.error.invalid_request": "Invalid board data or search limits.",
+  "solve.success": "Solved in {milliseconds} ms!",
+  "solve.no_solution": "No solution found, {milliseconds} ms.",
+  "message.solution_applied": "Selected solution applied.",
+  "message.undo": "Change undone.",
+  "message.redo": "Change redone.",
+  "parse.line_count": "Expected 9 lines, found {actual}.",
+  "parse.line_length": "Line {row} must contain 9 characters, found {actual}.",
+  "parse.invalid_character": "Unsupported character at row {row}, column {column}. Use digits, 0, . or _."
+}
