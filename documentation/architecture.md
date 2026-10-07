@@ -20,7 +20,9 @@ flowchart LR
 | `src/lib.rs` | `Matrix`型、`solve`、`candidates_for`、`find_hint`を公開するライブラリ入口 |
 | `src/solver.rs` | 重複チェック、候補計算、ヒント判定、再帰探索、単体テスト |
 | `src/generator.rs` | seedと初期数字数を使った一意解問題の生成 |
-| `src/main.rs` | 初期盤面、セル入力、テキスト入出力、Solve/Clear、Undo/Redo、探索UI |
+| `src/main.rs` | 初期盤面、セル入力、テキスト入出力、Solve/Clear、Undo/Redo、探索UIと盤面変換の状態連携 |
+| `src/board_transform.rs` | 数独の制約を保つ盤面対称変換と、その純粋な変換テスト |
+| `src/board_analysis.rs` | 重複セル、候補マスク、候補切れの解析と、その単体テスト |
 | `src/bin/sudoku_search_worker.rs` | Web Workerから解列挙ライブラリを呼び、探索イベントを送信 |
 | `public/worker/entry.js` | ブラウザーWorkerのメッセージをWASM検索器へ中継 |
 | `public/app.css` | Web UIのスタイル。ビルド時に配信資材へコピー |
@@ -60,7 +62,7 @@ impl Iterator for SolutionSearch {
 
 ## UIのデータの流れ
 
-画面は表示言語、盤面、元のヒント数字、メッセージ、テキスト欄をDioxus Signalで保持します。表示文言は意味ベースのキーで`locales/ja.json`と`locales/en.json`から取得し、名前付き引数と数に応じた翻訳形もカタログ側で扱います。探索状態は言語に依存しない形で保持して選択言語に応じた文面を表示します。描画時には盤面の行・列・ブロックを一度解析し、候補、候補切れ、重複セルの強調と`aria-invalid`判定に再利用します。入力後のメッセージ判定にも同じ盤面解析を使います。翻訳リソースの書き方は[翻訳リソース](i18n.md)を参照してください。
+画面は表示言語、盤面、元のヒント数字、メッセージ、テキスト欄をDioxus Signalで保持します。表示文言は意味ベースのキーで`locales/ja.json`と`locales/en.json`から取得し、名前付き引数と数に応じた翻訳形もカタログ側で扱います。探索状態は言語に依存しない形で保持して選択言語に応じた文面を表示します。描画時には`src/board_analysis.rs`で盤面の行・列・ブロックを一度解析し、候補、候補切れ、重複セルの強調と`aria-invalid`判定に再利用します。入力後のメッセージ判定にも同じ盤面解析を使います。翻訳リソースの書き方は[翻訳リソース](i18n.md)を参照してください。
 
 1. 数字セルの入力を`Matrix`へ反映します。初期ヒントのロック状態はデフォルトで有効です。ロックを解除してヒントセルを編集すると、そのセルは初期ヒントではなく通常の入力セルとして扱います。
 2. 入力中に重複を検出し、同じ数字が同じ行・列・3×3ブロックにあるセルを強調します。
@@ -75,7 +77,8 @@ impl Iterator for SolutionSearch {
 11. テキスト読み込み前に9行×9文字か、使える記号かを検証します。`1`〜`9`は数字、`0`・`.`・`_`は空欄です。
 12. テキスト出力では空欄を`_`に置き換えます。
 13. 矢印キーで隣のセルへ移動し、数字入力後は次の空欄へフォーカスします。セル上のCtrl/Cmd+Z/Y操作も盤面履歴へ接続します。
+14. 対称変換の純粋な盤面処理は`src/board_transform.rs`に置きます。UIは`src/main.rs`から盤面と初期ヒントの両方へ同じband/stack置換、行列置換、数字置換、回転、反転を適用し、通常の盤面変更としてUndo/Redo履歴へ記録します。
 
 ## 生成物と編集元を分ける
 
-CSSの編集元は`public/app.css`、Rust UIの編集元は`src/main.rs`です。`docs/`は公開用の生成資材なので、手書き解説を置かず、Webアプリの再ビルドで更新します。解説資料の編集元は`documentation/`です。
+CSSの編集元は`public/app.css`、Rust UIの編集元は`src/main.rs`、盤面変換ロジックは`src/board_transform.rs`、盤面解析は`src/board_analysis.rs`です。`docs/`は公開用の生成資材なので、手書き解説を置かず、Webアプリの再ビルドで更新します。解説資料の編集元は`documentation/`です。

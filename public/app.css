@@ -195,12 +195,6 @@ h1 {
     }
 }
 
-.cell input::-webkit-outer-spin-button,
-.cell input::-webkit-inner-spin-button {
-    margin: 0;
-    -webkit-appearance: none;
-}
-
 .action-groups {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -284,6 +278,103 @@ h1 {
 .text:focus-visible {
     outline: 3px solid #84adff;
     outline-offset: 2px;
+}
+
+.transform-panel {
+    grid-column: 1 / -1;
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #f8faff;
+}
+
+.transform-panel > summary {
+    color: #344054;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.transform-controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr));
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.transform-control {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 6px;
+    min-width: 0;
+    margin: 0;
+    padding: 8px;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+}
+
+.transform-control legend {
+    padding: 0 4px;
+    color: #475467;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.transform-control label {
+    display: grid;
+    flex: 1 1 64px;
+    gap: 3px;
+    min-width: 0;
+    color: #475467;
+    font-size: 0.78rem;
+}
+
+.transform-control select {
+    width: 100%;
+    min-height: 38px;
+    border: 1px solid #98a2b3;
+    border-radius: 6px;
+    padding: 5px 7px;
+    background: #fff;
+    color: #344054;
+    font: inherit;
+}
+
+.transform-panel button {
+    flex: 1 1 auto;
+    min-height: 38px;
+    border: 1px solid #b2c8f5;
+    border-radius: 8px;
+    padding: 7px 9px;
+    background: #fff;
+    color: #1849a9;
+    font: inherit;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.transform-panel button:hover {
+    background: #eff4ff;
+}
+
+.transform-panel button:disabled {
+    border-color: #d0d5dd;
+    background: #f2f4f7;
+    color: #98a2b3;
+    cursor: not-allowed;
+}
+
+.transform-panel button:focus-visible,
+.transform-panel select:focus-visible,
+.transform-panel summary:focus-visible {
+    outline: 3px solid #84adff;
+    outline-offset: 2px;
+}
+
+.transform-orientation {
+    grid-column: 1 / -1;
 }
 
 .search-panel {

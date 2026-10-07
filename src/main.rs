@@ -2,8 +2,12 @@ use dioxus::prelude::*;
 use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
+mod board_analysis;
+mod board_transform;
 mod i18n;
 
+use board_analysis::{candidate_digits, BoardAnalysis};
+use board_transform::{transform_matrix, BoardTransform};
 use i18n::{t, t_args, t_plural, Language};
 
 fn main() {
@@ -24,7 +28,7 @@ const INITIAL_MTX: sudoku_solver::Matrix = [
     [1, 5, 0, 0, 0, 0, 0, 9, 0],
 ];
 
-#[derive(Clone, Copy, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 struct BoardSnapshot {
     board: sudoku_solver::Matrix,
     givens: sudoku_solver::Matrix,
@@ -269,6 +273,18 @@ fn app() -> Element {
     let mut is_ok = use_signal(|| true);
     let mut show_candidates = use_signal(|| false);
     let mut lock_givens = use_signal(|| true);
+    let mut band_first = use_signal(|| 0u8);
+    let mut band_second = use_signal(|| 1u8);
+    let mut row_band = use_signal(|| 0u8);
+    let mut row_first = use_signal(|| 0u8);
+    let mut row_second = use_signal(|| 1u8);
+    let mut stack_first = use_signal(|| 0u8);
+    let mut stack_second = use_signal(|| 1u8);
+    let mut column_stack = use_signal(|| 0u8);
+    let mut column_first = use_signal(|| 0u8);
+    let mut column_second = use_signal(|| 1u8);
+    let mut digit_first = use_signal(|| 1u8);
+    let mut digit_second = use_signal(|| 2u8);
     let mut undo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut redo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut search_solutions = use_signal(Vec::<sudoku_solver::Matrix>::new);
@@ -338,6 +354,36 @@ fn app() -> Element {
     let copy_error_label = t(lang, "message.copy_failed");
     let history_group_label = t(lang, "group.history");
     let board_group_label = t(lang, "group.board");
+    let transform_group_label = t(lang, "group.transform");
+    let bands_label = t(lang, "label.bands");
+    let stacks_label = t(lang, "label.stacks");
+    let rows_label = t(lang, "label.rows_in_band");
+    let columns_label = t(lang, "label.columns_in_stack");
+    let digits_label = t(lang, "label.digits");
+    let orientation_label = t(lang, "label.orientation");
+    let first_band_label = t(lang, "label.first_band");
+    let second_band_label = t(lang, "label.second_band");
+    let row_band_label = t(lang, "label.row_band");
+    let first_row_label = t(lang, "label.first_row");
+    let second_row_label = t(lang, "label.second_row");
+    let first_stack_label = t(lang, "label.first_stack");
+    let second_stack_label = t(lang, "label.second_stack");
+    let column_stack_label = t(lang, "label.column_stack");
+    let first_column_label = t(lang, "label.first_column");
+    let second_column_label = t(lang, "label.second_column");
+    let first_digit_label = t(lang, "label.first_digit");
+    let second_digit_label = t(lang, "label.second_digit");
+    let swap_bands_label = t(lang, "action.swap_bands");
+    let swap_stacks_label = t(lang, "action.swap_stacks");
+    let swap_rows_label = t(lang, "action.swap_rows");
+    let swap_columns_label = t(lang, "action.swap_columns");
+    let swap_digits_label = t(lang, "action.swap_digits");
+    let transpose_label = t(lang, "action.transpose");
+    let rotate_90_label = t(lang, "action.rotate_90");
+    let rotate_180_label = t(lang, "action.rotate_180");
+    let rotate_270_label = t(lang, "action.rotate_270");
+    let reflect_horizontal_label = t(lang, "action.reflect_horizontal");
+    let reflect_vertical_label = t(lang, "action.reflect_vertical");
     let solve_group_label = t(lang, "group.solve");
     let text_group_label = t(lang, "group.text");
     let puzzle_text_help = t(lang, "help.puzzle_text");
@@ -402,9 +448,8 @@ fn app() -> Element {
                                     }
                                     input {
                                         id: "cell-{y}-{x}",
-                                        r#type: "number",
-                                        max: "9",
-                                        min: "1",
+                                        r#type: "text",
+                                        maxlength: "1",
                                         inputmode: "numeric",
                                         value: "{cell_text(cell)}",
                                         aria_label: "{cell_aria_label(lang, y, x)}",
@@ -485,6 +530,26 @@ fn app() -> Element {
                                                 if let Some((next_y, next_x)) = moved_cell(y, x, dy, dx) {
                                                     focus_cell(next_y, next_x);
                                                 }
+                                                return;
+                                            }
+
+                                            if modifiers.contains(command_key) || modifiers.contains(meta_key) {
+                                                return;
+                                            }
+
+                                            if !matches!(
+                                                key.as_str(),
+                                                "Backspace"
+                                                    | "Delete"
+                                                    | "Tab"
+                                                    | "Home"
+                                                    | "End"
+                                                    | "Shift"
+                                                    | "Control"
+                                                    | "Alt"
+                                                    | "Meta"
+                                            ) {
+                                                evt.prevent_default();
                                             }
                                         },
                                     }
@@ -752,6 +817,279 @@ fn app() -> Element {
                     },
                     "{clear_label}"
                 }
+                }
+                details {
+                    class: "transform-panel",
+                    summary { "{transform_group_label}" }
+                    div {
+                        class: "transform-controls",
+                        fieldset {
+                            class: "transform-control",
+                            legend { "{bands_label}" }
+                            label {
+                                "{first_band_label}"
+                                select {
+                                    aria_label: "{first_band_label}",
+                                    value: "{band_first()}",
+                                    onchange: move |event| band_first.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{second_band_label}"
+                                select {
+                                    aria_label: "{second_band_label}",
+                                    value: "{band_second()}",
+                                    onchange: move |event| band_second.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            button {
+                                disabled: band_first() == band_second(),
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::SwapBands {
+                                        first: band_first() as usize,
+                                        second: band_second() as usize,
+                                    },
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{swap_bands_label}"
+                            }
+                        }
+                        fieldset {
+                            class: "transform-control",
+                            legend { "{rows_label}" }
+                            label {
+                                "{row_band_label}"
+                                select {
+                                    aria_label: "{row_band_label}",
+                                    value: "{row_band()}",
+                                    onchange: move |event| row_band.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{first_row_label}"
+                                select {
+                                    aria_label: "{first_row_label}",
+                                    value: "{row_first()}",
+                                    onchange: move |event| row_first.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{second_row_label}"
+                                select {
+                                    aria_label: "{second_row_label}",
+                                    value: "{row_second()}",
+                                    onchange: move |event| row_second.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            button {
+                                disabled: row_first() == row_second(),
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::SwapRows {
+                                        band: row_band() as usize,
+                                        first: row_first() as usize,
+                                        second: row_second() as usize,
+                                    },
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{swap_rows_label}"
+                            }
+                        }
+                        fieldset {
+                            class: "transform-control",
+                            legend { "{stacks_label}" }
+                            label {
+                                "{first_stack_label}"
+                                select {
+                                    aria_label: "{first_stack_label}",
+                                    value: "{stack_first()}",
+                                    onchange: move |event| stack_first.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{second_stack_label}"
+                                select {
+                                    aria_label: "{second_stack_label}",
+                                    value: "{stack_second()}",
+                                    onchange: move |event| stack_second.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            button {
+                                disabled: stack_first() == stack_second(),
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::SwapStacks {
+                                        first: stack_first() as usize,
+                                        second: stack_second() as usize,
+                                    },
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{swap_stacks_label}"
+                            }
+                        }
+                        fieldset {
+                            class: "transform-control",
+                            legend { "{columns_label}" }
+                            label {
+                                "{column_stack_label}"
+                                select {
+                                    aria_label: "{column_stack_label}",
+                                    value: "{column_stack()}",
+                                    onchange: move |event| column_stack.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{first_column_label}"
+                                select {
+                                    aria_label: "{first_column_label}",
+                                    value: "{column_first()}",
+                                    onchange: move |event| column_first.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{second_column_label}"
+                                select {
+                                    aria_label: "{second_column_label}",
+                                    value: "{column_second()}",
+                                    onchange: move |event| column_second.set(event.value().parse().unwrap_or(0)),
+                                    for value in 0u8..3 {
+                                        option { value: "{value}", "{value + 1}" }
+                                    }
+                                }
+                            }
+                            button {
+                                disabled: column_first() == column_second(),
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::SwapColumns {
+                                        stack: column_stack() as usize,
+                                        first: column_first() as usize,
+                                        second: column_second() as usize,
+                                    },
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{swap_columns_label}"
+                            }
+                        }
+                        fieldset {
+                            class: "transform-control",
+                            legend { "{digits_label}" }
+                            label {
+                                "{first_digit_label}"
+                                select {
+                                    aria_label: "{first_digit_label}",
+                                    value: "{digit_first()}",
+                                    onchange: move |event| digit_first.set(event.value().parse().unwrap_or(1)),
+                                    for value in 1u8..=9 {
+                                        option { value: "{value}", "{value}" }
+                                    }
+                                }
+                            }
+                            label {
+                                "{second_digit_label}"
+                                select {
+                                    aria_label: "{second_digit_label}",
+                                    value: "{digit_second()}",
+                                    onchange: move |event| digit_second.set(event.value().parse().unwrap_or(2)),
+                                    for value in 1u8..=9 {
+                                        option { value: "{value}", "{value}" }
+                                    }
+                                }
+                            }
+                            button {
+                                disabled: digit_first() == digit_second(),
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::SwapDigits {
+                                        first: digit_first(),
+                                        second: digit_second(),
+                                    },
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{swap_digits_label}"
+                            }
+                        }
+                        fieldset {
+                            class: "transform-control transform-orientation",
+                            legend { "{orientation_label}" }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::Transpose,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{transpose_label}"
+                            }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::Rotate90,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{rotate_90_label}"
+                            }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::Rotate180,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{rotate_180_label}"
+                            }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::Rotate270,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{rotate_270_label}"
+                            }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::ReflectHorizontal,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{reflect_horizontal_label}"
+                            }
+                            button {
+                                onclick: move |_| apply_board_transform(
+                                    BoardTransform::ReflectVertical,
+                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                    &mut msg, &mut is_ok, lang,
+                                ),
+                                "{reflect_vertical_label}"
+                            }
+                        }
+                    }
                 }
                 div {
                     class: "button-group",
@@ -1227,6 +1565,44 @@ fn is_cell_locked(lock_givens: bool, givens: sudoku_solver::Matrix, y: usize, x:
     lock_givens && (1..=9).contains(&givens[y][x])
 }
 
+fn apply_board_transform(
+    transform: BoardTransform,
+    board: &mut Signal<sudoku_solver::Matrix>,
+    givens: &mut Signal<sudoku_solver::Matrix>,
+    undo: &mut Signal<Vec<BoardSnapshot>>,
+    redo: &mut Signal<Vec<BoardSnapshot>>,
+    message: &mut Signal<String>,
+    is_ok: &mut Signal<bool>,
+    language: Language,
+) {
+    let before = BoardSnapshot {
+        board: *board.read(),
+        givens: *givens.read(),
+    };
+    let after = transform_snapshot(before, transform);
+    if before == after {
+        return;
+    }
+
+    record_board_change(&mut undo.write(), &mut redo.write(), before, after);
+    board.set(after.board);
+    givens.set(after.givens);
+    set_board_message(
+        message,
+        is_ok,
+        &after.board,
+        &t(language, "message.transform_applied"),
+        language,
+    );
+}
+
+fn transform_snapshot(before: BoardSnapshot, transform: BoardTransform) -> BoardSnapshot {
+    BoardSnapshot {
+        board: transform_matrix(&before.board, transform),
+        givens: transform_matrix(&before.givens, transform),
+    }
+}
+
 fn create_search_worker() -> Result<web_sys::Worker, wasm_bindgen::JsValue> {
     let window = web_sys::window()
         .ok_or_else(|| wasm_bindgen::JsValue::from_str("Window is unavailable"))?;
@@ -1289,6 +1665,26 @@ fn record_board_change(
     redo.clear();
 }
 
+fn undo_snapshot(
+    undo: &mut Vec<BoardSnapshot>,
+    redo: &mut Vec<BoardSnapshot>,
+    current: BoardSnapshot,
+) -> Option<BoardSnapshot> {
+    let previous = undo.pop()?;
+    redo.push(current);
+    Some(previous)
+}
+
+fn redo_snapshot(
+    undo: &mut Vec<BoardSnapshot>,
+    redo: &mut Vec<BoardSnapshot>,
+    current: BoardSnapshot,
+) -> Option<BoardSnapshot> {
+    let next = redo.pop()?;
+    undo.push(current);
+    Some(next)
+}
+
 fn undo_board(
     undo: &mut Signal<Vec<BoardSnapshot>>,
     redo: &mut Signal<Vec<BoardSnapshot>>,
@@ -1298,12 +1694,16 @@ fn undo_board(
     is_ok: &mut Signal<bool>,
     language: Language,
 ) {
-    if let Some(previous) = undo.write().pop() {
-        let current = BoardSnapshot {
-            board: *board.read(),
-            givens: *givens.read(),
-        };
-        redo.write().push(current);
+    let current = BoardSnapshot {
+        board: *board.read(),
+        givens: *givens.read(),
+    };
+    let previous = {
+        let mut undo_stack = undo.write();
+        let mut redo_stack = redo.write();
+        undo_snapshot(&mut undo_stack, &mut redo_stack, current)
+    };
+    if let Some(previous) = previous {
         board.set(previous.board);
         givens.set(previous.givens);
         set_board_message(
@@ -1325,12 +1725,16 @@ fn redo_board(
     is_ok: &mut Signal<bool>,
     language: Language,
 ) {
-    if let Some(next) = redo.write().pop() {
-        let current = BoardSnapshot {
-            board: *board.read(),
-            givens: *givens.read(),
-        };
-        undo.write().push(current);
+    let current = BoardSnapshot {
+        board: *board.read(),
+        givens: *givens.read(),
+    };
+    let next = {
+        let mut undo_stack = undo.write();
+        let mut redo_stack = redo.write();
+        redo_snapshot(&mut undo_stack, &mut redo_stack, current)
+    };
+    if let Some(next) = next {
         board.set(next.board);
         givens.set(next.givens);
         set_board_message(
@@ -1403,96 +1807,6 @@ fn cell_classes(
 fn candidate_position(digit: u8) -> String {
     let index = digit.saturating_sub(1);
     format!("grid-area: {} / {}", index / 3 + 1, index % 3 + 1)
-}
-
-struct BoardAnalysis {
-    conflicts: [[bool; 9]; 9],
-    candidate_masks: [[u16; 9]; 9],
-    no_candidates: [[bool; 9]; 9],
-}
-
-impl BoardAnalysis {
-    fn new(board: &sudoku_solver::Matrix) -> Self {
-        const ALL_CANDIDATES: u16 = (1 << 9) - 1;
-
-        let mut row_masks = [0u16; 9];
-        let mut column_masks = [0u16; 9];
-        let mut block_masks = [0u16; 9];
-        let mut row_duplicates = [0u16; 9];
-        let mut column_duplicates = [0u16; 9];
-        let mut block_duplicates = [0u16; 9];
-
-        for y in 0..9 {
-            for x in 0..9 {
-                let value = board[y][x];
-                if !(1..=9).contains(&value) {
-                    continue;
-                }
-
-                let bit = 1 << (value - 1);
-                let block = (y / 3) * 3 + x / 3;
-                if row_masks[y] & bit != 0 {
-                    row_duplicates[y] |= bit;
-                }
-                if column_masks[x] & bit != 0 {
-                    column_duplicates[x] |= bit;
-                }
-                if block_masks[block] & bit != 0 {
-                    block_duplicates[block] |= bit;
-                }
-                row_masks[y] |= bit;
-                column_masks[x] |= bit;
-                block_masks[block] |= bit;
-            }
-        }
-
-        let mut conflicts = [[false; 9]; 9];
-        let mut candidate_masks = [[0u16; 9]; 9];
-        let mut no_candidates = [[false; 9]; 9];
-        for y in 0..9 {
-            for x in 0..9 {
-                let value = board[y][x];
-                let block = (y / 3) * 3 + x / 3;
-                if (1..=9).contains(&value) {
-                    let bit = 1 << (value - 1);
-                    conflicts[y][x] = row_duplicates[y] & bit != 0
-                        || column_duplicates[x] & bit != 0
-                        || block_duplicates[block] & bit != 0;
-                } else {
-                    let candidates =
-                        ALL_CANDIDATES & !(row_masks[y] | column_masks[x] | block_masks[block]);
-                    candidate_masks[y][x] = candidates;
-                    no_candidates[y][x] = candidates == 0;
-                }
-            }
-        }
-
-        Self {
-            conflicts,
-            candidate_masks,
-            no_candidates,
-        }
-    }
-
-    fn conflict_count(&self) -> usize {
-        self.conflicts
-            .iter()
-            .flatten()
-            .filter(|&&cell| cell)
-            .count()
-    }
-
-    fn no_candidate_count(&self) -> usize {
-        self.no_candidates
-            .iter()
-            .flatten()
-            .filter(|&&cell| cell)
-            .count()
-    }
-}
-
-fn candidate_digits(mask: u16) -> impl Iterator<Item = u8> {
-    (1..=9).filter(move |digit| mask & (1 << (digit - 1)) != 0)
 }
 
 fn parse_puzzle(txt: &str, language: Language) -> Result<sudoku_solver::Matrix, String> {
@@ -1589,9 +1903,10 @@ fn focus_cell(y: usize, x: usize) {
 #[cfg(test)]
 mod tests {
     use super::{
-        candidate_digits, cell_classes, cell_text, cell_value, is_cell_locked, moved_cell,
-        next_empty_cell, parse_puzzle, parse_solution, to_txt, BoardAnalysis, Language,
-        SearchStatus,
+        cell_classes, cell_text, cell_value, is_cell_locked, moved_cell, next_empty_cell,
+        parse_puzzle, parse_solution, record_board_change, redo_snapshot, to_txt,
+        transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform, Language, SearchStatus,
+        HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -1626,8 +1941,10 @@ mod tests {
             ("", 0),
             ("0", 0),
             ("10", 0),
+            ("1a", 0),
             ("-1", 0),
             ("x", 0),
+            ("１", 0),
         ] {
             assert_eq!(cell_value(text), expected, "input={text:?}");
         }
@@ -1933,69 +2250,110 @@ mod tests {
         assert_eq!(parse_puzzle(&text, Language::Japanese), Ok(board));
     }
 
-    #[test]
-    fn board_analysis_candidates_match_the_public_solver_api() {
-        let board = parse_puzzle(
-            concat!(
-                "530070000\n",
-                "600195000\n",
-                "098000060\n",
-                "800060003\n",
-                "400803001\n",
-                "700020006\n",
-                "060000280\n",
-                "000419005\n",
-                "000080079\n",
-            ),
-            Language::English,
-        )
-        .unwrap();
-        let analysis = BoardAnalysis::new(&board);
-
-        for y in 0..9 {
-            for x in 0..9 {
-                assert_eq!(
-                    candidate_digits(analysis.candidate_masks[y][x]).collect::<Vec<_>>(),
-                    sudoku_solver::candidates_for(&board, x, y),
-                    "candidate mismatch at ({y}, {x})"
-                );
-            }
+    fn snapshot(board_value: u8, given_value: u8) -> BoardSnapshot {
+        BoardSnapshot {
+            board: [[board_value; 9]; 9],
+            givens: [[given_value; 9]; 9],
         }
     }
 
     #[test]
-    fn board_analysis_marks_all_cells_in_duplicate_units() {
-        let mut board = Matrix::default();
-        board[0][0] = 5;
-        board[0][1] = 5;
-        board[3][3] = 6;
-        board[4][3] = 6;
-        board[6][6] = 7;
-        board[7][7] = 7;
+    fn transform_snapshot_applies_the_same_change_to_board_and_givens() {
+        let mut before = snapshot(0, 0);
+        before.board[0][0] = 4;
+        before.givens[0][0] = 7;
 
-        let analysis = BoardAnalysis::new(&board);
-        assert!(analysis.conflicts[0][0]);
-        assert!(analysis.conflicts[0][1]);
-        assert!(analysis.conflicts[3][3]);
-        assert!(analysis.conflicts[4][3]);
-        assert!(analysis.conflicts[6][6]);
-        assert!(analysis.conflicts[7][7]);
-        assert!(!analysis.conflicts[0][2]);
-        assert_eq!(analysis.conflict_count(), 6);
+        let after = transform_snapshot(
+            before,
+            BoardTransform::SwapBands {
+                first: 0,
+                second: 2,
+            },
+        );
+
+        assert_eq!(after.board[6][0], 4);
+        assert_eq!(after.givens[6][0], 7);
+        assert_eq!(after.board[0][0], 0);
+        assert_eq!(after.givens[0][0], 0);
     }
 
     #[test]
-    fn board_analysis_detects_empty_cells_with_no_legal_digits() {
-        let mut board = Matrix::default();
-        board[0] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
-        for (y, value) in [4, 6, 1, 2, 3, 5, 7, 8].into_iter().enumerate() {
-            board[y + 1][0] = value;
-        }
-        board[1][1] = 9;
+    fn recording_an_unchanged_board_preserves_both_history_stacks() {
+        let current = snapshot(1, 2);
+        let mut undo = vec![snapshot(3, 4)];
+        let mut redo = vec![snapshot(5, 6)];
 
-        let analysis = BoardAnalysis::new(&board);
-        assert!(analysis.no_candidates[0][0]);
-        assert_eq!(analysis.candidate_masks[0][0], 0);
-        assert_eq!(analysis.no_candidate_count(), 1);
+        record_board_change(&mut undo, &mut redo, current, current);
+
+        assert_eq!(undo, vec![snapshot(3, 4)]);
+        assert_eq!(redo, vec![snapshot(5, 6)]);
+    }
+
+    #[test]
+    fn recording_a_change_pushes_undo_and_clears_redo() {
+        let before = snapshot(1, 2);
+        let after = snapshot(3, 4);
+        let mut undo = Vec::new();
+        let mut redo = vec![snapshot(5, 6)];
+
+        record_board_change(&mut undo, &mut redo, before, after);
+
+        assert_eq!(undo, vec![before]);
+        assert!(redo.is_empty());
+    }
+
+    #[test]
+    fn undo_and_redo_round_trip_board_and_givens_together() {
+        let original = snapshot(1, 2);
+        let changed = snapshot(3, 4);
+        let mut undo = vec![original];
+        let mut redo = Vec::new();
+
+        assert_eq!(undo_snapshot(&mut undo, &mut redo, changed), Some(original));
+        assert!(undo.is_empty());
+        assert_eq!(redo, vec![changed]);
+
+        assert_eq!(redo_snapshot(&mut undo, &mut redo, original), Some(changed));
+        assert_eq!(undo, vec![original]);
+        assert!(redo.is_empty());
+    }
+
+    #[test]
+    fn undo_and_redo_without_history_leave_the_other_stack_untouched() {
+        let current = snapshot(1, 2);
+        let mut undo = Vec::new();
+        let mut redo = vec![snapshot(3, 4)];
+
+        assert_eq!(undo_snapshot(&mut undo, &mut redo, current), None);
+        assert!(undo.is_empty());
+        assert_eq!(redo, vec![snapshot(3, 4)]);
+
+        redo.clear();
+        undo.push(snapshot(5, 6));
+        assert_eq!(redo_snapshot(&mut undo, &mut redo, current), None);
+        assert_eq!(undo, vec![snapshot(5, 6)]);
+        assert!(redo.is_empty());
+    }
+
+    #[test]
+    fn board_history_discards_the_oldest_entry_at_its_limit() {
+        let mut undo = Vec::new();
+        let mut redo = Vec::new();
+
+        for value in 0..=HISTORY_LIMIT as u8 {
+            record_board_change(
+                &mut undo,
+                &mut redo,
+                snapshot(value, value),
+                snapshot(value + 1, value + 1),
+            );
+        }
+
+        assert_eq!(undo.len(), HISTORY_LIMIT);
+        assert_eq!(undo.first(), Some(&snapshot(1, 1)));
+        assert_eq!(
+            undo.last(),
+            Some(&snapshot(HISTORY_LIMIT as u8, HISTORY_LIMIT as u8))
+        );
     }
 }
