@@ -290,8 +290,7 @@ fn app() -> Element {
     let solution_count = found_solutions.len();
     let can_apply_selected_solution =
         search_board.read().as_ref() == Some(&board) || found_solutions.contains(&board);
-    let conflicts = conflicting_cells(&board);
-    let no_candidates = no_candidate_cells(&board);
+    let analysis = BoardAnalysis::new(&board);
     let candidate_toggle_label = if show_candidates() {
         t(lang, "action.hide_candidates")
     } else {
@@ -378,19 +377,19 @@ fn app() -> Element {
                             class: "row",
                             for (x, cell) in row.iter().copied().enumerate() {
                                 li {
-                                    class: "{cell_classes(y, x, givens.read()[y][x] != 0, conflicts[y][x], no_candidates[y][x], show_candidates() && !(1..=9).contains(&cell))}",
+                                    class: "{cell_classes(y, x, givens.read()[y][x] != 0, analysis.conflicts[y][x], analysis.no_candidates[y][x], show_candidates() && !(1..=9).contains(&cell))}",
                                     key: "{y}-{x}",
                                     if show_candidates() && !(1..=9).contains(&cell) {
                                         div {
                                             class: "candidate-grid",
-                                            for digit in sudoku_solver::candidates_for(&board, x, y) {
+                                            for digit in candidate_digits(analysis.candidate_masks[y][x]) {
                                                 span {
                                                     class: "candidate",
                                                     style: "{candidate_position(digit)}",
                                                     "{digit}"
                                                 }
                                             }
-                                            if no_candidates[y][x] {
+                                            if analysis.no_candidates[y][x] {
                                                 span { class: "candidate-empty", "×" }
                                             }
                                         }
@@ -403,7 +402,7 @@ fn app() -> Element {
                                         inputmode: "numeric",
                                         value: "{cell_text(cell)}",
                                         aria_label: "{cell_aria_label(lang, y, x)}",
-                                        aria_invalid: "{conflicts[y][x] || no_candidates[y][x]}",
+                                        aria_invalid: "{analysis.conflicts[y][x] || analysis.no_candidates[y][x]}",
                                         oninput: move |evt| {
                                             update_cell_value(
                                                 y,
@@ -876,8 +875,9 @@ fn app() -> Element {
                 button {
                     onclick: move |_| {
                         let mut solver_mtx = *mtx.read();
-                        let conflict_count = count_conflict_cells(&solver_mtx);
-                        let stuck_count = count_no_candidate_cells(&solver_mtx);
+                        let analysis = BoardAnalysis::new(&solver_mtx);
+                        let conflict_count = analysis.conflict_count();
+                        let stuck_count = analysis.no_candidate_count();
 
                         if conflict_count > 0 {
                             msg.set(conflict_message(lang, conflict_count));
@@ -939,12 +939,13 @@ fn app() -> Element {
                                 );
                                 mtx.set(board);
                                 givens.set(board);
-                                let conflict_count = count_conflict_cells(&board);
+                                let analysis = BoardAnalysis::new(&board);
+                                let conflict_count = analysis.conflict_count();
                                 if conflict_count > 0 {
                                     msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
                                     is_ok.set(false);
                                 } else {
-                                    let stuck_count = count_no_candidate_cells(&board);
+                                    let stuck_count = analysis.no_candidate_count();
                                     if stuck_count > 0 {
                                         msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
                                         is_ok.set(false);
@@ -1178,12 +1179,13 @@ fn update_cell_value(
     mtx.set(board);
     givens.set(original_clues);
 
-    let conflict_count = count_conflict_cells(&board);
+    let analysis = BoardAnalysis::new(&board);
+    let conflict_count = analysis.conflict_count();
     if conflict_count > 0 {
         msg.set(conflict_message(language, conflict_count));
         is_ok.set(false);
     } else {
-        let stuck_count = count_no_candidate_cells(&board);
+        let stuck_count = analysis.no_candidate_count();
         if stuck_count > 0 {
             msg.set(no_candidates_message(language, stuck_count));
             is_ok.set(false);
@@ -1319,14 +1321,15 @@ fn set_board_message(
     success_message: &str,
     language: Language,
 ) {
-    let conflict_count = count_conflict_cells(board);
+    let analysis = BoardAnalysis::new(board);
+    let conflict_count = analysis.conflict_count();
     if conflict_count > 0 {
         msg.set(conflict_message(language, conflict_count));
         is_ok.set(false);
         return;
     }
 
-    let stuck_count = count_no_candidate_cells(board);
+    let stuck_count = analysis.no_candidate_count();
     if stuck_count > 0 {
         msg.set(no_candidates_message(language, stuck_count));
         is_ok.set(false);
@@ -1373,20 +1376,94 @@ fn candidate_position(digit: u8) -> String {
     format!("grid-area: {} / {}", index / 3 + 1, index % 3 + 1)
 }
 
-fn no_candidate_cells(board: &sudoku_solver::Matrix) -> [[bool; 9]; 9] {
-    std::array::from_fn(|y| {
-        std::array::from_fn(|x| {
-            !(1..=9).contains(&board[y][x]) && sudoku_solver::candidates_for(board, x, y).is_empty()
-        })
-    })
+struct BoardAnalysis {
+    conflicts: [[bool; 9]; 9],
+    candidate_masks: [[u16; 9]; 9],
+    no_candidates: [[bool; 9]; 9],
 }
 
-fn count_no_candidate_cells(board: &sudoku_solver::Matrix) -> usize {
-    no_candidate_cells(board)
-        .iter()
-        .flatten()
-        .filter(|&&has_no_candidates| has_no_candidates)
-        .count()
+impl BoardAnalysis {
+    fn new(board: &sudoku_solver::Matrix) -> Self {
+        const ALL_CANDIDATES: u16 = (1 << 9) - 1;
+
+        let mut row_masks = [0u16; 9];
+        let mut column_masks = [0u16; 9];
+        let mut block_masks = [0u16; 9];
+        let mut row_duplicates = [0u16; 9];
+        let mut column_duplicates = [0u16; 9];
+        let mut block_duplicates = [0u16; 9];
+
+        for y in 0..9 {
+            for x in 0..9 {
+                let value = board[y][x];
+                if !(1..=9).contains(&value) {
+                    continue;
+                }
+
+                let bit = 1 << (value - 1);
+                let block = (y / 3) * 3 + x / 3;
+                if row_masks[y] & bit != 0 {
+                    row_duplicates[y] |= bit;
+                }
+                if column_masks[x] & bit != 0 {
+                    column_duplicates[x] |= bit;
+                }
+                if block_masks[block] & bit != 0 {
+                    block_duplicates[block] |= bit;
+                }
+                row_masks[y] |= bit;
+                column_masks[x] |= bit;
+                block_masks[block] |= bit;
+            }
+        }
+
+        let mut conflicts = [[false; 9]; 9];
+        let mut candidate_masks = [[0u16; 9]; 9];
+        let mut no_candidates = [[false; 9]; 9];
+        for y in 0..9 {
+            for x in 0..9 {
+                let value = board[y][x];
+                let block = (y / 3) * 3 + x / 3;
+                if (1..=9).contains(&value) {
+                    let bit = 1 << (value - 1);
+                    conflicts[y][x] = row_duplicates[y] & bit != 0
+                        || column_duplicates[x] & bit != 0
+                        || block_duplicates[block] & bit != 0;
+                } else {
+                    let candidates =
+                        ALL_CANDIDATES & !(row_masks[y] | column_masks[x] | block_masks[block]);
+                    candidate_masks[y][x] = candidates;
+                    no_candidates[y][x] = candidates == 0;
+                }
+            }
+        }
+
+        Self {
+            conflicts,
+            candidate_masks,
+            no_candidates,
+        }
+    }
+
+    fn conflict_count(&self) -> usize {
+        self.conflicts
+            .iter()
+            .flatten()
+            .filter(|&&cell| cell)
+            .count()
+    }
+
+    fn no_candidate_count(&self) -> usize {
+        self.no_candidates
+            .iter()
+            .flatten()
+            .filter(|&&cell| cell)
+            .count()
+    }
+}
+
+fn candidate_digits(mask: u16) -> impl Iterator<Item = u8> {
+    (1..=9).filter(move |digit| mask & (1 << (digit - 1)) != 0)
 }
 
 fn parse_puzzle(txt: &str, language: Language) -> Result<sudoku_solver::Matrix, String> {
@@ -1447,41 +1524,6 @@ fn to_txt(mtx: &sudoku_solver::Matrix) -> String {
     s
 }
 
-fn conflicting_cells(board: &sudoku_solver::Matrix) -> [[bool; 9]; 9] {
-    let mut conflicts = [[false; 9]; 9];
-    for y in 0..9 {
-        for x in 0..9 {
-            let value = board[y][x];
-            if !(1..=9).contains(&value) {
-                continue;
-            }
-            for other_y in 0..9 {
-                for other_x in 0..9 {
-                    if (other_y, other_x) <= (y, x) {
-                        continue;
-                    }
-                    let shares_unit = y == other_y
-                        || x == other_x
-                        || (y / 3 == other_y / 3 && x / 3 == other_x / 3);
-                    if shares_unit && board[other_y][other_x] == value {
-                        conflicts[y][x] = true;
-                        conflicts[other_y][other_x] = true;
-                    }
-                }
-            }
-        }
-    }
-    conflicts
-}
-
-fn count_conflict_cells(board: &sudoku_solver::Matrix) -> usize {
-    conflicting_cells(board)
-        .iter()
-        .flatten()
-        .filter(|&&has_conflict| has_conflict)
-        .count()
-}
-
 fn moved_cell(y: usize, x: usize, dy: isize, dx: isize) -> Option<(usize, usize)> {
     let next_y = y as isize + dy;
     let next_x = x as isize + dx;
@@ -1517,7 +1559,7 @@ fn focus_cell(y: usize, x: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_puzzle, to_txt, Language};
+    use super::{candidate_digits, parse_puzzle, to_txt, BoardAnalysis, Language};
     use sudoku_solver::Matrix;
 
     const SOLVED_TEXT: &str = concat!(
@@ -1631,5 +1673,71 @@ mod tests {
         assert_eq!(text.lines().next(), Some("7________"));
         assert_eq!(text.lines().last(), Some("________2"));
         assert_eq!(parse_puzzle(&text, Language::Japanese), Ok(board));
+    }
+
+    #[test]
+    fn board_analysis_candidates_match_the_public_solver_api() {
+        let board = parse_puzzle(
+            concat!(
+                "530070000\n",
+                "600195000\n",
+                "098000060\n",
+                "800060003\n",
+                "400803001\n",
+                "700020006\n",
+                "060000280\n",
+                "000419005\n",
+                "000080079\n",
+            ),
+            Language::English,
+        )
+        .unwrap();
+        let analysis = BoardAnalysis::new(&board);
+
+        for y in 0..9 {
+            for x in 0..9 {
+                assert_eq!(
+                    candidate_digits(analysis.candidate_masks[y][x]).collect::<Vec<_>>(),
+                    sudoku_solver::candidates_for(&board, x, y),
+                    "candidate mismatch at ({y}, {x})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn board_analysis_marks_all_cells_in_duplicate_units() {
+        let mut board = Matrix::default();
+        board[0][0] = 5;
+        board[0][1] = 5;
+        board[3][3] = 6;
+        board[4][3] = 6;
+        board[6][6] = 7;
+        board[7][7] = 7;
+
+        let analysis = BoardAnalysis::new(&board);
+        assert!(analysis.conflicts[0][0]);
+        assert!(analysis.conflicts[0][1]);
+        assert!(analysis.conflicts[3][3]);
+        assert!(analysis.conflicts[4][3]);
+        assert!(analysis.conflicts[6][6]);
+        assert!(analysis.conflicts[7][7]);
+        assert!(!analysis.conflicts[0][2]);
+        assert_eq!(analysis.conflict_count(), 6);
+    }
+
+    #[test]
+    fn board_analysis_detects_empty_cells_with_no_legal_digits() {
+        let mut board = Matrix::default();
+        board[0] = [0, 1, 2, 3, 4, 5, 6, 7, 8];
+        for (y, value) in [4, 6, 1, 2, 3, 5, 7, 8].into_iter().enumerate() {
+            board[y + 1][0] = value;
+        }
+        board[1][1] = 9;
+
+        let analysis = BoardAnalysis::new(&board);
+        assert!(analysis.no_candidates[0][0]);
+        assert_eq!(analysis.candidate_masks[0][0], 0);
+        assert_eq!(analysis.no_candidate_count(), 1);
     }
 }

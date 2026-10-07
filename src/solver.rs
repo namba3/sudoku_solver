@@ -33,8 +33,7 @@ pub enum SearchEvent {
 
 struct SearchFrame {
     cell: (usize, usize),
-    candidates: Vec<u8>,
-    next_candidate: usize,
+    remaining_candidates: u16,
     assigned: Option<u8>,
 }
 
@@ -117,10 +116,11 @@ impl SolutionSearch {
             let (cell, previous, candidate) = {
                 let frame = &mut self.frames[frame_index];
                 let previous = frame.assigned.take();
-                let candidate = if frame.next_candidate < frame.candidates.len() {
-                    let value = frame.candidates[frame.next_candidate];
-                    frame.next_candidate += 1;
-                    Some(value)
+                let candidate = if frame.remaining_candidates != 0 {
+                    let bit =
+                        frame.remaining_candidates & frame.remaining_candidates.wrapping_neg();
+                    frame.remaining_candidates &= !bit;
+                    Some(bit.trailing_zeros() as u8 + 1)
                 } else {
                     None
                 };
@@ -187,11 +187,9 @@ impl Iterator for SolutionSearch {
                     .map(|(index, _)| index)
                     .expect("non-empty cell list has a minimum");
                 let cell = self.empty_cells.swap_remove(min_index);
-                let candidates = self.manager.candidates(cell.0, cell.1).collect();
                 self.frames.push(SearchFrame {
                     cell,
-                    candidates,
-                    next_candidate: 0,
+                    remaining_candidates: self.manager.candidate_mask(cell.0, cell.1),
                     assigned: None,
                 });
                 self.advance_branch = true;
@@ -466,6 +464,10 @@ impl StateManager {
     pub const fn candidates(&self, x: usize, y: usize) -> Candidates {
         let bits = self.bits(x, y);
         Candidates::new(bits)
+    }
+
+    const fn candidate_mask(&self, x: usize, y: usize) -> u16 {
+        !self.bits(x, y) & ((1 << 9) - 1)
     }
 
     pub const fn num_candidates(&self, x: usize, y: usize) -> u8 {
@@ -761,6 +763,35 @@ mod tests {
         assert!(search.is_exhausted());
         assert_eq!(found, vec![SOLUTION]);
         assert_eq!(PUZZLE, original);
+    }
+
+    #[test]
+    fn enumerates_both_solutions_for_a_two_solution_rectangle() {
+        let mut puzzle = SOLUTION;
+        for (y, x) in [(3, 5), (3, 8), (4, 5), (4, 8)] {
+            puzzle[y][x] = 0;
+        }
+        let original = puzzle;
+        let mut alternative = SOLUTION;
+        for (y, x, value) in [(3, 5, 3), (3, 8, 1), (4, 5, 1), (4, 8, 3)] {
+            alternative[y][x] = value;
+        }
+
+        let mut search = SolutionSearch::new(&puzzle).unwrap();
+        let found: Vec<_> = search
+            .by_ref()
+            .filter_map(|event| match event {
+                SearchEvent::SolutionFound { board, .. } => Some(board),
+                SearchEvent::Progress { .. } => None,
+            })
+            .collect();
+
+        assert_eq!(search.solutions_found(), 2);
+        assert!(search.is_exhausted());
+        assert_eq!(found.len(), 2);
+        assert!(found.contains(&SOLUTION));
+        assert!(found.contains(&alternative));
+        assert_eq!(puzzle, original);
     }
 
     #[test]

@@ -1,4 +1,3 @@
-use crate::solver::solve;
 use crate::Matrix;
 
 pub const MIN_CLUE_COUNT: usize = 17;
@@ -15,6 +14,18 @@ const MINIMAL_PUZZLE: Matrix = [
     [3, 0, 0, 4, 0, 0, 2, 0, 0],
     [0, 5, 0, 1, 0, 0, 0, 0, 0],
     [0, 0, 0, 8, 0, 6, 0, 0, 0],
+];
+
+const MINIMAL_SOLUTION: Matrix = [
+    [6, 9, 3, 7, 8, 4, 5, 1, 2],
+    [4, 8, 7, 5, 1, 2, 9, 3, 6],
+    [1, 2, 5, 9, 6, 3, 8, 7, 4],
+    [9, 3, 2, 6, 5, 1, 4, 8, 7],
+    [5, 6, 8, 2, 4, 7, 3, 9, 1],
+    [7, 4, 1, 3, 9, 8, 6, 2, 5],
+    [3, 1, 9, 4, 7, 5, 2, 6, 8],
+    [8, 5, 6, 1, 2, 9, 7, 4, 3],
+    [2, 7, 4, 8, 3, 6, 1, 5, 9],
 ];
 
 /// Generate a randomized uniquely solvable puzzle with the default 30 clues.
@@ -35,21 +46,20 @@ pub fn generate_puzzle_with_clues(seed: u64, clue_count: usize) -> Result<Matrix
     let mut rng = SplitMix64(seed);
     let transform = SudokuTransform::random(&mut rng);
 
-    let mut solution = MINIMAL_PUZZLE;
-    assert!(
-        solve(&mut solution),
-        "the generator base puzzle must be solvable"
-    );
-
     let mut puzzle = transform.apply(&MINIMAL_PUZZLE);
-    let solution = transform.apply(&solution);
+    let solution = transform.apply(&MINIMAL_SOLUTION);
 
-    let mut empty_positions: Vec<usize> = (0..81)
-        .filter(|&position| puzzle[position / 9][position % 9] == 0)
-        .collect();
-    rng.shuffle(&mut empty_positions);
-    for position in empty_positions
-        .into_iter()
+    let mut empty_positions = [0usize; 81];
+    let mut empty_count = 0;
+    for position in 0..81 {
+        if puzzle[position / 9][position % 9] == 0 {
+            empty_positions[empty_count] = position;
+            empty_count += 1;
+        }
+    }
+    rng.shuffle(&mut empty_positions[..empty_count]);
+    for &position in empty_positions[..empty_count]
+        .iter()
         .take(clue_count - MIN_CLUE_COUNT)
     {
         let y = position / 9;
@@ -86,28 +96,30 @@ impl SudokuTransform {
 
     fn apply(&self, board: &Matrix) -> Matrix {
         let mut transformed = [[0; 9]; 9];
-        for y in 0..9 {
-            for x in 0..9 {
-                let value = board[self.rows[y]][self.columns[x]];
-                transformed[y][x] = if value == 0 {
-                    0
-                } else {
-                    self.digits[value as usize]
-                };
-            }
-        }
-
         if self.transpose {
-            let mut transposed = [[0; 9]; 9];
             for y in 0..9 {
                 for x in 0..9 {
-                    transposed[x][y] = transformed[y][x];
+                    let value = board[self.rows[y]][self.columns[x]];
+                    transformed[x][y] = if value == 0 {
+                        0
+                    } else {
+                        self.digits[value as usize]
+                    };
                 }
             }
-            transposed
         } else {
-            transformed
+            for y in 0..9 {
+                for x in 0..9 {
+                    let value = board[self.rows[y]][self.columns[x]];
+                    transformed[y][x] = if value == 0 {
+                        0
+                    } else {
+                        self.digits[value as usize]
+                    };
+                }
+            }
         }
+        transformed
     }
 }
 
@@ -147,10 +159,10 @@ impl SplitMix64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        generate_puzzle, generate_puzzle_with_clues, DEFAULT_CLUE_COUNT, MAX_CLUE_COUNT,
-        MIN_CLUE_COUNT,
+        generate_puzzle, generate_puzzle_with_clues, SudokuTransform, DEFAULT_CLUE_COUNT,
+        MAX_CLUE_COUNT, MINIMAL_PUZZLE, MINIMAL_SOLUTION, MIN_CLUE_COUNT,
     };
-    use crate::{SearchEvent, SolutionSearch};
+    use crate::{solve, SearchEvent, SolutionSearch};
 
     fn clue_count(board: &crate::Matrix) -> usize {
         board
@@ -192,8 +204,63 @@ mod tests {
     }
 
     #[test]
+    fn generated_puzzles_keep_their_clues_and_match_both_solver_apis() {
+        for seed in [0, 1, u64::MAX] {
+            for requested_count in [MIN_CLUE_COUNT, DEFAULT_CLUE_COUNT, MAX_CLUE_COUNT] {
+                let puzzle = generate_puzzle_with_clues(seed, requested_count).unwrap();
+                assert_eq!(clue_count(&puzzle), requested_count);
+
+                let mut solved = puzzle;
+                assert!(solve(&mut solved));
+                for (given_row, solved_row) in puzzle.iter().zip(solved.iter()) {
+                    for (&given, &value) in given_row.iter().zip(solved_row.iter()) {
+                        assert!(given == 0 || given == value);
+                    }
+                }
+
+                let solutions: Vec<_> = SolutionSearch::new(&puzzle)
+                    .unwrap()
+                    .filter_map(|event| match event {
+                        SearchEvent::SolutionFound { board, .. } => Some(board),
+                        SearchEvent::Progress { .. } => None,
+                    })
+                    .collect();
+                assert_eq!(
+                    solutions,
+                    vec![solved],
+                    "seed={seed}, clues={requested_count}"
+                );
+            }
+        }
+    }
+
+    #[test]
     fn rejects_clue_counts_outside_the_supported_range() {
         assert!(generate_puzzle_with_clues(7, MIN_CLUE_COUNT - 1).is_err());
         assert!(generate_puzzle_with_clues(7, MAX_CLUE_COUNT + 1).is_err());
+    }
+
+    #[test]
+    fn cached_base_solution_matches_the_solver() {
+        let mut solved = MINIMAL_PUZZLE;
+        assert!(solve(&mut solved));
+        assert_eq!(solved, MINIMAL_SOLUTION);
+    }
+
+    #[test]
+    fn transpose_transform_writes_cells_to_their_final_positions() {
+        let transform = SudokuTransform {
+            rows: std::array::from_fn(|index| index),
+            columns: std::array::from_fn(|index| index),
+            digits: std::array::from_fn(|digit| digit as u8),
+            transpose: true,
+        };
+
+        let transformed = transform.apply(&MINIMAL_SOLUTION);
+        for y in 0..9 {
+            for x in 0..9 {
+                assert_eq!(transformed[x][y], MINIMAL_SOLUTION[y][x]);
+            }
+        }
     }
 }
