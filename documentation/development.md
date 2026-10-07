@@ -24,7 +24,7 @@ cargo check --target wasm32-unknown-unknown
 ```
 
 - `cargo fmt --check`はRustコードの整形状態を確認します。
-- `cargo test`はソルバーの単体テストを実行します。
+- `cargo test`はソルバー・問題生成ライブラリの単体テストに加え、アプリの翻訳処理とテキスト盤面パーサーの単体テストを実行します。
 - WASM向け`cargo check`はWeb targetとしてRustコードがコンパイルできるかを確認します。実ブラウザーでの操作確認とは別です。
 
 ## GitHub Actions

@@ -1514,3 +1514,122 @@ fn focus_cell(y: usize, x: usize) {
     };
     let _ = input.focus();
 }
+
+#[cfg(test)]
+mod tests {
+    use super::{parse_puzzle, to_txt, Language};
+    use sudoku_solver::Matrix;
+
+    const SOLVED_TEXT: &str = concat!(
+        "534678912\n",
+        "672195348\n",
+        "198342567\n",
+        "859761423\n",
+        "426853791\n",
+        "713924856\n",
+        "961537284\n",
+        "287419635\n",
+        "345286179\n",
+    );
+
+    #[test]
+    fn parses_a_valid_board_and_all_supported_empty_markers() {
+        let text = concat!(
+            "10._56789\n",
+            ".........\n",
+            "_________\n",
+            "000000000\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+        );
+
+        let board = parse_puzzle(text, Language::Japanese).unwrap();
+        assert_eq!(board[0], [1, 0, 0, 0, 5, 6, 7, 8, 9]);
+        assert!(board[1..4].iter().flatten().all(|&cell| cell == 0));
+        assert_eq!(board[4], [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+    }
+
+    #[test]
+    fn parses_the_text_export_format_with_a_trailing_newline() {
+        let board = parse_puzzle(SOLVED_TEXT, Language::English).unwrap();
+
+        assert_eq!(to_txt(&board), SOLVED_TEXT);
+        assert_eq!(parse_puzzle(&to_txt(&board), Language::English), Ok(board));
+    }
+
+    #[test]
+    fn reports_localized_line_count_errors() {
+        assert_eq!(
+            parse_puzzle("123456789\n", Language::Japanese),
+            Err("9行必要ですが、1行あります。".to_owned())
+        );
+        assert_eq!(
+            parse_puzzle("123456789\n", Language::English),
+            Err("Expected 9 lines, found 1.".to_owned())
+        );
+    }
+
+    #[test]
+    fn reports_the_row_and_expected_length_for_short_lines() {
+        let text = concat!(
+            "123456789\n",
+            "12345678\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+        );
+
+        assert_eq!(
+            parse_puzzle(text, Language::Japanese),
+            Err("2 行目は9文字必要ですが、8文字あります。".to_owned())
+        );
+        assert_eq!(
+            parse_puzzle(text, Language::English),
+            Err("Line 2 must contain 9 characters, found 8.".to_owned())
+        );
+    }
+
+    #[test]
+    fn reports_the_row_and_column_of_an_unsupported_character() {
+        let text = concat!(
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "123456789\n",
+            "12345x789\n",
+        );
+
+        assert_eq!(
+            parse_puzzle(text, Language::Japanese),
+            Err("9 行 6 列に使えない文字があります。数字、0、.、_を使ってください。".to_owned())
+        );
+        assert_eq!(
+            parse_puzzle(text, Language::English),
+            Err("Unsupported character at row 9, column 6. Use digits, 0, . or _.".to_owned())
+        );
+    }
+
+    #[test]
+    fn text_export_preserves_empty_cells_as_underscores() {
+        let mut board = Matrix::default();
+        board[0][0] = 7;
+        board[8][8] = 2;
+
+        let text = to_txt(&board);
+        assert_eq!(text.lines().count(), 9);
+        assert_eq!(text.lines().next(), Some("7________"));
+        assert_eq!(text.lines().last(), Some("________2"));
+        assert_eq!(parse_puzzle(&text, Language::Japanese), Ok(board));
+    }
+}
