@@ -268,6 +268,7 @@ fn app() -> Element {
     let mut msg = use_signal(String::new);
     let mut is_ok = use_signal(|| true);
     let mut show_candidates = use_signal(|| false);
+    let mut lock_givens = use_signal(|| true);
     let mut undo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut redo_stack = use_signal(Vec::<BoardSnapshot>::new);
     let mut search_solutions = use_signal(Vec::<sudoku_solver::Matrix>::new);
@@ -295,6 +296,11 @@ fn app() -> Element {
         t(lang, "action.hide_candidates")
     } else {
         t(lang, "action.show_candidates")
+    };
+    let givens_lock_label = if lock_givens() {
+        t(lang, "action.unlock_givens")
+    } else {
+        t(lang, "action.lock_givens")
     };
     let language_switch_label = t(lang, "language.switch");
     let title_label = t(lang, "app.title");
@@ -403,11 +409,13 @@ fn app() -> Element {
                                         value: "{cell_text(cell)}",
                                         aria_label: "{cell_aria_label(lang, y, x)}",
                                         aria_invalid: "{analysis.conflicts[y][x] || analysis.no_candidates[y][x]}",
+                                        readonly: is_cell_locked(lock_givens(), *givens.read(), y, x),
                                         oninput: move |evt| {
                                             update_cell_value(
                                                 y,
                                                 x,
                                                 cell_value(&evt.value()),
+                                                lock_givens(),
                                                 &mut mtx,
                                                 &mut givens,
                                                 &mut undo_stack,
@@ -451,6 +459,7 @@ fn app() -> Element {
                                                         y,
                                                         x,
                                                         digit,
+                                                        lock_givens(),
                                                         &mut mtx,
                                                         &mut givens,
                                                         &mut undo_stack,
@@ -516,6 +525,12 @@ fn app() -> Element {
                         aria_pressed: "{show_candidates()}",
                         onclick: move |_| show_candidates.set(!show_candidates()),
                         "{candidate_toggle_label}"
+                    }
+                    button {
+                        class: "given-lock-toggle",
+                        aria_pressed: "{lock_givens()}",
+                        onclick: move |_| lock_givens.set(!lock_givens()),
+                        "{givens_lock_label}"
                     }
                     div {
                         class: "generator-options",
@@ -1149,6 +1164,7 @@ fn update_cell_value(
     y: usize,
     x: usize,
     value: u8,
+    lock_givens: bool,
     mtx: &mut Signal<sudoku_solver::Matrix>,
     givens: &mut Signal<sudoku_solver::Matrix>,
     undo_stack: &mut Signal<Vec<BoardSnapshot>>,
@@ -1157,9 +1173,14 @@ fn update_cell_value(
     is_ok: &mut Signal<bool>,
     language: Language,
 ) {
+    let current_givens = *givens.read();
+    if is_cell_locked(lock_givens, current_givens, y, x) {
+        return;
+    }
+
     let before = BoardSnapshot {
         board: *mtx.read(),
-        givens: *givens.read(),
+        givens: current_givens,
     };
     let mut board = *mtx.read();
     board[y][x] = value;
@@ -1200,6 +1221,10 @@ fn update_cell_value(
             focus_cell(next_y, next_x);
         }
     }
+}
+
+fn is_cell_locked(lock_givens: bool, givens: sudoku_solver::Matrix, y: usize, x: usize) -> bool {
+    lock_givens && (1..=9).contains(&givens[y][x])
 }
 
 fn create_search_worker() -> Result<web_sys::Worker, wasm_bindgen::JsValue> {
@@ -1559,7 +1584,7 @@ fn focus_cell(y: usize, x: usize) {
 
 #[cfg(test)]
 mod tests {
-    use super::{candidate_digits, parse_puzzle, to_txt, BoardAnalysis, Language};
+    use super::{candidate_digits, is_cell_locked, parse_puzzle, to_txt, BoardAnalysis, Language};
     use sudoku_solver::Matrix;
 
     const SOLVED_TEXT: &str = concat!(
@@ -1573,6 +1598,16 @@ mod tests {
         "287419635\n",
         "345286179\n",
     );
+
+    #[test]
+    fn given_cells_are_locked_by_default_and_can_be_unlocked() {
+        let mut givens = Matrix::default();
+        givens[0][0] = 5;
+
+        assert!(is_cell_locked(true, givens, 0, 0));
+        assert!(!is_cell_locked(false, givens, 0, 0));
+        assert!(!is_cell_locked(true, givens, 0, 1));
+    }
 
     #[test]
     fn parses_a_valid_board_and_all_supported_empty_markers() {

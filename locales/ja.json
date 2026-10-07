@@ -16,6 +16,8 @@
   "action.save_text": "テキストに保存 ↓",
   "action.show_candidates": "候補を表示",
   "action.hide_candidates": "候補を隠す",
+  "action.lock_givens": "初期数字をロック",
+  "action.unlock_givens": "初期数字のロックを解除",
   "action.previous_solution": "前の解",
   "action.select_solution": "見つかった解を選択",
   "action.next_solution": "次の解",

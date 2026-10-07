@@ -16,6 +16,8 @@
   "action.save_text": "Save text ↓",
   "action.show_candidates": "Show candidates",
   "action.hide_candidates": "Hide candidates",
+  "action.lock_givens": "Lock given numbers",
+  "action.unlock_givens": "Unlock given numbers",
   "action.previous_solution": "Previous solution",
   "action.select_solution": "Select found solution",
   "action.next_solution": "Next solution",
