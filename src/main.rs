@@ -149,6 +149,16 @@ enum SearchStatus {
 }
 
 impl SearchStatus {
+    fn is_generation(&self) -> bool {
+        matches!(
+            self,
+            Self::Generating
+                | Self::Generated { .. }
+                | Self::GenerationCancelled { .. }
+                | Self::GenerationError { .. }
+        )
+    }
+
     fn text(&self, language: Language) -> String {
         match self {
             Self::Starting => t(language, "search.starting"),
@@ -294,13 +304,20 @@ fn app() -> Element {
     let mut copy_feedback = use_signal(|| None::<bool>);
     let mut is_searching = use_signal(|| false);
     let mut is_generating = use_signal(|| false);
-    let mut generation_clue_count = use_signal(|| "30".to_string());
+    let mut generation_clue_count = use_signal(|| "25".to_string());
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
+    let mut active_side_tab = use_signal(|| 1u8);
 
     let lang = language();
-    let msg_class = if is_ok() { "msg ok" } else { "msg error" };
+    let msg_class = if is_generating() {
+        "msg info"
+    } else if is_ok() {
+        "msg ok"
+    } else {
+        "msg error"
+    };
     let board = *mtx.read();
     let found_solutions = search_solutions.read();
     let solution_source_board = *search_board.read();
@@ -352,8 +369,8 @@ fn app() -> Element {
     let copy_text_label = t(lang, "action.copy_text");
     let copy_success_label = t(lang, "message.copied");
     let copy_error_label = t(lang, "message.copy_failed");
-    let history_group_label = t(lang, "group.history");
     let board_group_label = t(lang, "group.board");
+    let generation_group_label = t(lang, "group.generation");
     let transform_group_label = t(lang, "group.transform");
     let bands_label = t(lang, "label.bands");
     let stacks_label = t(lang, "label.stacks");
@@ -386,6 +403,7 @@ fn app() -> Element {
     let reflect_vertical_label = t(lang, "action.reflect_vertical");
     let solve_group_label = t(lang, "group.solve");
     let text_group_label = t(lang, "group.text");
+    let side_panels_label = t(lang, "label.board_panels");
     let puzzle_text_help = t(lang, "help.puzzle_text");
     let stale_solution_message = t(lang, "message.stale_solutions");
 
@@ -422,6 +440,283 @@ fn app() -> Element {
             }
             div {
                 class: "board-workspace",
+                div {
+                    class: "board-column",
+                    div {
+                        class: "board-toolbar",
+                        role: "group",
+                        aria_label: "{board_group_label}",
+                        button {
+                            disabled: undo_stack.read().is_empty(),
+                            onclick: move |_| {
+                                undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
+                            },
+                            "{undo_label}"
+                        }
+                        button {
+                            disabled: redo_stack.read().is_empty(),
+                            onclick: move |_| {
+                                redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
+                            },
+                            "{redo_label}"
+                        }
+                        button {
+                            aria_pressed: "{show_candidates()}",
+                            onclick: move |_| show_candidates.set(!show_candidates()),
+                            "{candidate_toggle_label}"
+                        }
+                        button {
+                            class: "given-lock-toggle",
+                            aria_pressed: "{lock_givens()}",
+                            onclick: move |_| lock_givens.set(!lock_givens()),
+                            "{givens_lock_label}"
+                        }
+                        button {
+                            disabled: board == *givens.read(),
+                            onclick: move |_| {
+                                let initial_clues = *givens.read();
+                                record_board_change(
+                                    &mut undo_stack.write(),
+                                    &mut redo_stack.write(),
+                                    BoardSnapshot {
+                                        board: *mtx.read(),
+                                        givens: initial_clues,
+                                    },
+                                    BoardSnapshot {
+                                        board: initial_clues,
+                                        givens: initial_clues,
+                                    },
+                                );
+                                mtx.set(initial_clues);
+                                msg.set(reset_message.to_string());
+                                is_ok.set(true);
+                                focus_cell(0, 0);
+                            },
+                            "{reset_label}"
+                        }
+                        button {
+                            onclick: move |_| {
+                                let before = BoardSnapshot {
+                                    board: *mtx.read(),
+                                    givens: *givens.read(),
+                                };
+                                record_board_change(
+                                    &mut undo_stack.write(),
+                                    &mut redo_stack.write(),
+                                    before,
+                                    BoardSnapshot {
+                                        board: [[0; 9]; 9],
+                                        givens: [[0; 9]; 9],
+                                    },
+                                );
+                                mtx.set([[0; 9]; 9]);
+                                givens.set([[0; 9]; 9]);
+                                msg.set(String::new());
+                                is_ok.set(true);
+                                focus_cell(0, 0);
+                            },
+                            "{clear_label}"
+                        }
+                    }
+                    div {
+                        class: "generation-toolbar",
+                        role: "group",
+                        aria_label: "{generation_group_label}",
+                    div {
+                        class: "generator-options",
+                        label {
+                            r#for: "generation-clue-count",
+                            "{generation_clue_count_label}"
+                        }
+                        input {
+                            id: "generation-clue-count",
+                            r#type: "number",
+                            min: "17",
+                            max: "81",
+                            step: "1",
+                            value: "{generation_clue_count}",
+                            aria_label: "{generation_clue_count_label}",
+                            oninput: move |event| generation_clue_count.set(event.value()),
+                        }
+                        span { "{generation_clue_count_help}" }
+                    }
+                button {
+                    disabled: is_searching(),
+                    onclick: move |_| {
+                        let Some(clue_count) = generation_clue_count()
+                            .parse::<usize>()
+                            .ok()
+                            .filter(|count| (17..=81).contains(count))
+                        else {
+                            msg.set(invalid_generation_clue_count.to_string());
+                            is_ok.set(false);
+                            return;
+                        };
+
+                        active_search.set(None);
+                        let job_id = search_job_id().wrapping_add(1);
+                        search_job_id.set(job_id);
+                        search_solutions.set(Vec::new());
+                        selected_solution.set(0);
+                        search_board.set(None);
+                        is_ok.set(true);
+                        let started_at = web_sys::window()
+                            .and_then(|window| window.performance())
+                            .map(|performance| performance.now())
+                            .unwrap_or(0.0);
+                        search_started_at.set(started_at);
+                        let generation_status = SearchStatus::Generating;
+                        msg.set(generation_status.text(lang));
+                        search_status.set(Some(generation_status));
+                        is_searching.set(true);
+                        is_generating.set(true);
+
+                        match create_search_worker() {
+                            Ok(worker) => {
+                                let mut status = search_status;
+                                let mut searching = is_searching;
+                                let mut generating = is_generating;
+                                let current_job_id = search_job_id;
+                                let started_at = search_started_at();
+                                let mut board_signal = mtx;
+                                let mut givens_signal = givens;
+                                let mut text_signal = txt;
+                                let mut undo = undo_stack;
+                                let mut redo = redo_stack;
+                                let language_signal = language;
+                                let mut message = msg;
+                                let mut message_ok = is_ok;
+                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+                                    let Some(raw_message) = event.data().as_string() else {
+                                        return;
+                                    };
+                                    let Ok(response) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
+                                        return;
+                                    };
+                                    if response["job_id"].as_u64() != Some(job_id as u64)
+                                        || current_job_id() != job_id
+                                    {
+                                        return;
+                                    }
+
+                                    match response["type"].as_str() {
+                                        Some("generated") => {
+                                            let Some(generated_board) = parse_solution(&response["board"]) else {
+                                                let generation_error = SearchStatus::GenerationError {
+                                                    message: t(language_signal(), "worker.error.invalid_board"),
+                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                };
+                                                message.set(generation_error.text(language_signal()));
+                                                message_ok.set(false);
+                                                status.set(Some(generation_error));
+                                                searching.set(false);
+                                                generating.set(false);
+                                                return;
+                                            };
+                                            let before = BoardSnapshot {
+                                                board: *board_signal.read(),
+                                                givens: *givens_signal.read(),
+                                            };
+                                            record_board_change(
+                                                &mut undo.write(),
+                                                &mut redo.write(),
+                                                before,
+                                                BoardSnapshot { board: generated_board, givens: generated_board },
+                                            );
+                                            board_signal.set(generated_board);
+                                            givens_signal.set(generated_board);
+                                            text_signal.set(to_txt(&generated_board));
+                                            let generated_status = SearchStatus::Generated {
+                                                clues: response["clues"].as_u64().unwrap_or(0) as usize,
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            };
+                                            message.set(generated_status.text(language_signal()));
+                                            message_ok.set(true);
+                                            status.set(Some(generated_status));
+                                            searching.set(false);
+                                            generating.set(false);
+                                            focus_cell(0, 0);
+                                        }
+                                        Some("error") => {
+                                            let generation_error = SearchStatus::GenerationError {
+                                                message: response["message"].as_str().map_or_else(
+                                                    || t(language_signal(), "worker.error.unknown_generation"),
+                                                    str::to_owned,
+                                                ),
+                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                            };
+                                            message.set(generation_error.text(language_signal()));
+                                            message_ok.set(false);
+                                            status.set(Some(generation_error));
+                                            searching.set(false);
+                                            generating.set(false);
+                                        }
+                                        _ => {}
+                                    }
+                                });
+                                let mut error_status = search_status;
+                                let mut error_searching = is_searching;
+                                let mut error_generating = is_generating;
+                                let mut error_message = msg;
+                                let mut error_message_ok = is_ok;
+                                let error_language = language;
+                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
+                                    if current_job_id() == job_id {
+                                        let generation_error = SearchStatus::GenerationError {
+                                            message: event.message(),
+                                            elapsed_seconds: elapsed_seconds_since(started_at),
+                                        };
+                                        error_message.set(generation_error.text(error_language()));
+                                        error_message_ok.set(false);
+                                        error_status.set(Some(generation_error));
+                                        error_searching.set(false);
+                                        error_generating.set(false);
+                                    }
+                                });
+
+                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                                active_search.set(Some(ActiveSearch {
+                                    worker: worker.clone(),
+                                    _onmessage: onmessage,
+                                    _onerror: onerror,
+                                }));
+                                let seed = random_seed();
+                                let request = serde_json::json!({
+                                    "type": "generate",
+                                    "job_id": job_id,
+                                    "seed": seed,
+                                    "clue_count": clue_count,
+                                });
+                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
+                                    active_search.set(None);
+                                    let generation_error = SearchStatus::GenerationError {
+                                        message: format!("{error:?}"),
+                                        elapsed_seconds: elapsed_seconds_since(started_at),
+                                    };
+                                    msg.set(generation_error.text(lang));
+                                    is_ok.set(false);
+                                    search_status.set(Some(generation_error));
+                                    is_searching.set(false);
+                                    is_generating.set(false);
+                                }
+                            }
+                            Err(error) => {
+                                let generation_error = SearchStatus::GenerationError {
+                                    message: format!("{error:?}"),
+                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                };
+                                msg.set(generation_error.text(lang));
+                                is_ok.set(false);
+                                search_status.set(Some(generation_error));
+                                is_searching.set(false);
+                                is_generating.set(false);
+                            }
+                        }
+                    },
+                    "{generate_puzzle_label}"
+                }
+                    }
             ul {
                 class: "matrix",
                 for (y, row) in board.iter().enumerate() {
@@ -561,935 +856,743 @@ fn app() -> Element {
                     }
                 }
             }
-                details {
-                    class: "transform-panel",
-                    summary { "{transform_group_label}" }
+                }
+                div {
+                    class: "side-panel",
                     div {
-                        class: "transform-controls",
-                        fieldset {
-                            class: "transform-control",
-                            legend { "{bands_label}" }
-                            label {
-                                "{first_band_label}"
-                                select {
-                                    aria_label: "{first_band_label}",
-                                    value: "{band_first()}",
-                                    onchange: move |event| band_first.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{second_band_label}"
-                                select {
-                                    aria_label: "{second_band_label}",
-                                    value: "{band_second()}",
-                                    onchange: move |event| band_second.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            button {
-                                disabled: band_first() == band_second(),
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::SwapBands {
-                                        first: band_first() as usize,
-                                        second: band_second() as usize,
-                                    },
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{swap_bands_label}"
-                            }
+                        class: "side-panel-tabs",
+                        role: "tablist",
+                        aria_label: "{side_panels_label}",
+                        button {
+                            r#type: "button",
+                            id: "tab-solve",
+                            role: "tab",
+                            aria_selected: "{active_side_tab() == 1}",
+                            aria_controls: "panel-solve",
+                            tabindex: "0",
+                            onclick: move |_| active_side_tab.set(1),
+                            "{solve_group_label}"
                         }
-                        fieldset {
-                            class: "transform-control",
-                            legend { "{rows_label}" }
-                            label {
-                                "{row_band_label}"
-                                select {
-                                    aria_label: "{row_band_label}",
-                                    value: "{row_band()}",
-                                    onchange: move |event| row_band.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{first_row_label}"
-                                select {
-                                    aria_label: "{first_row_label}",
-                                    value: "{row_first()}",
-                                    onchange: move |event| row_first.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{second_row_label}"
-                                select {
-                                    aria_label: "{second_row_label}",
-                                    value: "{row_second()}",
-                                    onchange: move |event| row_second.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            button {
-                                disabled: row_first() == row_second(),
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::SwapRows {
-                                        band: row_band() as usize,
-                                        first: row_first() as usize,
-                                        second: row_second() as usize,
-                                    },
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{swap_rows_label}"
-                            }
+                        button {
+                            r#type: "button",
+                            id: "tab-transform",
+                            role: "tab",
+                            aria_selected: "{active_side_tab() == 0}",
+                            aria_controls: "panel-transform",
+                            tabindex: "0",
+                            onclick: move |_| active_side_tab.set(0),
+                            "{transform_group_label}"
                         }
-                        fieldset {
-                            class: "transform-control",
-                            legend { "{stacks_label}" }
-                            label {
-                                "{first_stack_label}"
-                                select {
-                                    aria_label: "{first_stack_label}",
-                                    value: "{stack_first()}",
-                                    onchange: move |event| stack_first.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{second_stack_label}"
-                                select {
-                                    aria_label: "{second_stack_label}",
-                                    value: "{stack_second()}",
-                                    onchange: move |event| stack_second.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            button {
-                                disabled: stack_first() == stack_second(),
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::SwapStacks {
-                                        first: stack_first() as usize,
-                                        second: stack_second() as usize,
-                                    },
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{swap_stacks_label}"
-                            }
+                        button {
+                            r#type: "button",
+                            id: "tab-text",
+                            role: "tab",
+                            aria_selected: "{active_side_tab() == 2}",
+                            aria_controls: "panel-text",
+                            tabindex: "0",
+                            onclick: move |_| active_side_tab.set(2),
+                            "{text_group_label}"
                         }
-                        fieldset {
-                            class: "transform-control",
-                            legend { "{columns_label}" }
-                            label {
-                                "{column_stack_label}"
-                                select {
-                                    aria_label: "{column_stack_label}",
-                                    value: "{column_stack()}",
-                                    onchange: move |event| column_stack.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{first_column_label}"
-                                select {
-                                    aria_label: "{first_column_label}",
-                                    value: "{column_first()}",
-                                    onchange: move |event| column_first.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{second_column_label}"
-                                select {
-                                    aria_label: "{second_column_label}",
-                                    value: "{column_second()}",
-                                    onchange: move |event| column_second.set(event.value().parse().unwrap_or(0)),
-                                    for value in 0u8..3 {
-                                        option { value: "{value}", "{value + 1}" }
-                                    }
-                                }
-                            }
-                            button {
-                                disabled: column_first() == column_second(),
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::SwapColumns {
-                                        stack: column_stack() as usize,
-                                        first: column_first() as usize,
-                                        second: column_second() as usize,
-                                    },
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{swap_columns_label}"
-                            }
-                        }
-                        fieldset {
-                            class: "transform-control",
-                            legend { "{digits_label}" }
-                            label {
-                                "{first_digit_label}"
-                                select {
-                                    aria_label: "{first_digit_label}",
-                                    value: "{digit_first()}",
-                                    onchange: move |event| digit_first.set(event.value().parse().unwrap_or(1)),
-                                    for value in 1u8..=9 {
-                                        option { value: "{value}", "{value}" }
-                                    }
-                                }
-                            }
-                            label {
-                                "{second_digit_label}"
-                                select {
-                                    aria_label: "{second_digit_label}",
-                                    value: "{digit_second()}",
-                                    onchange: move |event| digit_second.set(event.value().parse().unwrap_or(2)),
-                                    for value in 1u8..=9 {
-                                        option { value: "{value}", "{value}" }
-                                    }
-                                }
-                            }
-                            button {
-                                disabled: digit_first() == digit_second(),
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::SwapDigits {
-                                        first: digit_first(),
-                                        second: digit_second(),
-                                    },
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{swap_digits_label}"
-                            }
-                        }
-                        fieldset {
-                            class: "transform-control transform-orientation",
-                            legend { "{orientation_label}" }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::Transpose,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{transpose_label}"
-                            }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::Rotate90,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{rotate_90_label}"
-                            }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::Rotate180,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{rotate_180_label}"
-                            }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::Rotate270,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{rotate_270_label}"
-                            }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::ReflectHorizontal,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{reflect_horizontal_label}"
-                            }
-                            button {
-                                onclick: move |_| apply_board_transform(
-                                    BoardTransform::ReflectVertical,
-                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                    &mut msg, &mut is_ok, lang,
-                                ),
-                                "{reflect_vertical_label}"
-                            }
-                        }
-                    }
-                }
-            }
-            div {
-                class: "action-groups",
-                div {
-                    class: "button-group",
-                    role: "group",
-                    aria_label: "{history_group_label}",
-                    h2 { class: "button-group-title", "{history_group_label}" }
-                    button {
-                        disabled: undo_stack.read().is_empty(),
-                        onclick: move |_| {
-                            undo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
-                        },
-                        "{undo_label}"
-                    }
-                    button {
-                        disabled: redo_stack.read().is_empty(),
-                        onclick: move |_| {
-                            redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
-                        },
-                        "{redo_label}"
-                    }
-                }
-                div {
-                    class: "button-group",
-                    role: "group",
-                    aria_label: "{board_group_label}",
-                    h2 { class: "button-group-title", "{board_group_label}" }
-                    button {
-                        aria_pressed: "{show_candidates()}",
-                        onclick: move |_| show_candidates.set(!show_candidates()),
-                        "{candidate_toggle_label}"
-                    }
-                    button {
-                        class: "given-lock-toggle",
-                        aria_pressed: "{lock_givens()}",
-                        onclick: move |_| lock_givens.set(!lock_givens()),
-                        "{givens_lock_label}"
                     }
                     div {
-                        class: "generator-options",
-                        label {
-                            r#for: "generation-clue-count",
-                            "{generation_clue_count_label}"
-                        }
-                        input {
-                            id: "generation-clue-count",
-                            r#type: "number",
-                            min: "17",
-                            max: "81",
-                            step: "1",
-                            value: "{generation_clue_count}",
-                            aria_label: "{generation_clue_count_label}",
-                            oninput: move |event| generation_clue_count.set(event.value()),
-                        }
-                        span { "{generation_clue_count_help}" }
-                    }
-                button {
-                    disabled: is_searching(),
-                    onclick: move |_| {
-                        let Some(clue_count) = generation_clue_count()
-                            .parse::<usize>()
-                            .ok()
-                            .filter(|count| (17..=81).contains(count))
-                        else {
-                            msg.set(invalid_generation_clue_count.to_string());
-                            is_ok.set(false);
-                            return;
-                        };
+                        class: "side-panel-content",
+                        if active_side_tab() == 1 {
+                            section {
+                                id: "panel-solve",
+                                role: "tabpanel",
+                                aria_labelledby: "tab-solve",
+                                tabindex: "0",
+                                                                div {
+                                    class: "action-groups",
+                                    div {
+                                        class: "button-group",
+                                        role: "group",
+                                        aria_label: "{solve_group_label}",
+                                        h2 { class: "button-group-title", "{solve_group_label}" }
+                                    button {
+                                        disabled: is_searching(),
+                                        onclick: move |_| {
+                                            active_search.set(None);
+                                            let job_id = search_job_id().wrapping_add(1);
+                                            search_job_id.set(job_id);
+                                            search_solutions.set(Vec::new());
+                                            selected_solution.set(0);
+                                            search_board.set(Some(board));
+                                            msg.set(String::new());
+                                            is_ok.set(true);
+                                            let started_at = web_sys::window()
+                                                .and_then(|window| window.performance())
+                                                .map(|performance| performance.now())
+                                                .unwrap_or(0.0);
+                                            search_started_at.set(started_at);
+                                            search_status.set(Some(SearchStatus::Starting));
+                                            is_searching.set(true);
+                                            is_generating.set(false);
 
-                        active_search.set(None);
-                        let job_id = search_job_id().wrapping_add(1);
-                        search_job_id.set(job_id);
-                        search_solutions.set(Vec::new());
-                        selected_solution.set(0);
-                        search_board.set(None);
-                        msg.set(String::new());
-                        is_ok.set(true);
-                        let started_at = web_sys::window()
-                            .and_then(|window| window.performance())
-                            .map(|performance| performance.now())
-                            .unwrap_or(0.0);
-                        search_started_at.set(started_at);
-                        search_status.set(Some(SearchStatus::Generating));
-                        is_searching.set(true);
-                        is_generating.set(true);
+                                            match create_search_worker() {
+                                                Ok(worker) => {
+                                                    let mut solutions = search_solutions;
+                                                    let mut status = search_status;
+                                                    let mut searching = is_searching;
+                                                    let current_job_id = search_job_id;
+                                                    let mut error_status = search_status;
+                                                    let mut error_searching = is_searching;
+                                                    let started_at = search_started_at();
+                                                    let language_for_worker = lang;
+                                                    let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+                                                        let Some(raw_message) = event.data().as_string() else {
+                                                            return;
+                                                        };
+                                                        let Ok(message) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
+                                                            return;
+                                                        };
+                                                        if message["job_id"].as_u64() != Some(job_id as u64)
+                                                            || current_job_id() != job_id
+                                                        {
+                                                            return;
+                                                        }
 
-                        match create_search_worker() {
-                            Ok(worker) => {
-                                let mut status = search_status;
-                                let mut searching = is_searching;
-                                let mut generating = is_generating;
-                                let current_job_id = search_job_id;
-                                let started_at = search_started_at();
-                                let mut board_signal = mtx;
-                                let mut givens_signal = givens;
-                                let mut text_signal = txt;
-                                let mut undo = undo_stack;
-                                let mut redo = redo_stack;
-                                let language_signal = language;
-                                let mut message = msg;
-                                let mut message_ok = is_ok;
-                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
-                                    let Some(raw_message) = event.data().as_string() else {
-                                        return;
-                                    };
-                                    let Ok(response) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
-                                        return;
-                                    };
-                                    if response["job_id"].as_u64() != Some(job_id as u64)
-                                        || current_job_id() != job_id
-                                    {
-                                        return;
-                                    }
+                                                        match message["type"].as_str() {
+                                                            Some("solution") => {
+                                                                if let Some(solution) = parse_solution(&message["board"]) {
+                                                                    solutions.write().push(solution);
+                                                                }
+                                                            }
+                                                            Some("progress") => {
+                                                                let count = message["solutions_found"].as_u64().unwrap_or(0);
+                                                                let nodes = message["nodes"].as_u64().unwrap_or(0);
+                                                                status.set(Some(SearchStatus::Progress { solutions: count, nodes }));
+                                                            }
+                                                            Some("finished") => {
+                                                                status.set(Some(SearchStatus::Finished {
+                                                                    solutions: message["solutions_found"].as_u64().unwrap_or(0),
+                                                                    nodes: message["explored_nodes"].as_u64().unwrap_or(0),
+                                                                    termination: message["termination"].as_str().unwrap_or("exhausted").to_string(),
+                                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                                }));
+                                                                searching.set(false);
+                                                            }
+                                                            Some("error") => {
+                                                                status.set(Some(SearchStatus::Error {
+                                                                    message: message["message"].as_str().map_or_else(
+                                                                        || t(language_for_worker, "worker.error.search_failed"),
+                                                                        str::to_owned,
+                                                                    ),
+                                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                                }));
+                                                                searching.set(false);
+                                                            }
+                                                            _ => {}
+                                                        }
+                                                    });
+                                                    let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
+                                                        if current_job_id() == job_id {
+                                                            error_status.set(Some(SearchStatus::WorkerError(event.message())));
+                                                            error_searching.set(false);
+                                                        }
+                                                    });
 
-                                    match response["type"].as_str() {
-                                        Some("generated") => {
-                                            let Some(generated_board) = parse_solution(&response["board"]) else {
-                                                status.set(Some(SearchStatus::GenerationError {
-                                                    message: t(language_signal(), "worker.error.invalid_board"),
-                                                    elapsed_seconds: elapsed_seconds_since(started_at),
-                                                }));
-                                                searching.set(false);
-                                                generating.set(false);
-                                                return;
-                                            };
-                                            let before = BoardSnapshot {
-                                                board: *board_signal.read(),
-                                                givens: *givens_signal.read(),
-                                            };
-                                            record_board_change(
-                                                &mut undo.write(),
-                                                &mut redo.write(),
-                                                before,
-                                                BoardSnapshot { board: generated_board, givens: generated_board },
-                                            );
-                                            board_signal.set(generated_board);
-                                            givens_signal.set(generated_board);
-                                            text_signal.set(to_txt(&generated_board));
-                                            message.set(t(language_signal(), "message.puzzle_generated"));
-                                            message_ok.set(true);
-                                            status.set(Some(SearchStatus::Generated {
-                                                clues: response["clues"].as_u64().unwrap_or(0) as usize,
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            }));
-                                            searching.set(false);
-                                            generating.set(false);
-                                            focus_cell(0, 0);
-                                        }
-                                        Some("error") => {
-                                            status.set(Some(SearchStatus::GenerationError {
-                                                message: response["message"].as_str().map_or_else(
-                                                    || t(language_signal(), "worker.error.unknown_generation"),
-                                                    str::to_owned,
-                                                ),
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            }));
-                                            searching.set(false);
-                                            generating.set(false);
-                                        }
-                                        _ => {}
-                                    }
-                                });
-                                let mut error_status = search_status;
-                                let mut error_searching = is_searching;
-                                let mut error_generating = is_generating;
-                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
-                                    if current_job_id() == job_id {
-                                        error_status.set(Some(SearchStatus::GenerationError {
-                                            message: event.message(),
-                                            elapsed_seconds: elapsed_seconds_since(started_at),
-                                        }));
-                                        error_searching.set(false);
-                                        error_generating.set(false);
-                                    }
-                                });
+                                                    worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                                                    worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                                                    active_search.set(Some(ActiveSearch {
+                                                        worker: worker.clone(),
+                                                        _onmessage: onmessage,
+                                                        _onerror: onerror,
+                                                    }));
 
-                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
-                                active_search.set(Some(ActiveSearch {
-                                    worker: worker.clone(),
-                                    _onmessage: onmessage,
-                                    _onerror: onerror,
-                                }));
-                                let seed = random_seed();
-                                let request = serde_json::json!({
-                                    "type": "generate",
-                                    "job_id": job_id,
-                                    "seed": seed,
-                                    "clue_count": clue_count,
-                                });
-                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
-                                    active_search.set(None);
-                                    search_status.set(Some(SearchStatus::GenerationError {
-                                        message: format!("{error:?}"),
-                                        elapsed_seconds: elapsed_seconds_since(started_at),
-                                    }));
-                                    is_searching.set(false);
-                                    is_generating.set(false);
-                                }
-                            }
-                            Err(error) => {
-                                search_status.set(Some(SearchStatus::GenerationError {
-                                    message: format!("{error:?}"),
-                                    elapsed_seconds: elapsed_seconds_since(started_at),
-                                }));
-                                is_searching.set(false);
-                                is_generating.set(false);
-                            }
-                        }
-                    },
-                    "{generate_puzzle_label}"
-                }
-                button {
-                    disabled: board == *givens.read(),
-                    onclick: move |_| {
-                        let initial_clues = *givens.read();
-                        record_board_change(
-                            &mut undo_stack.write(),
-                            &mut redo_stack.write(),
-                            BoardSnapshot {
-                                board: *mtx.read(),
-                                givens: initial_clues,
-                            },
-                            BoardSnapshot {
-                                board: initial_clues,
-                                givens: initial_clues,
-                            },
-                        );
-                        mtx.set(initial_clues);
-                        msg.set(reset_message.to_string());
-                        is_ok.set(true);
-                        focus_cell(0, 0);
-                    },
-                    "{reset_label}"
-                }
-                button {
-                    onclick: move |_| {
-                        let before = BoardSnapshot {
-                            board: *mtx.read(),
-                            givens: *givens.read(),
-                        };
-                        record_board_change(
-                            &mut undo_stack.write(),
-                            &mut redo_stack.write(),
-                            before,
-                            BoardSnapshot {
-                                board: [[0; 9]; 9],
-                                givens: [[0; 9]; 9],
-                            },
-                        );
-                        mtx.set([[0; 9]; 9]);
-                        givens.set([[0; 9]; 9]);
-                        msg.set(String::new());
-                        is_ok.set(true);
-                        focus_cell(0, 0);
-                    },
-                    "{clear_label}"
-                }
-                }
-                div {
-                    class: "button-group",
-                    role: "group",
-                    aria_label: "{solve_group_label}",
-                    h2 { class: "button-group-title", "{solve_group_label}" }
-                button {
-                    disabled: is_searching(),
-                    onclick: move |_| {
-                        active_search.set(None);
-                        let job_id = search_job_id().wrapping_add(1);
-                        search_job_id.set(job_id);
-                        search_solutions.set(Vec::new());
-                        selected_solution.set(0);
-                        search_board.set(Some(board));
-                        let started_at = web_sys::window()
-                            .and_then(|window| window.performance())
-                            .map(|performance| performance.now())
-                            .unwrap_or(0.0);
-                        search_started_at.set(started_at);
-                        search_status.set(Some(SearchStatus::Starting));
-                        is_searching.set(true);
-                        is_generating.set(false);
-
-                        match create_search_worker() {
-                            Ok(worker) => {
-                                let mut solutions = search_solutions;
-                                let mut status = search_status;
-                                let mut searching = is_searching;
-                                let current_job_id = search_job_id;
-                                let mut error_status = search_status;
-                                let mut error_searching = is_searching;
-                                let started_at = search_started_at();
-                                let language_for_worker = lang;
-                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
-                                    let Some(raw_message) = event.data().as_string() else {
-                                        return;
-                                    };
-                                    let Ok(message) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
-                                        return;
-                                    };
-                                    if message["job_id"].as_u64() != Some(job_id as u64)
-                                        || current_job_id() != job_id
-                                    {
-                                        return;
-                                    }
-
-                                    match message["type"].as_str() {
-                                        Some("solution") => {
-                                            if let Some(solution) = parse_solution(&message["board"]) {
-                                                solutions.write().push(solution);
+                                                    let request = serde_json::json!({
+                                                        "type": "start",
+                                                        "job_id": job_id,
+                                                        "board": board.iter().flatten().copied().collect::<Vec<_>>(),
+                                                        "max_solutions": UI_MAX_SOLUTIONS,
+                                                        "max_nodes": 500_000u32,
+                                                    });
+                                                    if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
+                                                        active_search.set(None);
+                                                        search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
+                                                        is_searching.set(false);
+                                                    }
+                                                }
+                                                Err(error) => {
+                                                    search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
+                                                    is_searching.set(false);
+                                                }
                                             }
-                                        }
-                                        Some("progress") => {
-                                            let count = message["solutions_found"].as_u64().unwrap_or(0);
-                                            let nodes = message["nodes"].as_u64().unwrap_or(0);
-                                            status.set(Some(SearchStatus::Progress { solutions: count, nodes }));
-                                        }
-                                        Some("finished") => {
-                                            status.set(Some(SearchStatus::Finished {
-                                                solutions: message["solutions_found"].as_u64().unwrap_or(0),
-                                                nodes: message["explored_nodes"].as_u64().unwrap_or(0),
-                                                termination: message["termination"].as_str().unwrap_or("exhausted").to_string(),
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            }));
-                                            searching.set(false);
-                                        }
-                                        Some("error") => {
-                                            status.set(Some(SearchStatus::Error {
-                                                message: message["message"].as_str().map_or_else(
-                                                    || t(language_for_worker, "worker.error.search_failed"),
-                                                    str::to_owned,
-                                                ),
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            }));
-                                            searching.set(false);
-                                        }
-                                        _ => {}
+                                        },
+                                        "{count_solutions_label}"
                                     }
-                                });
-                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
-                                    if current_job_id() == job_id {
-                                        error_status.set(Some(SearchStatus::WorkerError(event.message())));
-                                        error_searching.set(false);
-                                    }
-                                });
-
-                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
-                                active_search.set(Some(ActiveSearch {
-                                    worker: worker.clone(),
-                                    _onmessage: onmessage,
-                                    _onerror: onerror,
-                                }));
-
-                                let request = serde_json::json!({
-                                    "type": "start",
-                                    "job_id": job_id,
-                                    "board": board.iter().flatten().copied().collect::<Vec<_>>(),
-                                    "max_solutions": UI_MAX_SOLUTIONS,
-                                    "max_nodes": 500_000u32,
-                                });
-                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
-                                    active_search.set(None);
-                                    search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
-                                    is_searching.set(false);
-                                }
-                            }
-                            Err(error) => {
-                                search_status.set(Some(SearchStatus::StartError(format!("{error:?}"))));
-                                is_searching.set(false);
-                            }
-                        }
-                    },
-                    "{count_solutions_label}"
-                }
-                if is_searching() {
-                    button {
-                        onclick: move |_| {
-                            let was_generating = is_generating();
-                            search_job_id.set(search_job_id().wrapping_add(1));
-                            active_search.set(None);
-                            is_searching.set(false);
-                            is_generating.set(false);
-                            let elapsed_seconds = elapsed_seconds_since(search_started_at());
-                            if was_generating {
-                                search_status.set(Some(SearchStatus::GenerationCancelled { elapsed_seconds }));
-                            } else {
-                                let count = search_solutions.read().len();
-                                search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
-                            }
-                        },
-                        "{cancel_task_label}"
-                    }
-                }
-                button {
-                    onclick: move |_| {
-                        let mut solver_mtx = *mtx.read();
-                        let analysis = BoardAnalysis::new(&solver_mtx);
-                        let conflict_count = analysis.conflict_count();
-                        let stuck_count = analysis.no_candidate_count();
-
-                        if conflict_count > 0 {
-                            msg.set(conflict_message(lang, conflict_count));
-                            is_ok.set(false);
-                        } else if stuck_count > 0 {
-                            msg.set(no_candidates_message(lang, stuck_count));
-                            is_ok.set(false);
-                        } else {
-                            let window = web_sys::window().unwrap();
-                            let performance = window.performance().unwrap();
-                            let t_start = performance.now();
-                            let succeeded = sudoku_solver::solve(&mut solver_mtx);
-                            let ms = performance.now() - t_start;
-                            log::debug!("time: {ms:.0} ms");
-
-                            if succeeded {
-                                record_board_change(
-                                    &mut undo_stack.write(),
-                                    &mut redo_stack.write(),
-                                    BoardSnapshot {
-                                        board: *mtx.read(),
-                                        givens: *givens.read(),
-                                    },
-                                    BoardSnapshot {
-                                        board: solver_mtx,
-                                        givens: *givens.read(),
-                                    },
-                                );
-                                mtx.set(solver_mtx);
-                                msg.set(t_args(lang, "solve.success", &[("milliseconds", format!("{ms:.0}"))]));
-                                is_ok.set(true);
-                            } else {
-                                msg.set(t_args(lang, "solve.no_solution", &[("milliseconds", format!("{ms:.0}"))]));
-                                is_ok.set(false);
-                            }
-                        }
-                    },
-                    "{solve_label}"
-                }
-                }
-                div {
-                    class: "button-group",
-                    role: "group",
-                    aria_label: "{text_group_label}",
-                    h2 { class: "button-group-title", "{text_group_label}" }
-                button {
-                    onclick: move |_| {
-                        match parse_puzzle(&txt.read(), lang) {
-                            Ok(board) => {
-                                let before = BoardSnapshot {
-                                    board: *mtx.read(),
-                                    givens: *givens.read(),
-                                };
-                                record_board_change(
-                                    &mut undo_stack.write(),
-                                    &mut redo_stack.write(),
-                                    before,
-                                    BoardSnapshot { board, givens: board },
-                                );
-                                mtx.set(board);
-                                givens.set(board);
-                                let analysis = BoardAnalysis::new(&board);
-                                let conflict_count = analysis.conflict_count();
-                                if conflict_count > 0 {
-                                    msg.set(format!("{}", puzzle_loaded_message(lang, Some(conflict_count), None)));
-                                    is_ok.set(false);
-                                } else {
-                                    let stuck_count = analysis.no_candidate_count();
-                                    if stuck_count > 0 {
-                                        msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
-                                        is_ok.set(false);
-                                    } else {
-                                        msg.set(puzzle_loaded_message(lang, None, None));
-                                        is_ok.set(true);
-                                    }
-                                }
-                                focus_cell(0, 0);
-                            }
-                            Err(error) => {
-                                msg.set(error);
-                                is_ok.set(false);
-                            }
-                        }
-                    },
-                    "{load_text_label}"
-                }
-                button {
-                    onclick: move |_| {
-                        txt.set(to_txt(&mtx.read()));
-                    },
-                    "{save_text_label}"
-                }
-                }
-            }
-            if let Some(status) = search_status() {
-                div {
-                    class: "search-panel",
-                    p { role: "status", "{status.text(lang)}" }
-                    if !found_solutions.is_empty() {
-                        div {
-                            p { class: "solution-heading", "{found_solutions_label}" }
-                            div {
-                                class: "solution-carousel-controls",
-                                button {
-                                    class: "solution-step",
-                                    aria_label: "{previous_solution_label}",
-                                    disabled: selected_solution() == 0,
-                                    onclick: move |_| {
-                                        selected_solution.set(selected_solution().saturating_sub(1));
-                                    },
-                                    "‹"
-                                }
-                                div {
-                                    class: "solution-range-control",
-                                    input {
-                                        id: "solution-range",
-                                        r#type: "range",
-                                        min: "0",
-                                        max: "{solution_count - 1}",
-                                        step: "1",
-                                        value: "{selected_solution()}",
-                                        aria_label: "{select_solution_label}",
-                                        aria_valuetext: "{solution_range_label(lang, selected_solution() + 1, solution_count)}",
-                                        oninput: move |evt| {
-                                            let index = evt.value().parse::<usize>().unwrap_or(0);
-                                            selected_solution.set(index.min(solution_count - 1));
+                                    if is_searching() {
+                                        button {
+                                            onclick: move |_| {
+                                                let was_generating = is_generating();
+                                                search_job_id.set(search_job_id().wrapping_add(1));
+                                                active_search.set(None);
+                                                is_searching.set(false);
+                                                is_generating.set(false);
+                                                let elapsed_seconds = elapsed_seconds_since(search_started_at());
+                                                if was_generating {
+                                                    let cancelled = SearchStatus::GenerationCancelled { elapsed_seconds };
+                                                    msg.set(cancelled.text(lang));
+                                                    is_ok.set(true);
+                                                    search_status.set(Some(cancelled));
+                                                } else {
+                                                    let count = search_solutions.read().len();
+                                                    search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
+                                                }
+                                            },
+                                            "{cancel_task_label}"
                                         }
                                     }
-                                    output { "{selected_solution() + 1} / {solution_count}" }
-                                },
-                                button {
-                                    class: "solution-step",
-                                    aria_label: "{next_solution_label}",
-                                    disabled: selected_solution() + 1 >= solution_count,
-                                    onclick: move |_| {
-                                        selected_solution.set((selected_solution() + 1).min(solution_count - 1));
-                                    },
-                                    "›"
-                                }
-                            }
-                            if let Some(solution) = found_solutions.get(selected_solution()) {
-                                div {
-                                    class: "solution-slide",
-                                    key: "solution-slide-{selected_solution()}",
-                                    table {
-                                        class: "solution-preview",
-                                        aria_label: "{solution_preview_label(lang, selected_solution() + 1)}",
-                                        tbody {
-                                            for (row_index, row) in solution.iter().enumerate() {
-                                                tr {
-                                                    key: "preview-row-{row_index}",
-                                                    for (column_index, value) in row.iter().enumerate() {
-                                                        td {
-                                                            key: "preview-cell-{row_index}-{column_index}",
-                                                            class: if solution_source_board.is_some_and(|source| source[row_index][column_index] != 0) { "solution-preview-given" } else { "" },
-                                                            "{value}"
+                                    button {
+                                        onclick: move |_| {
+                                            let mut solver_mtx = *mtx.read();
+                                            let analysis = BoardAnalysis::new(&solver_mtx);
+                                            let conflict_count = analysis.conflict_count();
+                                            let stuck_count = analysis.no_candidate_count();
+
+                                            if conflict_count > 0 {
+                                                msg.set(conflict_message(lang, conflict_count));
+                                                is_ok.set(false);
+                                            } else if stuck_count > 0 {
+                                                msg.set(no_candidates_message(lang, stuck_count));
+                                                is_ok.set(false);
+                                            } else {
+                                                let window = web_sys::window().unwrap();
+                                                let performance = window.performance().unwrap();
+                                                let t_start = performance.now();
+                                                let succeeded = sudoku_solver::solve(&mut solver_mtx);
+                                                let ms = performance.now() - t_start;
+                                                log::debug!("time: {ms:.0} ms");
+
+                                                if succeeded {
+                                                    record_board_change(
+                                                        &mut undo_stack.write(),
+                                                        &mut redo_stack.write(),
+                                                        BoardSnapshot {
+                                                            board: *mtx.read(),
+                                                            givens: *givens.read(),
+                                                        },
+                                                        BoardSnapshot {
+                                                            board: solver_mtx,
+                                                            givens: *givens.read(),
+                                                        },
+                                                    );
+                                                    mtx.set(solver_mtx);
+                                                    msg.set(t_args(lang, "solve.success", &[("milliseconds", format!("{ms:.0}"))]));
+                                                    is_ok.set(true);
+                                                } else {
+                                                    msg.set(t_args(lang, "solve.no_solution", &[("milliseconds", format!("{ms:.0}"))]));
+                                                    is_ok.set(false);
+                                                }
+                                            }
+                                        },
+                                        "{solve_label}"
+                                    }
+                                if let Some(status) = search_status().filter(|status| !status.is_generation()) {
+                                    div {
+                                        class: "search-panel",
+                                        p { role: "status", "{status.text(lang)}" }
+                                        if !found_solutions.is_empty() {
+                                            div {
+                                                p { class: "solution-heading", "{found_solutions_label}" }
+                                                div {
+                                                    class: "solution-carousel-controls",
+                                                    button {
+                                                        class: "solution-step",
+                                                        aria_label: "{previous_solution_label}",
+                                                        disabled: selected_solution() == 0,
+                                                        onclick: move |_| {
+                                                            selected_solution.set(selected_solution().saturating_sub(1));
+                                                        },
+                                                        "‹"
+                                                    }
+                                                    div {
+                                                        class: "solution-range-control",
+                                                        input {
+                                                            id: "solution-range",
+                                                            r#type: "range",
+                                                            min: "0",
+                                                            max: "{solution_count - 1}",
+                                                            step: "1",
+                                                            value: "{selected_solution()}",
+                                                            aria_label: "{select_solution_label}",
+                                                            aria_valuetext: "{solution_range_label(lang, selected_solution() + 1, solution_count)}",
+                                                            oninput: move |evt| {
+                                                                let index = evt.value().parse::<usize>().unwrap_or(0);
+                                                                selected_solution.set(index.min(solution_count - 1));
+                                                            }
+                                                        }
+                                                        output { "{selected_solution() + 1} / {solution_count}" }
+                                                    },
+                                                    button {
+                                                        class: "solution-step",
+                                                        aria_label: "{next_solution_label}",
+                                                        disabled: selected_solution() + 1 >= solution_count,
+                                                        onclick: move |_| {
+                                                            selected_solution.set((selected_solution() + 1).min(solution_count - 1));
+                                                        },
+                                                        "›"
+                                                    }
+                                                }
+                                                if let Some(solution) = found_solutions.get(selected_solution()) {
+                                                    div {
+                                                        class: "solution-slide",
+                                                        key: "solution-slide-{selected_solution()}",
+                                                        table {
+                                                            class: "solution-preview",
+                                                            aria_label: "{solution_preview_label(lang, selected_solution() + 1)}",
+                                                            tbody {
+                                                                for (row_index, row) in solution.iter().enumerate() {
+                                                                    tr {
+                                                                        key: "preview-row-{row_index}",
+                                                                        for (column_index, value) in row.iter().enumerate() {
+                                                                            td {
+                                                                                key: "preview-cell-{row_index}-{column_index}",
+                                                                                class: if solution_source_board.is_some_and(|source| source[row_index][column_index] != 0) { "solution-preview-given" } else { "" },
+                                                                                "{value}"
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                            }
                                                         }
                                                     }
+                                                }
+                                                button {
+                                                    disabled: !can_apply_selected_solution,
+                                                    onclick: move |_| {
+                                                        if let Some(solution) = search_solutions.read().get(selected_solution()).copied() {
+                                                            record_board_change(
+                                                                &mut undo_stack.write(),
+                                                                &mut redo_stack.write(),
+                                                                BoardSnapshot {
+                                                                    board: *mtx.read(),
+                                                                    givens: *givens.read(),
+                                                                },
+                                                                BoardSnapshot {
+                                                                    board: solution,
+                                                                    givens: *givens.read(),
+                                                                },
+                                                            );
+                                                            mtx.set(solution);
+                                                            msg.set(t(lang, "message.solution_applied"));
+                                                            is_ok.set(true);
+                                                        }
+                                                    },
+                                                    "{apply_solution_label}"
+                                                }
+                                                if !can_apply_selected_solution {
+                                                    p { "{stale_solution_message}" }
                                                 }
                                             }
                                         }
                                     }
                                 }
-                            }
-                            button {
-                                disabled: !can_apply_selected_solution,
-                                onclick: move |_| {
-                                    if let Some(solution) = search_solutions.read().get(selected_solution()).copied() {
-                                        record_board_change(
-                                            &mut undo_stack.write(),
-                                            &mut redo_stack.write(),
-                                            BoardSnapshot {
-                                                board: *mtx.read(),
-                                                givens: *givens.read(),
-                                            },
-                                            BoardSnapshot {
-                                                board: solution,
-                                                givens: *givens.read(),
-                                            },
-                                        );
-                                        mtx.set(solution);
-                                        msg.set(t(lang, "message.solution_applied"));
-                                        is_ok.set(true);
                                     }
-                                },
-                                "{apply_solution_label}"
-                            }
-                            if !can_apply_selected_solution {
-                                p { "{stale_solution_message}" }
-                            }
-                        }
-                    }
-                }
-            }
-            div {
-                class: "text-panel",
-                div {
-                    class: "text-label-row",
-                    label {
-                        r#for: "puzzle-text",
-                        "{puzzle_text_label}"
-                    }
-                    button {
-                        class: "copy-button",
-                        r#type: "button",
-                        aria_label: "{copy_text_label}",
-                        title: "{copy_text_label}",
-                        onclick: move |_| {
-                            copy_feedback.set(None);
-                            let text_to_copy = txt.read().clone();
-                            let mut feedback = copy_feedback;
-                            spawn(async move {
-                                let result = async {
-                                    let window = web_sys::window()
-                                        .ok_or_else(|| wasm_bindgen::JsValue::from_str("Window is unavailable"))?;
-                                    let clipboard = window.navigator().clipboard();
-                                    wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text_to_copy))
-                                        .await
-                                        .map(|_| ())
                                 }
-                                .await;
-                                feedback.set(Some(result.is_ok()));
-                            });
-                        },
-                        svg {
-                            view_box: "0 0 24 24",
-                            fill: "none",
-                            stroke: "currentColor",
-                            stroke_width: "2",
-                            stroke_linecap: "round",
-                            stroke_linejoin: "round",
-                            rect { x: "8", y: "8", width: "13", height: "13", rx: "2" }
-                            path { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }
+                            }
+                        }
+                        if active_side_tab() == 0 {
+                            section {
+                                id: "panel-transform",
+                                role: "tabpanel",
+                                aria_labelledby: "tab-transform",
+                                tabindex: "0",
+                                                                section {
+                                    class: "transform-panel",
+                                    aria_label: "{transform_group_label}",
+                                    h2 { class: "transform-heading", "{transform_group_label}" }
+                                    div {
+                                        class: "transform-controls",
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{bands_label}" }
+                                            label {
+                                                "{first_band_label}"
+                                                select {
+                                                    aria_label: "{first_band_label}",
+                                                    onchange: move |event| band_first.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: band_first() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_band_label}"
+                                                select {
+                                                    aria_label: "{second_band_label}",
+                                                    onchange: move |event| band_second.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: band_second() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: band_first() == band_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapBands {
+                                                        first: band_first() as usize,
+                                                        second: band_second() as usize,
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_bands_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{rows_label}" }
+                                            label {
+                                                "{row_band_label}"
+                                                select {
+                                                    aria_label: "{row_band_label}",
+                                                    onchange: move |event| row_band.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: row_band() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{first_row_label}"
+                                                select {
+                                                    aria_label: "{first_row_label}",
+                                                    onchange: move |event| row_first.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: row_first() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_row_label}"
+                                                select {
+                                                    aria_label: "{second_row_label}",
+                                                    onchange: move |event| row_second.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: row_second() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: row_first() == row_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapRows {
+                                                        band: row_band() as usize,
+                                                        first: row_first() as usize,
+                                                        second: row_second() as usize,
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_rows_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{stacks_label}" }
+                                            label {
+                                                "{first_stack_label}"
+                                                select {
+                                                    aria_label: "{first_stack_label}",
+                                                    onchange: move |event| stack_first.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: stack_first() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_stack_label}"
+                                                select {
+                                                    aria_label: "{second_stack_label}",
+                                                    onchange: move |event| stack_second.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: stack_second() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: stack_first() == stack_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapStacks {
+                                                        first: stack_first() as usize,
+                                                        second: stack_second() as usize,
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_stacks_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{columns_label}" }
+                                            label {
+                                                "{column_stack_label}"
+                                                select {
+                                                    aria_label: "{column_stack_label}",
+                                                    onchange: move |event| column_stack.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: column_stack() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{first_column_label}"
+                                                select {
+                                                    aria_label: "{first_column_label}",
+                                                    onchange: move |event| column_first.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: column_first() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_column_label}"
+                                                select {
+                                                    aria_label: "{second_column_label}",
+                                                    onchange: move |event| column_second.set(event.value().parse().unwrap_or(0)),
+                                                    for value in 0u8..3 {
+                                                        option { value: "{value}", selected: column_second() == value, "{value + 1}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: column_first() == column_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapColumns {
+                                                        stack: column_stack() as usize,
+                                                        first: column_first() as usize,
+                                                        second: column_second() as usize,
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_columns_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{digits_label}" }
+                                            label {
+                                                "{first_digit_label}"
+                                                select {
+                                                    aria_label: "{first_digit_label}",
+                                                    onchange: move |event| digit_first.set(event.value().parse().unwrap_or(1)),
+                                                    for value in 1u8..=9 {
+                                                        option { value: "{value}", selected: digit_first() == value, "{value}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_digit_label}"
+                                                select {
+                                                    aria_label: "{second_digit_label}",
+                                                    onchange: move |event| digit_second.set(event.value().parse().unwrap_or(2)),
+                                                    for value in 1u8..=9 {
+                                                        option { value: "{value}", selected: digit_second() == value, "{value}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: digit_first() == digit_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapDigits {
+                                                        first: digit_first(),
+                                                        second: digit_second(),
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_digits_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control transform-orientation",
+                                            legend { "{orientation_label}" }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Transpose,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{transpose_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate90,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_90_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate180,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_180_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate270,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_270_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::ReflectHorizontal,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{reflect_horizontal_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::ReflectVertical,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{reflect_vertical_label}"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if active_side_tab() == 2 {
+                            section {
+                                id: "panel-text",
+                                role: "tabpanel",
+                                aria_labelledby: "tab-text",
+                                tabindex: "0",
+                                                                div {
+                                    class: "text-panel",
+                                    role: "group",
+                                    aria_label: "{text_group_label}",
+                                    div {
+                                        class: "text-label-row",
+                                        h2 { class: "text-panel-title", "{text_group_label}" }
+                                        button {
+                                            class: "copy-button",
+                                            r#type: "button",
+                                            aria_label: "{copy_text_label}",
+                                            title: "{copy_text_label}",
+                                            onclick: move |_| {
+                                                copy_feedback.set(None);
+                                                let text_to_copy = txt.read().clone();
+                                                let mut feedback = copy_feedback;
+                                                spawn(async move {
+                                                    let result = async {
+                                                        let window = web_sys::window()
+                                                            .ok_or_else(|| wasm_bindgen::JsValue::from_str("Window is unavailable"))?;
+                                                        let clipboard = window.navigator().clipboard();
+                                                        wasm_bindgen_futures::JsFuture::from(clipboard.write_text(&text_to_copy))
+                                                            .await
+                                                            .map(|_| ())
+                                                    }
+                                                    .await;
+                                                    feedback.set(Some(result.is_ok()));
+                                                });
+                                            },
+                                            svg {
+                                                view_box: "0 0 24 24",
+                                                fill: "none",
+                                                stroke: "currentColor",
+                                                stroke_width: "2",
+                                                stroke_linecap: "round",
+                                                stroke_linejoin: "round",
+                                                rect { x: "8", y: "8", width: "13", height: "13", rx: "2" }
+                                                path { d: "M16 8V5a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h3" }
+                                            }
+                                        }
+                                    }
+                                    div {
+                                        class: "text-actions",
+                                        button {
+                                            r#type: "button",
+                                            onclick: move |_| {
+                                                match parse_puzzle(&txt.read(), lang) {
+                                                    Ok(board) => {
+                                                        let before = BoardSnapshot {
+                                                            board: *mtx.read(),
+                                                            givens: *givens.read(),
+                                                        };
+                                                        record_board_change(
+                                                            &mut undo_stack.write(),
+                                                            &mut redo_stack.write(),
+                                                            before,
+                                                            BoardSnapshot { board, givens: board },
+                                                        );
+                                                        mtx.set(board);
+                                                        givens.set(board);
+                                                        let analysis = BoardAnalysis::new(&board);
+                                                        let conflict_count = analysis.conflict_count();
+                                                        if conflict_count > 0 {
+                                                            msg.set(puzzle_loaded_message(lang, Some(conflict_count), None));
+                                                            is_ok.set(false);
+                                                        } else {
+                                                            let stuck_count = analysis.no_candidate_count();
+                                                            if stuck_count > 0 {
+                                                                msg.set(puzzle_loaded_message(lang, None, Some(stuck_count)));
+                                                                is_ok.set(false);
+                                                            } else {
+                                                                msg.set(puzzle_loaded_message(lang, None, None));
+                                                                is_ok.set(true);
+                                                            }
+                                                        }
+                                                        focus_cell(0, 0);
+                                                    }
+                                                    Err(error) => {
+                                                        msg.set(error);
+                                                        is_ok.set(false);
+                                                    }
+                                                }
+                                            },
+                                            "{load_text_label}"
+                                        }
+                                        button {
+                                            r#type: "button",
+                                            onclick: move |_| {
+                                                txt.set(to_txt(&mtx.read()));
+                                            },
+                                            "{save_text_label}"
+                                        }
+                                    }
+                                    label {
+                                        class: "text-field-label",
+                                        r#for: "puzzle-text",
+                                        "{puzzle_text_label}"
+                                    }
+                                    if let Some(copied) = copy_feedback() {
+                                        p {
+                                            class: "copy-feedback",
+                                            role: "status",
+                                            if copied { "{copy_success_label}" } else { "{copy_error_label}" }
+                                        }
+                                    }
+                                    p {
+                                        class: "text-help",
+                                        "{puzzle_text_help}"
+                                    }
+                                    textarea {
+                                        id: "puzzle-text",
+                                        class: "text",
+                                        value: "{txt}",
+                                        onchange: move |evt| {
+                                            txt.set(evt.value());
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                if let Some(copied) = copy_feedback() {
-                    p {
-                        class: "copy-feedback",
-                        role: "status",
-                        if copied { "{copy_success_label}" } else { "{copy_error_label}" }
-                    }
-                }
-                p {
-                    class: "text-help",
-                    "{puzzle_text_help}"
-                }
-                textarea {
-                    id: "puzzle-text",
-                    class: "text",
-                    value: "{txt}",
-                    onchange: move |evt| {
-                        txt.set(evt.value());
-                    }
-                }
             }
+
+
         }
     }
 }
