@@ -56,7 +56,7 @@
   "label.first_digit": "Digit A",
   "label.second_digit": "Digit B",
   "help.puzzle_text": "Enter exactly 9 lines of 9 characters. Digits 1–9 are clues; 0, ., and _ are blank cells.",
-  "help.drag_board_transforms": "Use the band and stack handles to move whole groups. Row and column handles only swap within their group. You can also click or tap two handles.",
+  "help.drag_board_transforms": "Drag the band, stack, row, or column handles to swap them. Rows and columns can only be swapped within the same band or stack. You can also click or tap two handles to swap them.",
   "label.drag_band": "Drag or select band {band} to swap",
   "label.drag_row": "Drag or select row {row} in band {band} to swap",
   "label.drag_stack": "Drag or select stack {stack} to swap",
