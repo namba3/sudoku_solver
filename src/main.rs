@@ -7,7 +7,10 @@ mod board_transform;
 mod i18n;
 
 use board_analysis::{candidate_digits, BoardAnalysis};
-use board_transform::{transform_matrix, BoardTransform};
+use board_transform::{
+    band_drag_transform, column_drag_transform, row_drag_transform, stack_drag_transform,
+    transform_matrix, BoardTransform,
+};
 use i18n::{t, t_args, t_plural, Language};
 
 fn main() {
@@ -32,6 +35,14 @@ const INITIAL_MTX: sudoku_solver::Matrix = [
 struct BoardSnapshot {
     board: sudoku_solver::Matrix,
     givens: sudoku_solver::Matrix,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum BoardDragHandle {
+    Band(usize),
+    Row(usize),
+    Stack(usize),
+    Column(usize),
 }
 
 const HISTORY_LIMIT: usize = 100;
@@ -59,6 +70,44 @@ fn cell_aria_label(language: Language, row: usize, column: usize) -> String {
             ("row", (row + 1).to_string()),
             ("column", (column + 1).to_string()),
         ],
+    )
+}
+
+fn row_drag_handle_label(language: Language, row: usize) -> String {
+    t_args(
+        language,
+        "label.drag_row",
+        &[
+            ("row", (row % 3 + 1).to_string()),
+            ("band", (row / 3 + 1).to_string()),
+        ],
+    )
+}
+
+fn column_drag_handle_label(language: Language, column: usize) -> String {
+    t_args(
+        language,
+        "label.drag_column",
+        &[
+            ("column", (column % 3 + 1).to_string()),
+            ("stack", (column / 3 + 1).to_string()),
+        ],
+    )
+}
+
+fn band_drag_handle_label(language: Language, band: usize) -> String {
+    t_args(
+        language,
+        "label.drag_band",
+        &[("band", (band + 1).to_string())],
+    )
+}
+
+fn stack_drag_handle_label(language: Language, stack: usize) -> String {
+    t_args(
+        language,
+        "label.drag_stack",
+        &[("stack", (stack + 1).to_string())],
     )
 }
 
@@ -309,6 +358,7 @@ fn app() -> Element {
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
     let mut active_side_tab = use_signal(|| 1u8);
+    let mut selected_drag_handle = use_signal(|| None::<BoardDragHandle>);
 
     let lang = language();
     let msg_class = if is_generating() {
@@ -370,6 +420,11 @@ fn app() -> Element {
     let copy_success_label = t(lang, "message.copied");
     let copy_error_label = t(lang, "message.copy_failed");
     let board_group_label = t(lang, "group.board");
+    let band_handles_label = t(lang, "label.drag_bands");
+    let row_handles_label = t(lang, "label.drag_rows");
+    let stack_handles_label = t(lang, "label.drag_stacks");
+    let column_handles_label = t(lang, "label.drag_columns");
+    let board_transform_help = t(lang, "help.drag_board_transforms");
     let generation_group_label = t(lang, "group.generation");
     let transform_group_label = t(lang, "group.transform");
     let bands_label = t(lang, "label.bands");
@@ -717,7 +772,210 @@ fn app() -> Element {
                     "{generate_puzzle_label}"
                 }
                     }
-            ul {
+            div {
+                class: "matrix-interaction",
+                div { class: "matrix-interaction-corner", aria_hidden: "true" }
+                div {
+                    class: "axis-handles stack-handles",
+                    role: "group",
+                    aria_label: "{stack_handles_label}",
+                    for stack in 0usize..3 {
+                        button {
+                            r#type: "button",
+                            class: if selected_drag_handle() == Some(BoardDragHandle::Stack(stack)) { "drag-handle group-drag-handle selected" } else { "drag-handle group-drag-handle" },
+                            draggable: "true",
+                            aria_label: "{stack_drag_handle_label(lang, stack)}",
+                            title: "{stack_drag_handle_label(lang, stack)}",
+                            ondragstart: move |event| {
+                                let transfer = event.data_transfer();
+                                let _ = transfer.set_data("text/plain", &format!("stack:{stack}"));
+                                transfer.set_drop_effect("move");
+                                selected_drag_handle.set(Some(BoardDragHandle::Stack(stack)));
+                            },
+                            ondragover: move |event| event.prevent_default(),
+                            ondrop: move |event| {
+                                event.prevent_default();
+                                let source = event
+                                    .data_transfer()
+                                    .get_as_text()
+                                    .and_then(|value| value.strip_prefix("stack:").and_then(|value| value.parse::<usize>().ok()));
+                                if let Some(transform) = source.and_then(|source| stack_drag_transform(source, stack)) {
+                                    apply_board_transform(
+                                        transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                        &mut msg, &mut is_ok, lang,
+                                    );
+                                }
+                                selected_drag_handle.set(None);
+                            },
+                            ondragend: move |_| selected_drag_handle.set(None),
+                            onclick: move |_| {
+                                if let Some(BoardDragHandle::Stack(source)) = selected_drag_handle() {
+                                    selected_drag_handle.set(None);
+                                    if let Some(transform) = stack_drag_transform(source, stack) {
+                                        apply_board_transform(
+                                            transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                            &mut msg, &mut is_ok, lang,
+                                        );
+                                    }
+                                } else {
+                                    selected_drag_handle.set(Some(BoardDragHandle::Stack(stack)));
+                                }
+                            },
+                            "S{stack + 1}"
+                        }
+                    }
+                }
+                div {
+                    class: "axis-handles column-handles",
+                    role: "group",
+                    aria_label: "{column_handles_label}",
+                    for column in 0usize..9 {
+                        button {
+                            r#type: "button",
+                            class: if selected_drag_handle() == Some(BoardDragHandle::Column(column)) { "drag-handle selected" } else { "drag-handle" },
+                            draggable: "true",
+                            aria_label: "{column_drag_handle_label(lang, column)}",
+                            title: "{column_drag_handle_label(lang, column)}",
+                            ondragstart: move |event| {
+                                let transfer = event.data_transfer();
+                                let _ = transfer.set_data("text/plain", &format!("column:{column}"));
+                                transfer.set_drop_effect("move");
+                                selected_drag_handle.set(Some(BoardDragHandle::Column(column)));
+                            },
+                            ondragover: move |event| event.prevent_default(),
+                            ondrop: move |event| {
+                                event.prevent_default();
+                                let source = event
+                                    .data_transfer()
+                                    .get_as_text()
+                                    .and_then(|value| value.strip_prefix("column:").and_then(|value| value.parse::<usize>().ok()));
+                                if let Some(transform) = source.and_then(|source| column_drag_transform(source, column)) {
+                                    apply_board_transform(
+                                        transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                        &mut msg, &mut is_ok, lang,
+                                    );
+                                }
+                                selected_drag_handle.set(None);
+                            },
+                            ondragend: move |_| selected_drag_handle.set(None),
+                            onclick: move |_| {
+                                if let Some(BoardDragHandle::Column(source)) = selected_drag_handle() {
+                                    selected_drag_handle.set(None);
+                                    if let Some(transform) = column_drag_transform(source, column) {
+                                        apply_board_transform(
+                                            transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                            &mut msg, &mut is_ok, lang,
+                                        );
+                                    }
+                                } else {
+                                    selected_drag_handle.set(Some(BoardDragHandle::Column(column)));
+                                }
+                            },
+                            "{column % 3 + 1}"
+                        }
+                    }
+                }
+                div {
+                    class: "axis-handles band-handles",
+                    role: "group",
+                    aria_label: "{band_handles_label}",
+                    for band in 0usize..3 {
+                        button {
+                            r#type: "button",
+                            class: if selected_drag_handle() == Some(BoardDragHandle::Band(band)) { "drag-handle group-drag-handle selected" } else { "drag-handle group-drag-handle" },
+                            draggable: "true",
+                            aria_label: "{band_drag_handle_label(lang, band)}",
+                            title: "{band_drag_handle_label(lang, band)}",
+                            ondragstart: move |event| {
+                                let transfer = event.data_transfer();
+                                let _ = transfer.set_data("text/plain", &format!("band:{band}"));
+                                transfer.set_drop_effect("move");
+                                selected_drag_handle.set(Some(BoardDragHandle::Band(band)));
+                            },
+                            ondragover: move |event| event.prevent_default(),
+                            ondrop: move |event| {
+                                event.prevent_default();
+                                let source = event
+                                    .data_transfer()
+                                    .get_as_text()
+                                    .and_then(|value| value.strip_prefix("band:").and_then(|value| value.parse::<usize>().ok()));
+                                if let Some(transform) = source.and_then(|source| band_drag_transform(source, band)) {
+                                    apply_board_transform(
+                                        transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                        &mut msg, &mut is_ok, lang,
+                                    );
+                                }
+                                selected_drag_handle.set(None);
+                            },
+                            ondragend: move |_| selected_drag_handle.set(None),
+                            onclick: move |_| {
+                                if let Some(BoardDragHandle::Band(source)) = selected_drag_handle() {
+                                    selected_drag_handle.set(None);
+                                    if let Some(transform) = band_drag_transform(source, band) {
+                                        apply_board_transform(
+                                            transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                            &mut msg, &mut is_ok, lang,
+                                        );
+                                    }
+                                } else {
+                                    selected_drag_handle.set(Some(BoardDragHandle::Band(band)));
+                                }
+                            },
+                            "B{band + 1}"
+                        }
+                    }
+                }
+                div {
+                    class: "axis-handles row-handles",
+                    role: "group",
+                    aria_label: "{row_handles_label}",
+                    for row in 0usize..9 {
+                        button {
+                            r#type: "button",
+                            class: if selected_drag_handle() == Some(BoardDragHandle::Row(row)) { "drag-handle selected" } else { "drag-handle" },
+                            draggable: "true",
+                            aria_label: "{row_drag_handle_label(lang, row)}",
+                            title: "{row_drag_handle_label(lang, row)}",
+                            ondragstart: move |event| {
+                                let transfer = event.data_transfer();
+                                let _ = transfer.set_data("text/plain", &format!("row:{row}"));
+                                transfer.set_drop_effect("move");
+                                selected_drag_handle.set(Some(BoardDragHandle::Row(row)));
+                            },
+                            ondragover: move |event| event.prevent_default(),
+                            ondrop: move |event| {
+                                event.prevent_default();
+                                let source = event
+                                    .data_transfer()
+                                    .get_as_text()
+                                    .and_then(|value| value.strip_prefix("row:").and_then(|value| value.parse::<usize>().ok()));
+                                if let Some(transform) = source.and_then(|source| row_drag_transform(source, row)) {
+                                    apply_board_transform(
+                                        transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                        &mut msg, &mut is_ok, lang,
+                                    );
+                                }
+                                selected_drag_handle.set(None);
+                            },
+                            ondragend: move |_| selected_drag_handle.set(None),
+                            onclick: move |_| {
+                                if let Some(BoardDragHandle::Row(source)) = selected_drag_handle() {
+                                    selected_drag_handle.set(None);
+                                    if let Some(transform) = row_drag_transform(source, row) {
+                                        apply_board_transform(
+                                            transform, &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                            &mut msg, &mut is_ok, lang,
+                                        );
+                                    }
+                                } else {
+                                    selected_drag_handle.set(Some(BoardDragHandle::Row(row)));
+                                }
+                            },
+                            "{row % 3 + 1}"
+                        }
+                    }
+                }
+                ul {
                 class: "matrix",
                 for (y, row) in board.iter().enumerate() {
                     li {
@@ -855,6 +1113,8 @@ fn app() -> Element {
                         }
                     }
                 }
+            }
+                p { class: "board-transform-help", "{board_transform_help}" }
             }
                 }
                 div {

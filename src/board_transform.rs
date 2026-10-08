@@ -30,6 +30,56 @@ pub(super) enum BoardTransform {
     ReflectVertical,
 }
 
+pub(super) fn row_drag_transform(source: usize, target: usize) -> Option<BoardTransform> {
+    if source >= 9 || target >= 9 || source == target {
+        return None;
+    }
+
+    let source_band = source / 3;
+    let target_band = target / 3;
+    if source_band == target_band {
+        Some(BoardTransform::SwapRows {
+            band: source_band,
+            first: source % 3,
+            second: target % 3,
+        })
+    } else {
+        None
+    }
+}
+
+pub(super) fn column_drag_transform(source: usize, target: usize) -> Option<BoardTransform> {
+    if source >= 9 || target >= 9 || source == target {
+        return None;
+    }
+
+    let source_stack = source / 3;
+    let target_stack = target / 3;
+    if source_stack == target_stack {
+        Some(BoardTransform::SwapColumns {
+            stack: source_stack,
+            first: source % 3,
+            second: target % 3,
+        })
+    } else {
+        None
+    }
+}
+
+pub(super) fn band_drag_transform(source: usize, target: usize) -> Option<BoardTransform> {
+    (source < 3 && target < 3 && source != target).then_some(BoardTransform::SwapBands {
+        first: source,
+        second: target,
+    })
+}
+
+pub(super) fn stack_drag_transform(source: usize, target: usize) -> Option<BoardTransform> {
+    (source < 3 && target < 3 && source != target).then_some(BoardTransform::SwapStacks {
+        first: source,
+        second: target,
+    })
+}
+
 pub(super) fn transform_matrix(
     board: &sudoku_solver::Matrix,
     transform: BoardTransform,
@@ -113,7 +163,10 @@ pub(super) fn transform_matrix(
 
 #[cfg(test)]
 mod tests {
-    use super::{transform_matrix, BoardTransform};
+    use super::{
+        band_drag_transform, column_drag_transform, row_drag_transform, stack_drag_transform,
+        transform_matrix, BoardTransform,
+    };
     use sudoku_solver::Matrix;
 
     const SOLUTION: Matrix = [
@@ -198,6 +251,62 @@ mod tests {
             transform_matrix(&SOLUTION, BoardTransform::ReflectVertical)[0][8],
             5
         );
+    }
+
+    #[test]
+    fn row_indices_only_swap_rows_within_their_band() {
+        assert_eq!(
+            row_drag_transform(3, 5),
+            Some(BoardTransform::SwapRows {
+                band: 1,
+                first: 0,
+                second: 2,
+            })
+        );
+        assert_eq!(row_drag_transform(1, 7), None);
+        assert_eq!(row_drag_transform(4, 4), None);
+        assert_eq!(row_drag_transform(9, 0), None);
+    }
+
+    #[test]
+    fn band_indices_swap_only_whole_bands() {
+        assert_eq!(
+            band_drag_transform(0, 2),
+            Some(BoardTransform::SwapBands {
+                first: 0,
+                second: 2
+            })
+        );
+        assert_eq!(band_drag_transform(1, 1), None);
+        assert_eq!(band_drag_transform(3, 0), None);
+    }
+
+    #[test]
+    fn column_indices_only_swap_columns_within_their_stack() {
+        assert_eq!(
+            column_drag_transform(6, 8),
+            Some(BoardTransform::SwapColumns {
+                stack: 2,
+                first: 0,
+                second: 2,
+            })
+        );
+        assert_eq!(column_drag_transform(1, 7), None);
+        assert_eq!(column_drag_transform(2, 2), None);
+        assert_eq!(column_drag_transform(0, 9), None);
+    }
+
+    #[test]
+    fn stack_indices_swap_only_whole_stacks() {
+        assert_eq!(
+            stack_drag_transform(0, 2),
+            Some(BoardTransform::SwapStacks {
+                first: 0,
+                second: 2
+            })
+        );
+        assert_eq!(stack_drag_transform(1, 1), None);
+        assert_eq!(stack_drag_transform(3, 0), None);
     }
 
     #[test]
