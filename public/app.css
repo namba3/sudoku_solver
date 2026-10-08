@@ -218,6 +218,22 @@ h1 {
     color: #fff;
 }
 
+.drag-handle.drag-preview-source {
+    box-shadow: 0 0 0 2px #175cd3;
+}
+
+.drag-handle.drag-preview-target {
+    border-color: #039855;
+    background: #d1fadf;
+    color: #05603a;
+}
+
+.drag-handle.drag-preview-invalid {
+    border-color: #d92d20;
+    background: #fee4e2;
+    color: #b42318;
+}
+
 .drag-handle:active {
     cursor: grabbing;
 }
@@ -258,6 +274,21 @@ h1 {
     text-align: left;
 }
 
+.board-transform-preview {
+    grid-column: 1 / -1;
+    grid-row: 5;
+    margin: 6px 0 0 48px;
+    padding: 7px 10px;
+    border: 1px solid #d6bbfb;
+    border-radius: 6px;
+    background: #f9f5ff;
+    color: #53389e;
+    font-size: 0.82rem;
+    font-weight: 650;
+    line-height: 1.4;
+    text-align: left;
+}
+
 .matrix li {
     min-width: 0;
     margin: 0;
@@ -274,6 +305,16 @@ h1 {
 .cell {
     position: relative;
     min-width: 0;
+}
+
+.cell.drag-preview-cell::after {
+    position: absolute;
+    z-index: 2;
+    inset: 1px;
+    border: 2px solid rgb(127 86 217 / 75%);
+    background: rgb(234 221 255 / 18%);
+    content: "";
+    pointer-events: none;
 }
 
 .odd input {
