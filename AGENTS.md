@@ -43,3 +43,8 @@ cargo check --target wasm32-unknown-unknown
 ```
 
 Use a Dioxus CLI version compatible with the Dioxus dependency in `Cargo.toml`. A successful compile or bundle does not establish that the application was exercised in a browser.
+
+## Code Review
+
+When performing a code review, read and follow the guidelines in [REVIEW.md](./REVIEW.md).
+These guidelines apply only to code review tasks; for regular development work, follow the instructions above.
