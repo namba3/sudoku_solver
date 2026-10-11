@@ -9,5 +9,8 @@
 3. [アプリとコードの構成](architecture.md)
 4. [開発とビルド](development.md)
 5. [翻訳リソース](i18n.md)
+6. [Dioxus UIテスト設計](testing/dioxus-ui-testing.md)
+7. [Dioxus UIテスト導入準備状況](testing/dioxus-test-readiness.md)
+8. [UIテストシナリオ](testing/ui-test-scenarios.md)
 
 資料は現在の実装を説明します。実装やコマンドを変更した場合は、関連資料も合わせて更新してください。

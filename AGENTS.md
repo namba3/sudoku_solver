@@ -44,6 +44,8 @@ cargo check --target wasm32-unknown-unknown
 
 Use a Dioxus CLI version compatible with the Dioxus dependency in `Cargo.toml`. A successful compile or bundle does not establish that the application was exercised in a browser.
 
+For UI changes, consult [`documentation/testing/dioxus-ui-testing.md`](documentation/testing/dioxus-ui-testing.md), the readiness assessment, and the scenario list. Keep unit, render/component, browser E2E, and visual evidence distinct; a build alone does not establish UI coverage.
+
 ## Code Review
 
 When performing a code review, read and follow the guidelines in [REVIEW.md](./REVIEW.md).
