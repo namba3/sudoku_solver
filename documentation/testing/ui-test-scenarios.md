@@ -1,6 +1,6 @@
 # UIテストシナリオ
 
-ケースは現行UIと`src/main.rs`の補助関数に基づきます。準備状況の採点は[Dioxus UIテスト導入準備状況](dioxus-test-readiness.md)、階層と識別方針は[Dioxus UIテスト設計](dioxus-ui-testing.md)を参照してください。「Ready」は既存境界からテストを記述可能という意味で、実装済みを示しません。
+ケースは現行UIと`src/main.rs`の補助関数に基づく、確認対象の契約一覧です。実行済みテストの記録ではありません。準備状況の採点は[Dioxus UIテスト導入準備状況](dioxus-test-readiness.md)、階層と識別方針は[Dioxus UIテスト設計](dioxus-ui-testing.md)を参照してください。「Ready」は既存境界からテストを記述可能という意味で、実装済みを示しません。
 
 | Test ID | 対象 | Given | When | Then / 目的 | 推奨階層・ツール | 優先度 | 準備・前提 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -13,8 +13,8 @@
 | UI-07 | Reset/Clear | givenとユーザー入力あり | ResetまたはClear、続いてUndo | Resetはgiven保持、Clearは双方消去、履歴で復元 | Unit + Component | P1 | 履歴関数あり、ボタン統合Minor |
 | UI-08 | Solve | 解ける/競合盤面 | Solveを押す | 解を表示するか、競合/候補切れの局所化エラーを表示 | Integration + Web E2E | P1 | solver Ready、UI操作Minor。fixture盤面 |
 | UI-09 | サイドタブ | Solve表示 | Transform/Textを選ぶ | 選択tabとtabpanelが切り替わる | Component + Web E2E | P2 | Minor Changes。現行3タブ、Routerではない |
-| UI-10 | 生成入力 | clue数欄 | 16/17/81/82/空/非整数でGenerate | 17〜81の整数だけ送信し、無効値は翻訳エラー | Unit + Component | P1 | validation抽出とWorker境界が必要 |
-| UI-11 | 生成成功 | 固定seed/有効clue数 | Generate完了イベント | clue数が一致し、given/盤面が同期し成功状態 | Integration + Web E2E | P1 | Fake Worker必要。UIは現在暗号乱数seed |
+| UI-10 | 生成入力 | clue数欄 | 16/17/81/82/空/非整数を入力してGenerate | Fastで17〜81の整数だけをWorkerへ送り、無効値は翻訳エラー | Unit + Component | P1 | 範囲検証は実装済み。Worker requestのFake検証は未整備 |
+| UI-11 | Fast生成完了 | 固定seed/有効clue数 | Workerから完了またはエラーを送る | 指定ヒント数の盤面だけ反映し、given/盤面が同期 | Integration + Web E2E | P1 | UI配線は実装済み。Fake Workerとブラウザー検証は未整備 |
 | UI-12 | 検索進捗/完了 | 解がある盤面 | 開始後にWorkerイベントを送る | 開始/進捗/完了、解数/ノード数を表示し解を適用可能 | Integration + Component | P1 | Refactoring Required。Fake Worker/clock |
 | UI-13 | 検索上限 | 複数解盤面 | 上限到達event | 部分結果を総数と誤表示せず、上限到達を示す | Unit + Integration | P1 | 表示ロジックUnit可、Worker Fake必要 |
 | UI-14 | 検索エラー | 競合または不正worker応答 | Search実行 | localized errorを表示し盤面を上書きしない | Integration | P1 | parser/status Unit Ready、配線要分離 |
@@ -34,11 +34,3 @@
 - Router遷移、dialog、theme toggle: 該当機能を確認できません。
 - Desktop E2E、OS設定変更、実ファイル削除、外部サービスへの書込み: 現行Web構成外です。
 - Worker時間の性能閾値: 初期段階は決定的な上限制御/状態表示を検証し、端末差のある性能測定は分離します。
-
-## 実装順
-
-1. UI-01〜08とUI-18〜19のロジック/状態境界を既存`cargo test`で維持・補強します。
-2. UI-10〜15のWorkerとclockをFake可能にします。
-3. 盤面、操作、タブのcomponent境界とaccessible selectorを整え、UI-01〜09、UI-16〜17を試します。
-4. Playwrightを導入可能な環境でUI-21〜24を含む主要利用フローを実ブラウザーで確認します。
-5. `dioxus-test`の成熟度ゲート通過後、E2Eと重複しない小さなPoCを選びます。

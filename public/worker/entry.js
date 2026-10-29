@@ -22,7 +22,11 @@ function dispatch(message) {
             message.max_nodes,
         );
     } else if (message?.type === "generate") {
-        generate(message.job_id, message.seed, message.clue_count);
+        generate(
+            message.job_id,
+            message.seed,
+            message.clue_count,
+        );
     }
 }
 

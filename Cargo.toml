@@ -3,6 +3,7 @@ name = "sudoku_solver"
 version = "0.1.0"
 edition = "2021"
 license = "MIT OR Apache-2.0"
+autobins = false
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -26,6 +27,14 @@ search-worker = []
 name = "sudoku_search_worker"
 path = "src/bin/sudoku_search_worker.rs"
 required-features = ["search-worker"]
+
+[[bin]]
+name = "sudoku_solver"
+path = "src/main.rs"
+
+[[bin]]
+name = "sudoku"
+path = "src/bin/sudoku.rs"
 
 [profile]
 

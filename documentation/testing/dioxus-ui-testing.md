@@ -4,9 +4,9 @@
 
 ## 現在のUI境界
 
-アプリは`Dioxus.toml`でWebを既定ターゲットとし、`Cargo.toml`はDioxus 0.7.10の`web` featureを指定しています（default featuresは無効化されていません）。Routerはなく、`src/main.rs`の単一`app()`が盤面、言語、候補表示、履歴、検索/生成、変換、テキスト欄など36個のSignalとRSXを所有します。Solve / Transform / Textの3つのサイドタブがあります。
+アプリは`Dioxus.toml`でWebを既定ターゲットとし、`Cargo.toml`はDioxus 0.7.10の`web` featureを指定しています（default featuresは無効化されていません）。Routerはなく、`src/main.rs`の単一`app()`が盤面、言語、候補表示、履歴、検索/生成、変換、テキスト欄などのSignalとRSXを所有します。Solve / Transform / Textの3つのサイドタブがあります。
 
-ソルバー、盤面解析、対称変換、問題生成はRustロジックとしてUI外に分離されています。検索と生成はWeb Worker経由です。Clipboard、Web Crypto、時刻、DOM focusは`web_sys`に直接接続します。スタイルは`public/app.css`、`docs/`はPages向け生成資材です。
+ソルバー、盤面解析、対称変換、問題生成はRustロジックとしてUI外に分離されています。検索とFast生成はWeb Worker経由です。DiverseはRust API/CLI専用で、Web UIとWorkerからは呼び出しません。Clipboard、Web Crypto、時刻、DOM focusは`web_sys`に直接接続します。スタイルは`public/app.css`、`docs/`はPages向け生成資材です。
 
 ## テスト階層
 

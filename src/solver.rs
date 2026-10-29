@@ -34,6 +34,7 @@ pub enum SearchEvent {
 struct SearchFrame {
     cell: (usize, usize),
     remaining_candidates: u16,
+    preferred_value: Option<u8>,
     assigned: Option<u8>,
 }
 
@@ -53,6 +54,7 @@ pub struct SolutionSearch {
     completed: bool,
     explored_nodes: u64,
     solutions_found: usize,
+    preferred_solution: Option<Matrix>,
 }
 
 /// Errors detected before solution enumeration begins.
@@ -61,9 +63,202 @@ pub enum SearchError {
     ConflictingValues,
 }
 
+/// Result of checking a board with a finite node budget.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum UniquenessStatus {
+    /// Exactly one solution exists and the search tree was exhausted.
+    Unique,
+    /// At least two solutions were found.
+    Multiple,
+    /// The complete search tree was exhausted without finding a solution.
+    NoSolution,
+    /// The node budget was reached before uniqueness could be established.
+    Unknown,
+}
+
+/// Outcome and work used by a bounded uniqueness check.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct UniquenessCheck {
+    pub status: UniquenessStatus,
+    pub solutions_found: usize,
+    pub explored_nodes: u64,
+}
+
+/// Result of searching for a solution other than a supplied known solution.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum AlternativeSolutionStatus {
+    /// A different solution was found.
+    AlternativeFound,
+    /// The complete search proved that no different solution exists.
+    Unique,
+    /// The search stopped before it could prove uniqueness.
+    Unknown,
+    /// The board has no solution, or the supplied known solution does not solve it.
+    InvalidInput,
+}
+
+/// Branch order for bounded searches for a solution other than a known one.
+#[derive(Clone, Copy, Debug, Default, Eq, PartialEq)]
+pub enum AlternativeSearchOrder {
+    /// Use the solver's regular ascending candidate order.
+    #[default]
+    SolverDefault,
+    /// Try the known solution's digit first at each selected cell. This tends
+    /// to explore nearby completions first, but may delay finding any alternative.
+    PreferKnownValues,
+}
+
+/// Outcome of a bounded alternative-solution query.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct AlternativeSolutionCheck {
+    pub status: AlternativeSolutionStatus,
+    pub alternative: Option<Matrix>,
+    pub explored_nodes: u64,
+}
+
+/// Find a solution different from `known_solution`, or prove none exists.
+/// `Unique` is returned only after the complete search tree was exhausted.
+/// The node limit is checked at progress events, so an `Unknown` result may
+/// exceed the limit by at most the solver's progress interval minus one.
+pub fn find_alternative_solution(
+    puzzle: &Matrix,
+    known_solution: &Matrix,
+    max_nodes: u64,
+) -> AlternativeSolutionCheck {
+    find_alternative_solution_with_order(
+        puzzle,
+        known_solution,
+        max_nodes,
+        AlternativeSearchOrder::SolverDefault,
+    )
+}
+
+/// Search for an alternative with an explicit branch ordering policy.
+pub fn find_alternative_solution_with_order(
+    puzzle: &Matrix,
+    known_solution: &Matrix,
+    max_nodes: u64,
+    order: AlternativeSearchOrder,
+) -> AlternativeSolutionCheck {
+    let mut validated_solution = *known_solution;
+    let clues_match = (0..9).all(|row| {
+        (0..9).all(|col| {
+            !(1..=9).contains(&puzzle[row][col]) || puzzle[row][col] == known_solution[row][col]
+        })
+    });
+    if !clues_match || !solve(&mut validated_solution) || validated_solution != *known_solution {
+        return AlternativeSolutionCheck {
+            status: AlternativeSolutionStatus::InvalidInput,
+            alternative: None,
+            explored_nodes: 0,
+        };
+    }
+    let search = match order {
+        AlternativeSearchOrder::SolverDefault => SolutionSearch::new(puzzle),
+        AlternativeSearchOrder::PreferKnownValues => {
+            SolutionSearch::new_preferring_solution(puzzle, *known_solution)
+        }
+    };
+    let Ok(mut search) = search else {
+        return AlternativeSolutionCheck {
+            status: AlternativeSolutionStatus::InvalidInput,
+            alternative: None,
+            explored_nodes: 0,
+        };
+    };
+    let mut found_known_solution = false;
+    loop {
+        if search.explored_nodes() >= max_nodes {
+            return AlternativeSolutionCheck {
+                status: AlternativeSolutionStatus::Unknown,
+                alternative: None,
+                explored_nodes: search.explored_nodes(),
+            };
+        }
+        match search.next() {
+            Some(SearchEvent::SolutionFound { board, .. }) if board != *known_solution => {
+                return AlternativeSolutionCheck {
+                    status: AlternativeSolutionStatus::AlternativeFound,
+                    alternative: Some(board),
+                    explored_nodes: search.explored_nodes(),
+                };
+            }
+            Some(SearchEvent::SolutionFound { .. }) => found_known_solution = true,
+            Some(SearchEvent::Progress { .. }) => {}
+            None => {
+                return AlternativeSolutionCheck {
+                    status: if found_known_solution {
+                        AlternativeSolutionStatus::Unique
+                    } else {
+                        AlternativeSolutionStatus::InvalidInput
+                    },
+                    alternative: None,
+                    explored_nodes: search.explored_nodes(),
+                };
+            }
+        }
+    }
+}
+
+/// Count solutions up to two, stopping when the search is exhausted or the
+/// node budget is reached. The iterator reports progress every 2,048 nodes, so
+/// the observed node count can exceed `max_nodes` by at most 2,047.
+pub fn check_uniqueness(mtx: &Matrix, max_nodes: u64) -> Result<UniquenessCheck, SearchError> {
+    let mut search = SolutionSearch::new(mtx)?;
+    if max_nodes == 0 {
+        return Ok(UniquenessCheck {
+            status: UniquenessStatus::Unknown,
+            solutions_found: 0,
+            explored_nodes: 0,
+        });
+    }
+
+    loop {
+        if search.explored_nodes() >= max_nodes {
+            return Ok(UniquenessCheck {
+                status: UniquenessStatus::Unknown,
+                solutions_found: search.solutions_found(),
+                explored_nodes: search.explored_nodes(),
+            });
+        }
+        if search.next().is_none() {
+            return Ok(UniquenessCheck {
+                status: if search.solutions_found() == 0 {
+                    UniquenessStatus::NoSolution
+                } else {
+                    UniquenessStatus::Unique
+                },
+                solutions_found: search.solutions_found(),
+                explored_nodes: search.explored_nodes(),
+            });
+        }
+        if search.solutions_found() >= 2 {
+            return Ok(UniquenessCheck {
+                status: UniquenessStatus::Multiple,
+                solutions_found: search.solutions_found(),
+                explored_nodes: search.explored_nodes(),
+            });
+        }
+    }
+}
+
 impl SolutionSearch {
     /// Create an unrestricted search. Duplicate given values are rejected.
     pub fn new(mtx: &Matrix) -> Result<Self, SearchError> {
+        Self::new_with_preferred_solution(mtx, None)
+    }
+
+    fn new_preferring_solution(
+        mtx: &Matrix,
+        preferred_solution: Matrix,
+    ) -> Result<Self, SearchError> {
+        Self::new_with_preferred_solution(mtx, Some(preferred_solution))
+    }
+
+    fn new_with_preferred_solution(
+        mtx: &Matrix,
+        preferred_solution: Option<Matrix>,
+    ) -> Result<Self, SearchError> {
         let mut board = *mtx;
         let mut manager = StateManager::new();
         let mut empty_cells = Vec::new();
@@ -89,6 +284,7 @@ impl SolutionSearch {
             completed: false,
             explored_nodes: 0,
             solutions_found: 0,
+            preferred_solution,
         })
     }
 
@@ -117,8 +313,15 @@ impl SolutionSearch {
                 let frame = &mut self.frames[frame_index];
                 let previous = frame.assigned.take();
                 let candidate = if frame.remaining_candidates != 0 {
-                    let bit =
-                        frame.remaining_candidates & frame.remaining_candidates.wrapping_neg();
+                    let preferred_bit = frame
+                        .preferred_value
+                        .map(|value| 1u16 << (value - 1))
+                        .unwrap_or(0);
+                    let bit = if frame.remaining_candidates & preferred_bit != 0 {
+                        preferred_bit
+                    } else {
+                        frame.remaining_candidates & frame.remaining_candidates.wrapping_neg()
+                    };
                     frame.remaining_candidates &= !bit;
                     Some(bit.trailing_zeros() as u8 + 1)
                 } else {
@@ -187,9 +390,13 @@ impl Iterator for SolutionSearch {
                     .map(|(index, _)| index)
                     .expect("non-empty cell list has a minimum");
                 let cell = self.empty_cells.swap_remove(min_index);
+                let preferred_value = self
+                    .preferred_solution
+                    .map(|solution| solution[cell.1][cell.0]);
                 self.frames.push(SearchFrame {
                     cell,
                     remaining_candidates: self.manager.candidate_mask(cell.0, cell.1),
+                    preferred_value,
                     assigned: None,
                 });
                 self.advance_branch = true;
@@ -519,8 +726,8 @@ impl Iterator for Candidates {
 #[cfg(test)]
 mod tests {
     use super::{
-        find_hint, solve, Candidates, HintError, HintTechnique, SearchEvent, SolutionSearch,
-        StateManager,
+        check_uniqueness, find_hint, solve, Candidates, HintError, HintTechnique, SearchEvent,
+        SolutionSearch, StateManager, UniquenessStatus,
     };
     use crate::Matrix;
 
@@ -917,5 +1124,118 @@ mod tests {
             SolutionSearch::new(&conflicting).map(|_| ()),
             Err(super::SearchError::ConflictingValues)
         );
+    }
+
+    #[test]
+    fn bounded_uniqueness_never_calls_an_unfinished_search_unique() {
+        let unknown = check_uniqueness(&[[0; 9]; 9], 1).unwrap();
+        assert_eq!(unknown.status, UniquenessStatus::Unknown);
+        assert!(unknown.explored_nodes > 1);
+
+        let unique = check_uniqueness(&SOLUTION, 10).unwrap();
+        assert_eq!(unique.status, UniquenessStatus::Unique);
+        assert_eq!(unique.solutions_found, 1);
+
+        let mut two_solution = SOLUTION;
+        for (y, x) in [(3, 5), (3, 8), (4, 5), (4, 8)] {
+            two_solution[y][x] = 0;
+        }
+        let multiple = check_uniqueness(&two_solution, 100).unwrap();
+        assert_eq!(multiple.status, UniquenessStatus::Multiple);
+        assert_eq!(multiple.solutions_found, 2);
+
+        let mut unsolvable = [[0; 9]; 9];
+        unsolvable[0][1..9].copy_from_slice(&[1, 2, 3, 4, 5, 6, 7, 8]);
+        for (y, value) in [4, 5, 2, 3, 6, 7, 8, 9].into_iter().enumerate() {
+            unsolvable[y + 1][0] = value;
+        }
+        let no_solution = check_uniqueness(&unsolvable, 10).unwrap();
+        assert_eq!(no_solution.status, UniquenessStatus::NoSolution);
+        assert_eq!(no_solution.solutions_found, 0);
+
+        let mut contradictory = [[0; 9]; 9];
+        contradictory[0][0] = 1;
+        contradictory[0][1] = 1;
+        assert!(check_uniqueness(&contradictory, 10).is_err());
+    }
+
+    #[test]
+    fn alternative_solution_query_distinguishes_proof_witness_unknown_and_invalid() {
+        let unique = super::find_alternative_solution(&SOLUTION, &SOLUTION, 10);
+        assert_eq!(unique.status, super::AlternativeSolutionStatus::Unique);
+        assert_eq!(unique.alternative, None);
+
+        let mut ambiguous = SOLUTION;
+        for (y, x) in [(3, 5), (3, 8), (4, 5), (4, 8)] {
+            ambiguous[y][x] = 0;
+        }
+        let multiple = super::find_alternative_solution(&ambiguous, &SOLUTION, 100);
+        assert_eq!(
+            multiple.status,
+            super::AlternativeSolutionStatus::AlternativeFound
+        );
+        let alternative = multiple.alternative.expect("witness is returned");
+        assert_ne!(alternative, SOLUTION);
+        assert!(ambiguous
+            .iter()
+            .flatten()
+            .zip(alternative.iter().flatten())
+            .all(|(&clue, &value)| !(1..=9).contains(&clue) || clue == value));
+
+        let mut first_solution_search = SolutionSearch::new(&[[0; 9]; 9]).unwrap();
+        let first_solution = first_solution_search
+            .find_map(|event| match event {
+                SearchEvent::SolutionFound { board, .. } => Some(board),
+                SearchEvent::Progress { .. } => None,
+            })
+            .unwrap();
+        let unknown = super::find_alternative_solution(&[[0; 9]; 9], &first_solution, 1);
+        assert_eq!(unknown.status, super::AlternativeSolutionStatus::Unknown);
+
+        let mut wrong_known_solution = SOLUTION;
+        wrong_known_solution[0][0] = 1;
+        let invalid = super::find_alternative_solution(&SOLUTION, &wrong_known_solution, 100);
+        assert_eq!(
+            invalid.status,
+            super::AlternativeSolutionStatus::InvalidInput
+        );
+
+        let nearby = super::find_alternative_solution_with_order(
+            &ambiguous,
+            &SOLUTION,
+            100,
+            super::AlternativeSearchOrder::PreferKnownValues,
+        );
+        assert_eq!(
+            nearby.status,
+            super::AlternativeSolutionStatus::AlternativeFound
+        );
+        assert_ne!(nearby.alternative, Some(SOLUTION));
+    }
+
+    #[test]
+    fn preferred_solution_branch_order_finds_the_known_completion_first() {
+        let mut puzzle = SOLUTION;
+        for (y, x) in [(3, 5), (3, 8), (4, 5), (4, 8)] {
+            puzzle[y][x] = 0;
+        }
+        let mut preferred = SOLUTION;
+        for (y, x, digit) in [(3, 5, 3), (3, 8, 1), (4, 5, 1), (4, 8, 3)] {
+            preferred[y][x] = digit;
+        }
+
+        let mut regular = SolutionSearch::new(&puzzle).unwrap();
+        let regular_first = regular.find_map(|event| match event {
+            SearchEvent::SolutionFound { board, .. } => Some(board),
+            SearchEvent::Progress { .. } => None,
+        });
+        let mut solution_aware =
+            SolutionSearch::new_preferring_solution(&puzzle, preferred).unwrap();
+        let aware_first = solution_aware.find_map(|event| match event {
+            SearchEvent::SolutionFound { board, .. } => Some(board),
+            SearchEvent::Progress { .. } => None,
+        });
+        assert_eq!(regular_first, Some(SOLUTION));
+        assert_eq!(aware_first, Some(preferred));
     }
 }

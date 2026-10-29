@@ -11,6 +11,7 @@ Rust製の数独ソルバーと、Dioxusで作ったブラウザー向けUIで�
 詳しい説明は[`documentation/`](documentation/README.md)にまとめています。ここでは入口と基本的な開発コマンドを案内します。
 
 - [アルゴリズム](documentation/algorithm.md)：ビットマスク、候補数字、MRV、バックトラック
+- [問題生成方式](documentation/generation.md)：Fast生成とCLI専用Diverse探索、最小問題Archive
 - [アプリとコードの構成](documentation/architecture.md)：ライブラリ、Web UI、ファイルの役割
 - [使い方と盤面形式](documentation/usage.md)：ブラウザー操作、テキスト形式、Rust API
 - [開発とビルド](documentation/development.md)：必要なツール、確認コマンド

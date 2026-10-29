@@ -79,31 +79,27 @@ pub fn search(job_id: u32, flat_board: Vec<u8>, max_solutions: u32, max_nodes: u
 
 #[wasm_bindgen]
 pub fn generate(job_id: u32, seed: u32, clue_count: u32) {
-    let board = match sudoku_solver::generator::generate_puzzle_with_clues(
-        u64::from(seed),
-        clue_count as usize,
-    ) {
-        Ok(board) => board,
-        Err(message) => {
+    match sudoku_solver::generator::generate_puzzle_with_clues(u64::from(seed), clue_count as usize)
+    {
+        Ok(board) => {
+            let clues = board
+                .iter()
+                .flatten()
+                .filter(|&&value| (1..=9).contains(&value))
+                .count();
             post_message(serde_json::json!({
-                "type": "error",
+                "type": "generated",
                 "job_id": job_id,
-                "message": message,
+                "board": board,
+                "clues": clues,
             }));
-            return;
         }
-    };
-    let clues = board
-        .iter()
-        .flatten()
-        .filter(|&&value| (1..=9).contains(&value))
-        .count();
-    post_message(serde_json::json!({
-        "type": "generated",
-        "job_id": job_id,
-        "board": board,
-        "clues": clues,
-    }));
+        Err(message) => post_message(serde_json::json!({
+            "type": "error",
+            "job_id": job_id,
+            "message": message,
+        })),
+    }
 }
 
 fn post_message(message: serde_json::Value) {

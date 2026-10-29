@@ -2,6 +2,7 @@
   "language.switch": "日本語",
   "app.title": "Sudoku Solver",
   "help.input": "Use arrow keys to move. Enter a digit to jump to the next empty cell. Ctrl/Cmd+Z: Undo; Ctrl/Cmd+Y or Ctrl/Cmd+Shift+Z: Redo.",
+  "help.puzzle_generation_method": "A known minimal-clue puzzle is selected at random, then randomized symmetry transforms are applied.",
   "action.undo": "Undo",
   "action.redo": "Redo",
   "action.load_text": "Load text into board",

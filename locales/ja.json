@@ -2,6 +2,7 @@
   "language.switch": "English",
   "app.title": "数独ソルバー",
   "help.input": "矢印キーで移動、数字キーで入力して次の空欄へ移動します。Ctrl/Cmd+Z: 元に戻す、Ctrl/Cmd+Y または Ctrl/Cmd+Shift+Z: やり直し。",
+  "help.puzzle_generation_method": "既知のMinimalヒント盤面からランダムに選び、ランダムな対称変換を重ねて生成します。",
   "action.undo": "元に戻す",
   "action.redo": "やり直す",
   "action.load_text": "テキストから盤面へ読み込む",

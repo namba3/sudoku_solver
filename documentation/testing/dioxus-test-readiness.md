@@ -1,16 +1,22 @@
 # Dioxus UIテスト導入準備状況
 
-調査日: 2026-10-11。評価はソース・設定・CIと下記公式資料に基づきます。実ブラウザーでの動作結果を示すものではありません。
+構造と導入状況の調査日: 2026-10-11。この節の評価は当時のソース・設定・CIと公式資料に基づくスナップショットです。2026-10-29に行った手動ブラウザー確認は後述の節に分けて記録します。
 
 ## 現状
 
 - **Dioxus:** `Cargo.toml`は`dioxus = 0.7.10`で`web` featureを指定しています（default featuresは無効化されていません）。`Dioxus.toml`の既定ターゲットはWeb、Pages base pathは`/sudoku_solver/`。`Cargo.lock`上も0.7.10。
 - **画面:** Routerなしの単一画面。`src/main.rs`の`app()`ひとつが36個のSignalと盤面、操作、3つのサイドタブ（Solve / Transform / Text）を描画します。分割されたProps/CallbackコンポーネントやContextは見つかりません。
-- **状態/ロジック:** ソルバー、候補/ヒント、盤面解析/変換、生成はUIから分離済み。盤面・given・履歴・メッセージ等のUI状態遷移は一部`app()`内。検索/生成はWorkerで非同期実行し、job IDで応答を照合します。
+- **状態/ロジック:** ソルバー、候補/ヒント、盤面解析/変換、生成はUIから分離済み。盤面・given・履歴・メッセージ等のUI状態遷移は一部`app()`内。検索とFast生成はWorkerで非同期実行し、job IDで応答を照合します。Diverse探索はCLI専用です。
 - **外部境界:** Worker、Clipboard、Web Crypto、時刻、DOM focusが`web_sys`に接続。Fakeを注入する共通境界はありません。
 - **既存テスト:** solver、生成、盤面解析/変換、翻訳、テキストparser、Worker応答parser、状態表示、履歴等にRustテストがあります。`tests/`統合テスト、`dioxus-ssr`、VirtualDom/コンポーネント操作、Playwright/E2E、Visual Regressionは確認できません。
 - **CI:** `.github/workflows/ci.yml`はfmt、`cargo test --locked`、Webアプリと検索WorkerのWASM checkを実施し、ブラウザーは起動しません。
 - **課題管理:** リポジトリ内に既存課題表ファイルはありません。末尾に完了条件付きのローカル課題台帳を設けます。
+
+## 手動ブラウザー確認（2026-10-29）
+
+生成済みPages bundleをChromium 156 / ChromeDriver 156でローカル配信して確認しました。1440pxと390px幅で初期表示と3つのタブを確認し、言語切替、候補表示、盤面を解く操作、検索Workerの完了表示を操作しました。検索は12,060ノードで1解を表示しました。変換パネルの重なりと390px幅の横はみ出しを修正後に再確認し、テキスト欄、コピー操作の配置、生成欄も確認しています。
+
+これは手動のスモーク確認です。自動Web E2E、Visual Regression、他ブラウザーや全操作の検証結果ではありません。生成・WASMビルドの成功とも区別します。
 
 ## dioxus-testと互換性
 
@@ -85,4 +91,4 @@
 
 ## 対象外・未解決
 
-独立component、ブラウザーE2E、Visual検証を実行した証拠はありません。Router遷移、dialog、theme切替、Desktop機能もUIに見つからないためシナリオに含めません。画面サイズ別layoutは現行CSSにあるため将来のPlaywright候補です。Issue/PRとして外部登録はしていません。
+独立component、Playwright等による自動ブラウザーE2E、Visual Regressionは未実施です。手動スモークの範囲は上記の記録に限られます。Router遷移、dialog、theme切替、Desktop機能もUIに見つからないためシナリオに含めません。画面サイズ別layoutの自動回帰確認は将来のPlaywright候補です。Issue/PRとして外部登録はしていません。

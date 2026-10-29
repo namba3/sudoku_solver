@@ -550,6 +550,7 @@ fn app() -> Element {
     };
     let generation_clue_count_label = t(lang, "label.clues");
     let generation_clue_count_help = t(lang, "label.clue_range");
+    let generation_method_help = t(lang, "help.puzzle_generation_method");
     let invalid_generation_clue_count = t(lang, "message.invalid_clue_count");
     let cancel_task_label = if is_generating() {
         t(lang, "action.cancel_generation")
@@ -758,7 +759,6 @@ fn app() -> Element {
                             is_ok.set(false);
                             return;
                         };
-
                         active_search.set(None);
                         let job_id = search_job_id().wrapping_add(1);
                         search_job_id.set(job_id);
@@ -807,7 +807,11 @@ fn app() -> Element {
 
                                     match response["type"].as_str() {
                                         Some("generated") => {
-                                            let Some(generated_board) = parse_solution(&response["board"]) else {
+                                            let Some(generated_board) = parse_generated_board(
+                                                &response["board"],
+                                                &response["clues"],
+                                                clue_count,
+                                            ) else {
                                                 let generation_error = SearchStatus::GenerationError {
                                                     message: t(language_signal(), "worker.error.invalid_board"),
                                                     elapsed_seconds: elapsed_seconds_since(started_at),
@@ -833,7 +837,7 @@ fn app() -> Element {
                                             givens_signal.set(generated_board);
                                             text_signal.set(to_txt(&generated_board));
                                             let generated_status = SearchStatus::Generated {
-                                                clues: response["clues"].as_u64().unwrap_or(0) as usize,
+                                                clues: clue_count,
                                                 elapsed_seconds: elapsed_seconds_since(started_at),
                                             };
                                             message.set(generated_status.text(language_signal()));
@@ -921,6 +925,10 @@ fn app() -> Element {
                         }
                     },
                     "{generate_puzzle_label}"
+                }
+                p {
+                    class: "generation-note",
+                    "{generation_method_help}"
                 }
                     }
             div {
@@ -1398,7 +1406,6 @@ fn app() -> Element {
                                         class: "button-group",
                                         role: "group",
                                         aria_label: "{solve_group_label}",
-                                        h2 { class: "button-group-title", "{solve_group_label}" }
                                     button {
                                         disabled: is_searching(),
                                         onclick: move |_| {
@@ -1691,9 +1698,96 @@ fn app() -> Element {
                                                                 section {
                                     class: "transform-panel",
                                     aria_label: "{transform_group_label}",
-                                    h2 { class: "transform-heading", "{transform_group_label}" }
                                     div {
                                         class: "transform-controls",
+                                        fieldset {
+                                            class: "transform-control transform-orientation",
+                                            legend { "{orientation_label}" }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Transpose,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{transpose_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate90,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_90_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate180,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_180_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::Rotate270,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{rotate_270_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::ReflectHorizontal,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{reflect_horizontal_label}"
+                                            }
+                                            button {
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::ReflectVertical,
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{reflect_vertical_label}"
+                                            }
+                                        }
+                                        fieldset {
+                                            class: "transform-control",
+                                            legend { "{digits_label}" }
+                                            label {
+                                                "{first_digit_label}"
+                                                select {
+                                                    aria_label: "{first_digit_label}",
+                                                    onchange: move |event| digit_first.set(event.value().parse().unwrap_or(1)),
+                                                    for value in 1u8..=9 {
+                                                        option { value: "{value}", selected: digit_first() == value, "{value}" }
+                                                    }
+                                                }
+                                            }
+                                            label {
+                                                "{second_digit_label}"
+                                                select {
+                                                    aria_label: "{second_digit_label}",
+                                                    onchange: move |event| digit_second.set(event.value().parse().unwrap_or(2)),
+                                                    for value in 1u8..=9 {
+                                                        option { value: "{value}", selected: digit_second() == value, "{value}" }
+                                                    }
+                                                }
+                                            }
+                                            button {
+                                                disabled: digit_first() == digit_second(),
+                                                onclick: move |_| apply_board_transform(
+                                                    BoardTransform::SwapDigits {
+                                                        first: digit_first(),
+                                                        second: digit_second(),
+                                                    },
+                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
+                                                    &mut msg, &mut is_ok, lang,
+                                                ),
+                                                "{swap_digits_label}"
+                                            }
+                                        }
                                         fieldset {
                                             class: "transform-control",
                                             legend { "{bands_label}" }
@@ -1860,94 +1954,6 @@ fn app() -> Element {
                                                 "{swap_columns_label}"
                                             }
                                         }
-                                        fieldset {
-                                            class: "transform-control",
-                                            legend { "{digits_label}" }
-                                            label {
-                                                "{first_digit_label}"
-                                                select {
-                                                    aria_label: "{first_digit_label}",
-                                                    onchange: move |event| digit_first.set(event.value().parse().unwrap_or(1)),
-                                                    for value in 1u8..=9 {
-                                                        option { value: "{value}", selected: digit_first() == value, "{value}" }
-                                                    }
-                                                }
-                                            }
-                                            label {
-                                                "{second_digit_label}"
-                                                select {
-                                                    aria_label: "{second_digit_label}",
-                                                    onchange: move |event| digit_second.set(event.value().parse().unwrap_or(2)),
-                                                    for value in 1u8..=9 {
-                                                        option { value: "{value}", selected: digit_second() == value, "{value}" }
-                                                    }
-                                                }
-                                            }
-                                            button {
-                                                disabled: digit_first() == digit_second(),
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::SwapDigits {
-                                                        first: digit_first(),
-                                                        second: digit_second(),
-                                                    },
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{swap_digits_label}"
-                                            }
-                                        }
-                                        fieldset {
-                                            class: "transform-control transform-orientation",
-                                            legend { "{orientation_label}" }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::Transpose,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{transpose_label}"
-                                            }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::Rotate90,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{rotate_90_label}"
-                                            }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::Rotate180,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{rotate_180_label}"
-                                            }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::Rotate270,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{rotate_270_label}"
-                                            }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::ReflectHorizontal,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{reflect_horizontal_label}"
-                                            }
-                                            button {
-                                                onclick: move |_| apply_board_transform(
-                                                    BoardTransform::ReflectVertical,
-                                                    &mut mtx, &mut givens, &mut undo_stack, &mut redo_stack,
-                                                    &mut msg, &mut is_ok, lang,
-                                                ),
-                                                "{reflect_vertical_label}"
-                                            }
-                                        }
                                     }
                                 }
                             }
@@ -1964,7 +1970,11 @@ fn app() -> Element {
                                     aria_label: "{text_group_label}",
                                     div {
                                         class: "text-label-row",
-                                        h2 { class: "text-panel-title", "{text_group_label}" }
+                                        label {
+                                            class: "text-field-label",
+                                            r#for: "puzzle-text",
+                                            "{puzzle_text_label}"
+                                        }
                                         button {
                                             class: "copy-button",
                                             r#type: "button",
@@ -2050,11 +2060,6 @@ fn app() -> Element {
                                             },
                                             "{save_text_label}"
                                         }
-                                    }
-                                    label {
-                                        class: "text-field-label",
-                                        r#for: "puzzle-text",
-                                        "{puzzle_text_label}"
                                     }
                                     if let Some(copied) = copy_feedback() {
                                         p {
@@ -2234,6 +2239,22 @@ fn parse_solution(value: &serde_json::Value) -> Option<sudoku_solver::Matrix> {
         }
     }
     Some(board)
+}
+
+fn parse_generated_board(
+    board_value: &serde_json::Value,
+    clue_count_value: &serde_json::Value,
+    expected_clue_count: usize,
+) -> Option<sudoku_solver::Matrix> {
+    let board = parse_solution(board_value)?;
+    let reported_clue_count = usize::try_from(clue_count_value.as_u64()?).ok()?;
+    let actual_clue_count = board
+        .iter()
+        .flatten()
+        .filter(|&&value| (1..=9).contains(&value))
+        .count();
+    (reported_clue_count == actual_clue_count && actual_clue_count == expected_clue_count)
+        .then_some(board)
 }
 
 fn elapsed_seconds_since(started_at: f64) -> f64 {
@@ -2500,9 +2521,9 @@ fn focus_cell(y: usize, x: usize) {
 mod tests {
     use super::{
         cell_classes, cell_text, cell_value, is_cell_locked, moved_cell, next_empty_cell,
-        parse_puzzle, parse_solution, record_board_change, redo_snapshot, to_txt,
-        transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform, Language, SearchStatus,
-        HISTORY_LIMIT,
+        parse_generated_board, parse_puzzle, parse_solution, record_board_change, redo_snapshot,
+        to_txt, transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform, Language,
+        SearchStatus, HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -2619,6 +2640,19 @@ mod tests {
         let mut out_of_range = valid;
         out_of_range[0][0] = json!(10);
         assert!(parse_solution(&out_of_range).is_none());
+    }
+
+    #[test]
+    fn generated_worker_board_must_match_reported_and_requested_clue_counts() {
+        let mut board = [[0u8; 9]; 9];
+        board[0][0] = 1;
+        board[8][8] = 9;
+        let board = json!(board);
+
+        assert!(parse_generated_board(&board, &json!(2), 2).is_some());
+        assert!(parse_generated_board(&board, &json!(1), 2).is_none());
+        assert!(parse_generated_board(&board, &json!(2), 3).is_none());
+        assert!(parse_generated_board(&board, &json!("2"), 2).is_none());
     }
 
     #[test]

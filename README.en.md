@@ -11,6 +11,7 @@ Live app: <https://namba3.github.io/sudoku_solver/>
 Detailed documentation is maintained in Japanese under [`documentation/`](documentation/README.md):
 
 - [Algorithm](documentation/algorithm.md): candidate masks, MRV, and backtracking
+- [Puzzle generation](documentation/generation.md): Fast generation, CLI-only Diverse search, and the minimal-puzzle archive
 - [Application and code structure](documentation/architecture.md)
 - [Usage and puzzle format](documentation/usage.md)
 - [Development and build](documentation/development.md)
