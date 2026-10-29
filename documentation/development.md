@@ -38,7 +38,7 @@ cargo llvm-cov --summary-only
 - `cargo test --locked`で単体テストを実行します。
 - `wasm32-unknown-unknown`向けにWebアプリと検索Workerをそれぞれコンパイルします。
 
-このCIはコンパイルと単体テストを確認します。ブラウザー上の操作確認やGitHub Pagesへの公開は行いません。
+このCIはコンパイルと単体テストを確認します。ブラウザー上の操作確認は行いません。
 
 ## GitHub Pages資材
 
@@ -52,4 +52,10 @@ bash scripts/build_pages.sh
 
 Dioxus CLI 0.7はバンドルを`docs/public/`に作成します。スクリプトは参照中のindex、CSS、ハッシュ付きJS/WASMと検索Workerだけを`docs/`公開ルートへ反映し、不要になった生成資材を整理します。
 
-RustやUIのソースを変更しても、既にある`docs/`のWeb資材は自動では更新されません。公開資材の更新後は`docs/index.html`が参照するJSとWASM、`docs/worker/`内のWorkerファイル、および`/sudoku_solver/`のbase pathを確認します。
+ローカルでRustやUIのソースを変更しただけでは、`docs/`のWeb資材は更新されません。ローカルで公開資材を確認する場合はスクリプトを実行し、`docs/index.html`が参照するJSとWASM、`docs/worker/`内のWorkerファイル、および`/sudoku_solver/`のbase pathを確認します。GitHub上ではPages workflowがpushごとに生成します。
+
+## GitHub Pagesの自動公開
+
+`.github/workflows/pages.yml`はpull requestでPagesサイトをビルドし、pushまたは手動実行で`main`を対象にビルドした場合にGitHub Pagesへ公開します。公開用バンドルは`bash scripts/build_pages.sh`で毎回生成するため、`docs/`の古い生成物には依存しません。ビルドにはDioxus CLI 0.7.10と、`Cargo.lock`に固定されたwasm-bindgen 0.2.129を使用します。
+
+初回はリポジトリの **Settings → Pages → Build and deployment → Source** を **GitHub Actions** に設定してください。Actionsの実行に必要な`pages: write`と`id-token: write`はdeploy jobに限定しています。
