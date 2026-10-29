@@ -1,8 +1,8 @@
 //! N-independent minimal-puzzle verification and verified archive storage.
 
-use crate::solver::{
-    find_alternative_solution, AlternativeSolutionStatus, SearchEvent, SolutionSearch,
-};
+pub mod minimality;
+
+use crate::solver::{AlternativeSolutionStatus, SearchEvent, SolutionSearch};
 use crate::symmetry::canonical_key;
 use crate::{solve, Matrix};
 use std::collections::{HashMap, HashSet};
@@ -84,116 +84,7 @@ pub fn analyze_minimality(
     solution: Matrix,
     max_nodes_per_check: u64,
 ) -> Result<MinimalPuzzleAnalysis, MinimalityError> {
-    if max_nodes_per_check == 0 {
-        return Err(MinimalityError::InvalidNodeBudget);
-    }
-    if puzzle
-        .iter()
-        .flatten()
-        .any(|&value| value != 0 && !(1..=9).contains(&value))
-    {
-        return Err(MinimalityError::InvalidPuzzleValues);
-    }
-    if !is_complete_solution(&solution) {
-        return Err(MinimalityError::InvalidSolution);
-    }
-    if !matches_clues(&solution, &puzzle) {
-        return Err(MinimalityError::SolutionDoesNotMatchPuzzle);
-    }
-
-    let clue_count = puzzle
-        .iter()
-        .flatten()
-        .filter(|&&value| (1..=9).contains(&value))
-        .count() as u8;
-    let input_check = find_alternative_solution(&puzzle, &solution, max_nodes_per_check);
-    let mut evidence = MinimalityEvidence {
-        input_unique: input_check.status == AlternativeSolutionStatus::Unique,
-        input_proof_nodes: input_check.explored_nodes,
-        deletions: Vec::with_capacity(clue_count as usize),
-        total_nodes: input_check.explored_nodes,
-    };
-    let status = match input_check.status {
-        AlternativeSolutionStatus::AlternativeFound | AlternativeSolutionStatus::InvalidInput => {
-            VerificationStatus::InvalidPuzzle
-        }
-        AlternativeSolutionStatus::Unknown => VerificationStatus::BudgetExceeded,
-        AlternativeSolutionStatus::Unique => {
-            let mut redundant_clue = false;
-            let mut unknown_deletion = false;
-            let mut direct_reductions = Vec::new();
-            for position in 0..81 {
-                if !(1..=9).contains(&puzzle[position / 9][position % 9]) {
-                    continue;
-                }
-                let mut reduced = puzzle;
-                reduced[position / 9][position % 9] = 0;
-                let check = find_alternative_solution(&reduced, &solution, max_nodes_per_check);
-                evidence.total_nodes = evidence.total_nodes.saturating_add(check.explored_nodes);
-                let (deletion_status, alternative, difference_mask) = match check.status {
-                    AlternativeSolutionStatus::AlternativeFound => {
-                        let alternative = check.alternative;
-                        let difference_mask = alternative
-                            .as_ref()
-                            .map_or(0, |other| solution_difference_mask(&solution, other));
-                        (
-                            DeletionStatus::AlternativeFound,
-                            alternative,
-                            difference_mask,
-                        )
-                    }
-                    AlternativeSolutionStatus::Unique => {
-                        redundant_clue = true;
-                        direct_reductions.push(reduced);
-                        (DeletionStatus::UniqueAfterDeletion, None, 0)
-                    }
-                    AlternativeSolutionStatus::Unknown => {
-                        unknown_deletion = true;
-                        (DeletionStatus::Unknown, None, 0)
-                    }
-                    AlternativeSolutionStatus::InvalidInput => {
-                        return Err(MinimalityError::SolutionDoesNotMatchPuzzle)
-                    }
-                };
-                evidence.deletions.push(DeletionWitness {
-                    position: position as u8,
-                    status: deletion_status,
-                    alternative,
-                    difference_mask,
-                    explored_nodes: check.explored_nodes,
-                });
-            }
-            let status = if redundant_clue {
-                VerificationStatus::VerifiedNonMinimal
-            } else if unknown_deletion {
-                VerificationStatus::BudgetExceeded
-            } else {
-                VerificationStatus::VerifiedMinimal
-            };
-            return Ok(MinimalPuzzleAnalysis {
-                puzzle,
-                solution,
-                clue_count,
-                puzzle_key: canonical_key(&puzzle),
-                solution_class: canonical_key(&solution),
-                status,
-                input_status: AlternativeSolutionStatus::Unique,
-                evidence,
-                direct_reductions,
-            });
-        }
-    };
-    Ok(MinimalPuzzleAnalysis {
-        puzzle,
-        solution,
-        clue_count,
-        puzzle_key: canonical_key(&puzzle),
-        solution_class: canonical_key(&solution),
-        status,
-        input_status: input_check.status,
-        evidence,
-        direct_reductions: Vec::new(),
-    })
+    minimality::analyze_with::<minimality::Optimized>(puzzle, solution, max_nodes_per_check)
 }
 
 /// Verify a puzzle when its completion is not supplied. The first completion

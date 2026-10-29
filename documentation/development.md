@@ -21,6 +21,7 @@ CLIはDioxus本体と同じバージョン系列を使います。異なる世�
 cargo fmt --check
 cargo test
 cargo check --target wasm32-unknown-unknown
+cargo bench --locked --bench solver_backends
 # Optional: report native source coverage when cargo-llvm-cov is installed
 cargo llvm-cov --summary-only
 ```
@@ -29,6 +30,7 @@ cargo llvm-cov --summary-only
 - `cargo test`はソルバー・問題生成ライブラリの単体テストに加え、アプリの翻訳処理とテキスト盤面パーサーの単体テストを実行します。
 - `cargo llvm-cov --summary-only`は、利用可能な場合にnative単体テストのソースカバレッジを表示します。WASM Workerや実ブラウザー上のDOM・操作はこの計測に含まれません。
 - WASM向け`cargo check`はWeb targetとしてRustコードがコンパイルできるかを確認します。実ブラウザーでの操作確認とは別です。
+- `cargo bench --locked --bench solver_backends`はNaive、scalar Optimized、Packed-u64、利用可能なSIMD backendの解探索・Minimality検証と、Naive/OptimizedのMinimal clue探索をrelease設定で比較します。WASM SIMD128版は`wasm-simd` featureでビルドできます。計測環境、盤面、反復数と結果は[ソルバー性能比較](solver-performance.md)を参照してください。
 
 ## GitHub Actions
 

@@ -1,4 +1,6 @@
 pub use crate::minimal_puzzle_seeds::{minimal_puzzle_seeds, MINIMAL_PUZZLES_BY_CLUE_COUNT};
+pub mod minimal_search;
+
 use crate::solver::{
     find_alternative_solution as solver_find_alternative_solution, AlternativeSolutionStatus,
 };

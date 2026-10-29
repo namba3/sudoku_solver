@@ -27,10 +27,18 @@ flowchart LR
 | パス | 役割 |
 | --- | --- |
 | `src/lib.rs` | `Matrix`型、`solve`、`candidates_for`、`find_hint`を公開するライブラリ入口 |
-| `src/solver.rs` | 重複チェック、候補計算、ヒント判定、再帰探索、有限予算の一意性判定、単体テスト |
+| `src/solver.rs` | Solver APIの公開面とNaive/Optimizedモジュール |
+| `src/solver/naive.rs` | 行優先で直接盤面を走査する参照バックエンド |
+| `src/solver/optimized.rs` | bitmaskとMRVを使うsolver API、SIMD/u64 dispatch、ヒント判定、単体テスト |
+| `src/solver/optimized_simd.rs` | nativeではSSE2、`wasm-simd` featureではWebAssembly SIMD128を使うバックエンド |
+| `src/solver/optimized_u64.rs` | SIMD未対応targetの既定backend。4個の16-bit maskをu64に詰めてpopcount |
+| `src/solver/backend.rs` | Solverバックエンド共通Trait、scalar比較実装、選択した実装向けの共通問い合わせ |
 | `src/generator.rs` | Fast生成、ランダム化完成盤面探索、Diverse生成と予算管理 |
+| `src/generator/minimal_search.rs` | Naive/Optimizedのminimal clue探索API |
 | `src/symmetry.rs` | 数独対称変換群に対する盤面の正規形 |
-| `src/archive.rs` | Minimal Puzzleの独立検証、証拠、JSON Archive |
+| `src/archive.rs` | Minimal Puzzleの検証API、証拠、JSON Archive |
+| `src/archive/minimality.rs` | Minimality検証のNaive/Optimized/Packed-u64実装 |
+| `src/archive/minimality/optimized_simd.rs` | native/wasm SIMDバックエンドによるMinimality検証 |
 | `src/multi_clue.rs` | 複数ヒントの増減探索と再開可能なFrontier |
 | `src/pivot.rs` | Solution-Space Pivot探索と並列候補検査 |
 | `src/minimal_puzzle_seeds.rs` | ヒント数を添字にした組み込みMinimal盤面配列 |

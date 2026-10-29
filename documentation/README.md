@@ -14,6 +14,7 @@
 | 知りたいこと | 資料 |
 | --- | --- |
 | 候補、バックトラック、解列挙 | [ソルバーのアルゴリズム](algorithm.md) |
+| 参照版/最適化版と実測結果 | [ソルバー性能比較](solver-performance.md) |
 | ライブラリ、UI、Worker、主要ファイル | [アプリとコードの構成](architecture.md) |
 | Fast、Diverse、Minimal Puzzle、Archive | [問題生成資料](generation.md) |
 | 日本語・英語カタログの編集方法 | [翻訳リソース](i18n.md) |

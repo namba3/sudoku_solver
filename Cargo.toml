@@ -22,6 +22,7 @@ web-sys = { version = "0.3.105", features = ["Clipboard", "Crypto", "DedicatedWo
 
 [features]
 search-worker = []
+wasm-simd = []
 
 [[bin]]
 name = "sudoku_search_worker"
@@ -35,6 +36,10 @@ path = "src/main.rs"
 [[bin]]
 name = "sudoku"
 path = "src/bin/sudoku.rs"
+
+[[bench]]
+name = "solver_backends"
+harness = false
 
 [profile]
 
