@@ -214,6 +214,29 @@ pub fn find_alternative_solution_with_order(
     )
 }
 
+/// Search against a completion that the caller has already validated once.
+/// Clue compatibility is still checked for every candidate, but the known
+/// completion is not solved again before each alternative-solution search.
+pub(crate) fn find_alternative_solution_for_known_solution(
+    puzzle: &Matrix,
+    known_solution: &Matrix,
+    max_nodes: u64,
+) -> AlternativeSolutionCheck {
+    let clues_match = (0..9).all(|row| {
+        (0..9).all(|col| {
+            !(1..=9).contains(&puzzle[row][col]) || puzzle[row][col] == known_solution[row][col]
+        })
+    });
+    if !clues_match {
+        return AlternativeSolutionCheck {
+            status: AlternativeSolutionStatus::InvalidInput,
+            alternative: None,
+            explored_nodes: 0,
+        };
+    }
+    find_alternative_solution_for_verified_solution(puzzle, known_solution, max_nodes)
+}
+
 /// Search assuming the caller has already proven `known_solution` complete
 /// and consistent with all puzzle clues. Minimality verification validates
 /// this invariant once, then checks many clue deletions against the same
@@ -365,40 +388,70 @@ fn find_alternative_solution_for_verified_solution_with_order(
 /// node budget is reached. The iterator reports progress every 2,048 nodes, so
 /// the observed node count can exceed `max_nodes` by at most 2,047.
 pub fn check_uniqueness(mtx: &Matrix, max_nodes: u64) -> Result<UniquenessCheck, SearchError> {
+    check_uniqueness_with_solution(mtx, max_nodes).map(|(check, _)| check)
+}
+
+/// Check uniqueness and retain the first completion found for internal callers
+/// that need to reuse it after the uniqueness proof.
+pub(crate) fn check_uniqueness_with_solution(
+    mtx: &Matrix,
+    max_nodes: u64,
+) -> Result<(UniquenessCheck, Option<Matrix>), SearchError> {
     let mut search = SolutionSearch::new(mtx)?;
     if max_nodes == 0 {
-        return Ok(UniquenessCheck {
-            status: UniquenessStatus::Unknown,
-            solutions_found: 0,
-            explored_nodes: 0,
-        });
+        return Ok((
+            UniquenessCheck {
+                status: UniquenessStatus::Unknown,
+                solutions_found: 0,
+                explored_nodes: 0,
+            },
+            None,
+        ));
     }
 
+    let mut first_solution = None;
     loop {
         if search.explored_nodes() >= max_nodes {
-            return Ok(UniquenessCheck {
-                status: UniquenessStatus::Unknown,
-                solutions_found: search.solutions_found(),
-                explored_nodes: search.explored_nodes(),
-            });
-        }
-        if search.next().is_none() {
-            return Ok(UniquenessCheck {
-                status: if search.solutions_found() == 0 {
-                    UniquenessStatus::NoSolution
-                } else {
-                    UniquenessStatus::Unique
+            return Ok((
+                UniquenessCheck {
+                    status: UniquenessStatus::Unknown,
+                    solutions_found: search.solutions_found(),
+                    explored_nodes: search.explored_nodes(),
                 },
-                solutions_found: search.solutions_found(),
-                explored_nodes: search.explored_nodes(),
-            });
+                first_solution,
+            ));
         }
-        if search.solutions_found() >= 2 {
-            return Ok(UniquenessCheck {
-                status: UniquenessStatus::Multiple,
-                solutions_found: search.solutions_found(),
-                explored_nodes: search.explored_nodes(),
-            });
+        match search.next() {
+            Some(SearchEvent::SolutionFound { board, .. }) => {
+                if first_solution.is_none() {
+                    first_solution = Some(board);
+                }
+                if search.solutions_found() >= 2 {
+                    return Ok((
+                        UniquenessCheck {
+                            status: UniquenessStatus::Multiple,
+                            solutions_found: search.solutions_found(),
+                            explored_nodes: search.explored_nodes(),
+                        },
+                        first_solution,
+                    ));
+                }
+            }
+            Some(SearchEvent::Progress { .. }) => {}
+            None => {
+                return Ok((
+                    UniquenessCheck {
+                        status: if first_solution.is_some() {
+                            UniquenessStatus::Unique
+                        } else {
+                            UniquenessStatus::NoSolution
+                        },
+                        solutions_found: search.solutions_found(),
+                        explored_nodes: search.explored_nodes(),
+                    },
+                    first_solution,
+                ));
+            }
         }
     }
 }
@@ -1411,6 +1464,32 @@ mod tests {
     }
 
     #[test]
+    fn uniqueness_query_can_reuse_its_first_solution() {
+        let (unique, solution) = super::check_uniqueness_with_solution(&SOLUTION, 10).unwrap();
+        assert_eq!(unique.status, UniquenessStatus::Unique);
+        assert_eq!(solution, Some(SOLUTION));
+
+        let mut ambiguous = SOLUTION;
+        for (y, x) in [(3, 5), (3, 8), (4, 5), (4, 8)] {
+            ambiguous[y][x] = 0;
+        }
+        let (multiple, first_solution) =
+            super::check_uniqueness_with_solution(&ambiguous, 100).unwrap();
+        assert_eq!(multiple.status, UniquenessStatus::Multiple);
+        assert!(first_solution.is_some());
+
+        let (unknown, no_solution_yet) =
+            super::check_uniqueness_with_solution(&[[0; 9]; 9], 1).unwrap();
+        assert_eq!(unknown.status, UniquenessStatus::Unknown);
+        assert!(no_solution_yet.is_some());
+
+        let (zero_budget, no_solution_yet) =
+            super::check_uniqueness_with_solution(&SOLUTION, 0).unwrap();
+        assert_eq!(zero_budget.status, UniquenessStatus::Unknown);
+        assert_eq!(no_solution_yet, None);
+    }
+
+    #[test]
     fn alternative_solution_query_distinguishes_proof_witness_unknown_and_invalid() {
         let unique = super::find_alternative_solution(&SOLUTION, &SOLUTION, 10);
         assert_eq!(unique.status, super::AlternativeSolutionStatus::Unique);
@@ -1433,6 +1512,12 @@ mod tests {
             .zip(alternative.iter().flatten())
             .all(|(&clue, &value)| !(1..=9).contains(&clue) || clue == value));
 
+        let trusted_multiple =
+            super::find_alternative_solution_for_known_solution(&ambiguous, &SOLUTION, 100);
+        assert_eq!(trusted_multiple.status, multiple.status);
+        assert_eq!(trusted_multiple.alternative, multiple.alternative);
+        assert_eq!(trusted_multiple.explored_nodes, multiple.explored_nodes);
+
         let mut first_solution_search = SolutionSearch::new(&[[0; 9]; 9]).unwrap();
         let first_solution = first_solution_search
             .find_map(|event| match event {
@@ -1448,6 +1533,15 @@ mod tests {
         let invalid = super::find_alternative_solution(&SOLUTION, &wrong_known_solution, 100);
         assert_eq!(
             invalid.status,
+            super::AlternativeSolutionStatus::InvalidInput
+        );
+        assert_eq!(
+            super::find_alternative_solution_for_known_solution(
+                &SOLUTION,
+                &wrong_known_solution,
+                100
+            )
+            .status,
             super::AlternativeSolutionStatus::InvalidInput
         );
 

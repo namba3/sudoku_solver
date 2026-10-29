@@ -1,9 +1,7 @@
 pub use crate::minimal_puzzle_seeds::{minimal_puzzle_seeds, MINIMAL_PUZZLES_BY_CLUE_COUNT};
 pub mod minimal_search;
 
-use crate::solver::{
-    find_alternative_solution as solver_find_alternative_solution, AlternativeSolutionStatus,
-};
+use crate::solver::AlternativeSolutionStatus;
 use crate::Matrix;
 use std::collections::{HashSet, VecDeque};
 
@@ -437,9 +435,11 @@ pub fn generate_diverse_from_parent_with_progress(
     {
         return Err(DiverseGenerationError::InvalidParent);
     }
-    let check = crate::check_uniqueness(&parent, budget.max_nodes_per_uniqueness_check)
-        .map_err(|_| DiverseGenerationError::InvalidParent)?;
-    let mut solved = parent;
+    let (check, unique_solution) = crate::solver::optimized::check_uniqueness_with_solution(
+        &parent,
+        budget.max_nodes_per_uniqueness_check,
+    )
+    .map_err(|_| DiverseGenerationError::InvalidParent)?;
     if check.status == crate::UniquenessStatus::Unknown {
         return Err(DiverseGenerationError::BudgetExhausted {
             attempts: 0,
@@ -448,10 +448,7 @@ pub fn generate_diverse_from_parent_with_progress(
             neighborhood_checks: 0,
         });
     }
-    if check.status != crate::UniquenessStatus::Unique
-        || !crate::solve(&mut solved)
-        || solved != parent_solution
-    {
+    if check.status != crate::UniquenessStatus::Unique || unique_solution != Some(parent_solution) {
         return Err(DiverseGenerationError::InvalidParent);
     }
     generate_diverse_17(
@@ -1196,9 +1193,7 @@ fn generate_diverse_plus_one_minus_one(
                 {
                     nodes = nodes.saturating_add(check.explored_nodes);
                     if check.status == crate::UniquenessStatus::Unique {
-                        let mut completion = candidate;
-                        if crate::solve(&mut completion) && canonical_key(&candidate) != parent_key
-                        {
+                        if canonical_key(&candidate) != parent_key {
                             emit_generation_progress(
                                 on_progress,
                                 1,
@@ -1369,14 +1364,14 @@ fn generate_diverse_swap_one(
                     let mut candidate = reduced;
                     candidate[y][x] = digit;
                     checks += 1;
-                    let uniqueness =
-                        crate::check_uniqueness(&candidate, budget.max_nodes_per_uniqueness_check);
-                    if let Ok(check) = uniqueness {
+                    let uniqueness = crate::solver::optimized::check_uniqueness_with_solution(
+                        &candidate,
+                        budget.max_nodes_per_uniqueness_check,
+                    );
+                    if let Ok((check, completion)) = uniqueness {
                         total_nodes = total_nodes.saturating_add(check.explored_nodes);
                         if check.status == crate::UniquenessStatus::Unique {
-                            let mut completion = candidate;
-                            if crate::solve(&mut completion)
-                                && completion != solution
+                            if completion.is_some_and(|completion| completion != solution)
                                 && canonical_key(&candidate) != parent_key
                             {
                                 emit_generation_progress(
@@ -1577,14 +1572,15 @@ fn generate_diverse_swap_two(
                     candidate[ay][ax] = digit_a;
                     candidate[by][bx] = digit_b;
                     checks += 1;
-                    if let Ok(check) =
-                        crate::check_uniqueness(&candidate, budget.max_nodes_per_uniqueness_check)
+                    if let Ok((check, completion)) =
+                        crate::solver::optimized::check_uniqueness_with_solution(
+                            &candidate,
+                            budget.max_nodes_per_uniqueness_check,
+                        )
                     {
                         nodes = nodes.saturating_add(check.explored_nodes);
                         if check.status == crate::UniquenessStatus::Unique {
-                            let mut completion = candidate;
-                            if crate::solve(&mut completion)
-                                && completion != solution
+                            if completion.is_some_and(|completion| completion != solution)
                                 && canonical_key(&candidate) != parent_key
                             {
                                 emit_generation_progress(
@@ -1784,15 +1780,15 @@ fn generate_diverse_swap_three(
                         let mut candidate = with_ab;
                         candidate[cy][cx] = digit_c;
                         checks += 1;
-                        if let Ok(check) = crate::check_uniqueness(
-                            &candidate,
-                            budget.max_nodes_per_uniqueness_check,
-                        ) {
+                        if let Ok((check, completion)) =
+                            crate::solver::optimized::check_uniqueness_with_solution(
+                                &candidate,
+                                budget.max_nodes_per_uniqueness_check,
+                            )
+                        {
                             nodes = nodes.saturating_add(check.explored_nodes);
                             if check.status == crate::UniquenessStatus::Unique {
-                                let mut completion = candidate;
-                                if crate::solve(&mut completion)
-                                    && completion != solution
+                                if completion.is_some_and(|completion| completion != solution)
                                     && canonical_key(&candidate) != parent_key
                                 {
                                     emit_generation_progress(
@@ -2009,16 +2005,19 @@ fn generate_diverse_via_intermediate(
                     let mut changed_bridge = after_remove;
                     changed_bridge[y][x] = digit;
                     checks += 1;
-                    let Ok(check) = crate::check_uniqueness(
-                        &changed_bridge,
-                        budget.max_nodes_per_uniqueness_check,
-                    ) else {
+                    let Ok((check, changed_solution)) =
+                        crate::solver::optimized::check_uniqueness_with_solution(
+                            &changed_bridge,
+                            budget.max_nodes_per_uniqueness_check,
+                        )
+                    else {
                         continue;
                     };
                     nodes = nodes.saturating_add(check.explored_nodes);
                     if check.status == crate::UniquenessStatus::Unique {
-                        let mut changed_solution = changed_bridge;
-                        if crate::solve(&mut changed_solution) && changed_solution != solution {
+                        if let Some(changed_solution) = changed_solution
+                            .filter(|changed_solution| *changed_solution != solution)
+                        {
                             if let Some(candidate) = search_bridge_reductions(
                                 &changed_bridge,
                                 &changed_solution,
@@ -2140,11 +2139,7 @@ fn search_bridge_reductions(
                     continue;
                 }
                 if canonical_key(&candidate).as_str() != parent_key {
-                    let mut completion = candidate;
-                    if crate::solve(&mut completion)
-                        && completion == *bridge_solution
-                        && (!require_solution_change || completion != *parent_solution)
-                    {
+                    if !require_solution_change || bridge_solution != parent_solution {
                         return Some(candidate);
                     }
                 }
@@ -2215,7 +2210,11 @@ fn find_alternative_solution(
     known_solution: &Matrix,
     max_nodes: u64,
 ) -> ProbeResult {
-    let result = solver_find_alternative_solution(board, known_solution, max_nodes);
+    let result = crate::solver::optimized::find_alternative_solution_for_known_solution(
+        board,
+        known_solution,
+        max_nodes,
+    );
     match result.status {
         AlternativeSolutionStatus::AlternativeFound => ProbeResult::Multiple {
             alternative: result
