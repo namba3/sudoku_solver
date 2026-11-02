@@ -28,7 +28,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
 
     match command.as_str() {
         "stats" => {
-            let archive = load_archive(&archive_path, nodes)?;
+            let archive = load_archive_fast(&archive_path)?;
             let stats = archive.stats();
             println!("total_records={}", stats.total_records);
             println!(
@@ -40,7 +40,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
             }
         }
         "verify" => {
-            let archive = load_archive(&archive_path, nodes)?;
+            let archive = load_archive_verified(&archive_path, nodes)?;
             println!(
                 "verified_records={} archive={}",
                 archive.records().len(),
@@ -51,7 +51,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
             let source_path = source_path.ok_or_else(|| usage().to_owned())?;
             let imported = MinimalPuzzleArchive::load(&source_path, nodes)
                 .map_err(|error| format!("source archive: {error}"))?;
-            let mut archive = load_or_new(&archive_path, nodes)?;
+            let mut archive = load_or_new_fast(&archive_path)?;
             let inserted = archive.merge_verified(&imported);
             archive
                 .save_atomic(&archive_path)
@@ -64,7 +64,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
         }
         "export" => {
             let output = output_path.ok_or_else(|| usage().to_owned())?;
-            let archive = load_archive(&archive_path, nodes)?;
+            let archive = load_archive_fast(&archive_path)?;
             archive
                 .save_atomic(&output)
                 .map_err(|error| error.to_string())?;
@@ -80,20 +80,24 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
     Ok(())
 }
 
-fn load_archive(path: &Path, nodes: u64) -> Result<MinimalPuzzleArchive, String> {
+fn load_archive_verified(path: &Path, nodes: u64) -> Result<MinimalPuzzleArchive, String> {
     MinimalPuzzleArchive::load(path, nodes).map_err(|error| error.to_string())
 }
 
-fn load_or_new(path: &Path, nodes: u64) -> Result<MinimalPuzzleArchive, String> {
+fn load_archive_fast(path: &Path) -> Result<MinimalPuzzleArchive, String> {
+    MinimalPuzzleArchive::load_fast(path).map_err(|error| error.to_string())
+}
+
+fn load_or_new_fast(path: &Path) -> Result<MinimalPuzzleArchive, String> {
     if path.exists() {
-        load_archive(path, nodes)
+        load_archive_fast(path)
     } else {
         Ok(MinimalPuzzleArchive::new())
     }
 }
 
 fn seed_fast_bases(archive_path: &Path, nodes: u64) -> Result<(), String> {
-    let mut archive = load_or_new(archive_path, nodes)?;
+    let mut archive = load_or_new_fast(archive_path)?;
     let mut inserted = 0usize;
     for (puzzle, solution) in verified_17_clue_bases() {
         let analysis =

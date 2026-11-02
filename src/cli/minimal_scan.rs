@@ -35,8 +35,8 @@ struct Candidate {
 pub(crate) fn run(args: impl Iterator<Item = String>) -> Result<(), String> {
     let options = parse_args(args)?;
     let mut archive = if options.archive.exists() {
-        MinimalPuzzleArchive::load(&options.archive, options.nodes)
-            .map_err(|error| format!("archive verification failed: {error}"))?
+        MinimalPuzzleArchive::load_fast(&options.archive)
+            .map_err(|error| format!("archive load failed: {error}"))?
     } else {
         MinimalPuzzleArchive::new()
     };

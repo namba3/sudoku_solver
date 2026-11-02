@@ -25,7 +25,7 @@ cargo run --release --bin sudoku -- minimal --help
 | Minimal collect checkpoint | `data/minimal-collect-<ヒント数>[-to-...].json` |
 | Multi-Clue Frontier checkpoint | `data/multi-clue-frontier.json` |
 
-Archiveは形式version 1とcanonical-key version 1、レコードchecksumを持ち、読み込み時に盤面と最小性の証拠を再検証します。Minimal collectとFrontierのcheckpointはversion 1、Diverseプールcheckpointはversion 7です。Diverseの再開時は各レコードの一意性、正規化key、親子関係を再確認します。異なるversionのcheckpointは直接再開できません。
+Archiveは形式version 1とcanonical-key version 1、レコードchecksumを持ちます。CLIの通常ロードでは形式・checksum・構造・保存済みWitnessの整合性を確認し、一意性・minimalityの探索とcanonical keyの再計算は省略します。保存済みkeyはchecksumの範囲で信用します。完全検証には`archive verify`を使います。`archive import`は取り込むsourceを全件検証し、既存destinationは高速ロードします。Minimal collect、Frontier、scanも既存Archiveを高速ロードし、新規登録する盤面は検証します。Minimal collectとFrontierのcheckpointはversion 1、Diverseプールcheckpointはversion 7です。Diverseの再開時は各レコードの一意性、正規化key、親子関係を再確認します。異なるversionのcheckpointは直接再開できません。
 
 ## よく使うコマンド
 
@@ -38,7 +38,7 @@ cargo run --release --bin sudoku -- archive import --source incoming.json --arch
 cargo run --release --bin sudoku -- archive seed-fast-bases --archive minimal-puzzles.json --nodes 1000000
 ```
 
-importはsourceとdestinationを全件再検証し、Puzzle MinLexで重複を除いて保存します。形式や検証条件は[Archive資料](archive.md)を参照してください。
+importはsourceを全件検証し、既存destinationを高速ロードした上でPuzzle MinLexの重複を除いて保存します。destinationを事前に全件再検証する場合は`archive verify`を実行してください。形式や検証条件は[Archive資料](archive.md)を参照してください。
 
 ### Minimal収集
 

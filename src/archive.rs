@@ -457,6 +457,19 @@ impl MinimalPuzzleArchive {
         if max_nodes_per_check == 0 {
             return Err(ArchiveError("node budget must be non-zero".into()));
         }
+        Self::load_inner(path.as_ref(), Some(max_nodes_per_check))
+    }
+
+    /// Load an archive without rerunning puzzle uniqueness, minimality, or
+    /// canonical-key calculations. Format, checksum, record structure, and
+    /// stored witness consistency are still checked. Stored canonical keys
+    /// are trusted after the checksum check. Use [`Self::load`] when full
+    /// record verification is required.
+    pub fn load_fast(path: impl AsRef<Path>) -> Result<Self, ArchiveError> {
+        Self::load_inner(path.as_ref(), None)
+    }
+
+    fn load_inner(path: &Path, max_nodes_per_check: Option<u64>) -> Result<Self, ArchiveError> {
         let bytes = fs::read(path).map_err(|error| ArchiveError(error.to_string()))?;
         let document: serde_json::Value =
             serde_json::from_slice(&bytes).map_err(|error| ArchiveError(error.to_string()))?;
@@ -491,27 +504,15 @@ impl MinimalPuzzleArchive {
         for (index, entry) in entries.iter().enumerate() {
             let puzzle = decode_board(entry.get("puzzle"), "puzzle", index)?;
             let solution = decode_board(entry.get("solution"), "solution", index)?;
-            let analysis = analyze_minimality(puzzle, solution, max_nodes_per_check)
-                .map_err(|error| ArchiveError(format!("record {index}: {error}")))?;
-            if analysis.status != VerificationStatus::VerifiedMinimal {
-                return Err(ArchiveError(format!(
-                    "record {index} failed minimality proof"
-                )));
-            }
             let puzzle_key = required_str(entry, "puzzle_key", index)?;
             let solution_class = required_str(entry, "solution_class", index)?;
-            if puzzle_key != analysis.puzzle_key || solution_class != analysis.solution_class {
-                return Err(ArchiveError(format!(
-                    "record {index} canonical key mismatch"
-                )));
-            }
             let clue_count = entry
                 .get("clue_count")
                 .and_then(serde_json::Value::as_u64)
                 .filter(|&count| count <= 81)
                 .ok_or_else(|| ArchiveError(format!("record {index} has invalid clue_count")))?
                 as u8;
-            if clue_count != analysis.clue_count {
+            if clue_count != count_clues(&puzzle) {
                 return Err(ArchiveError(format!("record {index} clue count mismatch")));
             }
             let evidence = evidence_from_json(entry.get("evidence"), index)?;
@@ -519,6 +520,23 @@ impl MinimalPuzzleArchive {
                 return Err(ArchiveError(format!(
                     "record {index} has invalid minimality evidence"
                 )));
+            }
+            if let Some(max_nodes_per_check) = max_nodes_per_check {
+                let analysis = analyze_minimality(puzzle, solution, max_nodes_per_check)
+                    .map_err(|error| ArchiveError(format!("record {index}: {error}")))?;
+                if analysis.status != VerificationStatus::VerifiedMinimal {
+                    return Err(ArchiveError(format!(
+                        "record {index} failed minimality proof"
+                    )));
+                }
+                if puzzle_key != analysis.puzzle_key || solution_class != analysis.solution_class {
+                    return Err(ArchiveError(format!(
+                        "record {index} canonical key mismatch"
+                    )));
+                }
+                if clue_count != analysis.clue_count {
+                    return Err(ArchiveError(format!("record {index} clue count mismatch")));
+                }
             }
             let id = format!("{clue_count}:{puzzle_key}");
             if !seen.insert(id) {

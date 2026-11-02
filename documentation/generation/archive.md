@@ -6,7 +6,7 @@
 
 `MinimalPuzzleArchive`はヒント数に関わらず検証済みのMinimal Puzzleを保持します。各recordには問題と解、一意性・minimalityの証拠、Puzzle/Solution MinLex key、来歴を含みます。
 
-ロード時にはJSONのformat versionとチェックサムを確認し、解、一意性、minimality、正規化keyを再検証します。シリアライズされたstatusだけを証拠として信用しません。更新は一時ファイルのflush・sync後にatomic renameします。
+CLIの通常ロードはJSONのformat version、チェックサム、レコード構造、保存済み解と削除Witnessの整合性を確認し、一意性・minimalityの探索とcanonical keyの再計算を省きます。保存済みcanonical keyはチェックサムの範囲で信用します。既存Archiveを繰り返し使う探索の起動時間を抑えるためです。完全な再検証には`archive verify`を実行してください。ライブラリAPIの`MinimalPuzzleArchive::load`は従来どおり全レコードを再証明し、`load_fast`は通常ロードと同じ高速経路を使います。更新は一時ファイルのflush・sync後にatomic renameします。
 
 `analyze_minimality`は盤面と既知解を受け取り、`analyze_minimality_from_puzzle`は盤面だけから最初の解を探します。どちらも各解探索にノード上限を適用します。進捗イベント単位で上限を確認するため、訪問ノードが指定値を最大2,047超える場合があります。盤面だけのAPIで上限までに最初の解が見つからない場合は`BudgetExceeded`を返し、無制限の通常solveへ切り替えません。`VerifiedMinimal`は問題全体の一意性と、各ヒントを1つ消すと別解が生じることを確認できた場合に限ります。
 
@@ -20,6 +20,6 @@ Archiveの統計、検証、import、export、Fast用seed登録は[CLIガイド]
 
 `minimal collect`はヒント数Nの親からRヒントを外し、親の解と一致するS個の数字を加えて、`N-R+S`ヒントの候補を探します。各削除Witnessを満たす追加位置集合だけを候補に残します。新しい別解が見つかれば、未検査候補をさらに絞ります。
 
-一意性とMinimalityを確認できた候補だけをArchiveに登録します。予算切れの親はcheckpointに未完了として残り、`--checks`または`--nodes`を増やして再開できます。探索と操作例は[CLIガイド](cli.md)を参照してください。
+一意性とMinimalityを確認できた候補だけをArchiveに登録します。既存Archiveの通常ロードでは全件再証明を省きますが、新規候補は登録前に独立検証します。予算切れの親はcheckpointに未完了として残り、`--checks`または`--nodes`を増やして再開できます。探索と操作例は[CLIガイド](cli.md)を参照してください。
 
 `scan`はヒント数別に並列探索し、Minimalと再検証できた問題だけを逐次Archiveへ登録します。worker数と予算は[CLIガイド](cli.md)、Diverseの交換アルゴリズムは[Diverse探索の詳細](diverse-details.md)を参照してください。

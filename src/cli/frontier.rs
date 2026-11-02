@@ -118,7 +118,7 @@ pub(super) fn run(options: Options) -> Result<(), String> {
     };
     let operation_id = operation.checkpoint_id();
     let mut archive =
-        MinimalPuzzleArchive::load(&archive_path, nodes).map_err(|error| error.to_string())?;
+        MinimalPuzzleArchive::load_fast(&archive_path).map_err(|error| error.to_string())?;
     let mut frontier = if checkpoint_path.exists() {
         MultiClueFrontier::load_checkpoint(&checkpoint_path, nodes)?
     } else {

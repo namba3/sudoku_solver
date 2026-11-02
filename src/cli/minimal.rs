@@ -51,8 +51,7 @@ pub(crate) fn collect_minimal(
     let algorithm =
         format!("cegar-witness-intersection-remove-{remove_count}-add-{add_count}-collector");
     let mut archive = if archive_path.exists() {
-        MinimalPuzzleArchive::load(&archive_path, max_nodes_per_check)
-            .map_err(|error| error.to_string())?
+        MinimalPuzzleArchive::load_fast(&archive_path).map_err(|error| error.to_string())?
     } else {
         MinimalPuzzleArchive::new()
     };
