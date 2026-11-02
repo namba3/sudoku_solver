@@ -2557,7 +2557,7 @@ mod tests {
     fn verified_base_pool_has_consistent_17_clue_puzzles_and_covers_each_entry() {
         assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT.len(), 82);
         assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[17].len(), 7);
-        assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[18].len(), 135);
+        assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[18].len(), 178);
         assert!(minimal_puzzle_seeds(u8::MAX).is_empty());
         let bases17 = minimal_puzzle_seeds(17);
         assert_eq!(bases17.len(), 7);
@@ -2569,7 +2569,7 @@ mod tests {
         }
 
         let bases18 = minimal_puzzle_seeds(18);
-        assert_eq!(bases18.len(), 135);
+        assert_eq!(bases18.len(), 178);
         for (puzzle, solution) in bases18 {
             assert_eq!(clue_count(puzzle), 18);
             assert!((0..81).all(|position| {
@@ -2590,7 +2590,7 @@ mod tests {
             let mut rng = SplitMix64(seed);
             selected_18.insert(verified_minimal_base_up_to(&mut rng, 18).0);
         }
-        assert_eq!(selected_18.len(), 7 + 135);
+        assert_eq!(selected_18.len(), 7 + 178);
 
         let mut selected_17 = HashSet::new();
         for seed in 0..128 {
