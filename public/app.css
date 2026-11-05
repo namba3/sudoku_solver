@@ -15,6 +15,28 @@ body {
     min-width: 320px;
 }
 
+.site-footer {
+    width: min(100% - 24px, 1020px);
+    margin: 0 auto;
+    padding: 0 0 24px;
+    text-align: center;
+    font-size: 0.875rem;
+}
+
+.site-footer a {
+    color: #475467;
+    text-underline-offset: 0.15em;
+}
+
+.site-footer a:hover {
+    color: #1849a9;
+}
+
+.site-footer a:focus-visible {
+    outline: 3px solid #84adff;
+    outline-offset: 3px;
+}
+
 .container {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
