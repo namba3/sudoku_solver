@@ -1,7 +1,8 @@
-use std::collections::HashMap;
-use std::sync::OnceLock;
+use std::borrow::Cow;
+use std::cell::RefCell;
 
-use serde_json::Value;
+use fluent_bundle::{FluentArgs, FluentBundle, FluentResource};
+use unic_langid::LanguageIdentifier;
 
 #[derive(Clone, Copy, PartialEq)]
 pub enum Language {
@@ -25,72 +26,103 @@ impl Language {
     }
 }
 
-fn catalog(language: Language) -> &'static HashMap<String, Value> {
-    static JAPANESE: OnceLock<HashMap<String, Value>> = OnceLock::new();
-    static ENGLISH: OnceLock<HashMap<String, Value>> = OnceLock::new();
+type Bundle = FluentBundle<FluentResource>;
 
-    let (cache, source) = match language {
-        Language::Japanese => (&JAPANESE, include_str!("../locales/ja.json")),
-        Language::English => (&ENGLISH, include_str!("../locales/en.json")),
-    };
-
-    cache.get_or_init(|| serde_json::from_str(source).expect("locale catalog must be valid JSON"))
+thread_local! {
+    static JAPANESE: RefCell<Bundle> = RefCell::new(build_bundle(
+        "ja",
+        include_str!("../locales/ja.ftl"),
+    ));
+    static ENGLISH: RefCell<Bundle> = RefCell::new(build_bundle(
+        "en",
+        include_str!("../locales/en.ftl"),
+    ));
 }
 
-/// Looks up a semantic message key, falling back to English for untranslated entries.
-pub fn t(language: Language, key: &str) -> String {
-    message(language, key, None)
+fn build_bundle(language: &str, source: &str) -> Bundle {
+    let language_id = language
+        .parse::<LanguageIdentifier>()
+        .expect("locale identifier must be valid");
+    let resource = FluentResource::try_new(source.to_owned()).unwrap_or_else(|(_, errors)| {
+        panic!("{language} Fluent resource must be valid: {errors:?}")
+    });
+    let mut bundle = FluentBundle::new(vec![language_id]);
+    bundle.add_resource(resource).unwrap_or_else(|errors| {
+        panic!("{language} Fluent resource has duplicate IDs: {errors:?}")
+    });
+    // The existing UI formats values directly without bidi isolation marks.
+    bundle.set_use_isolating(false);
+    bundle
 }
 
-/// Looks up a message and substitutes named values such as `{count}`.
-pub fn t_args(language: Language, key: &str, args: &[(&str, String)]) -> String {
-    interpolate(message(language, key, None), args)
-}
-
-/// Selects the locale's plural form before substituting `{count}`.
-pub fn t_plural(language: Language, key: &str, count: u64, args: &[(&str, String)]) -> String {
-    let mut values = args.to_vec();
-    values.push(("count", count.to_string()));
-    let selected = message(language, key, Some(count));
-    interpolate(selected, &values)
-}
-
-fn message(language: Language, key: &str, plural_count: Option<u64>) -> String {
-    resolve_message(
-        language,
-        key,
-        plural_count,
-        catalog(language).get(key),
-        catalog(Language::English).get(key),
-    )
-}
-
-fn resolve_message(
-    language: Language,
-    key: &str,
-    plural_count: Option<u64>,
-    localized: Option<&Value>,
-    english: Option<&Value>,
-) -> String {
-    let (value, message_language) = localized
-        .map(|value| (Some(value), language))
-        .unwrap_or((english, Language::English));
-
-    match value {
-        Some(Value::String(message)) => message.clone(),
-        Some(Value::Object(forms)) => plural_count
-            .map(|count| match message_language {
-                Language::Japanese => "other",
-                Language::English if count == 1 => "one",
-                Language::English => "other",
-            })
-            .and_then(|category| forms.get(category))
-            .or_else(|| forms.get("other"))
-            .and_then(Value::as_str)
-            .map(str::to_owned)
-            .unwrap_or_else(|| missing(key)),
-        _ => missing(key),
+fn with_bundle<T>(language: Language, f: impl FnOnce(&Bundle) -> T) -> T {
+    match language {
+        Language::Japanese => JAPANESE.with(|bundle| f(&bundle.borrow())),
+        Language::English => ENGLISH.with(|bundle| f(&bundle.borrow())),
     }
+}
+
+fn fluent_id(key: &str) -> Cow<'_, str> {
+    if key.contains('.') {
+        key.replace('.', "-").into()
+    } else {
+        key.into()
+    }
+}
+
+fn format_in(language: Language, key: &str, args: &FluentArgs<'_>) -> Option<String> {
+    let id = fluent_id(key);
+    with_bundle(language, |bundle| {
+        let message = bundle.get_message(&id)?;
+        let pattern = message.value()?;
+        let mut errors = Vec::new();
+        let formatted = bundle.format_pattern(pattern, Some(args), &mut errors);
+        if !errors.is_empty() {
+            log::warn!(
+                "Fluent formatting errors for `{key}` ({}): {errors:?}",
+                language.code()
+            );
+        }
+        Some(formatted.into_owned())
+    })
+}
+
+fn resolve(localized: Option<String>, english: Option<String>, key: &str) -> String {
+    localized.or(english).unwrap_or_else(|| missing(key))
+}
+
+fn format(language: Language, key: &str, args: &FluentArgs<'_>) -> String {
+    let localized = format_in(language, key, args);
+    let english = if language == Language::English {
+        None
+    } else {
+        format_in(Language::English, key, args)
+    };
+    resolve(localized, english, key)
+}
+
+/// Looks up a semantic message ID, falling back to English when untranslated.
+pub fn t(language: Language, key: &str) -> String {
+    format(language, key, &FluentArgs::new())
+}
+
+/// Looks up a message and formats named Fluent variables.
+pub fn t_args(language: Language, key: &str, args: &[(&str, String)]) -> String {
+    let mut fluent_args = FluentArgs::with_capacity(args.len());
+    for (name, value) in args {
+        fluent_args.set(*name, value.as_str());
+    }
+    format(language, key, &fluent_args)
+}
+
+/// Formats a message with a numeric `count` variable for Fluent's plural selection.
+pub fn t_plural(language: Language, key: &str, count: u64, args: &[(&str, String)]) -> String {
+    let mut fluent_args = FluentArgs::with_capacity(args.len() + 1);
+    for (name, value) in args {
+        fluent_args.set(*name, value.as_str());
+    }
+    fluent_args.set("count", count);
+    format(language, key, &fluent_args)
 }
 
 fn missing(key: &str) -> String {
@@ -101,84 +133,83 @@ fn missing(key: &str) -> String {
     }
 }
 
-fn interpolate(mut message: String, args: &[(&str, String)]) -> String {
-    for (name, value) in args {
-        message = message.replace(&format!("{{{name}}}"), value);
-    }
-    message
-}
-
 #[cfg(test)]
 mod tests {
-    use super::{catalog, resolve_message, t_args, t_plural, Language};
-    use serde_json::json;
+    use super::{build_bundle, missing, resolve, t, t_args, t_plural, Language};
 
     #[test]
-    fn japanese_and_english_catalogs_have_matching_keys_and_message_shapes() {
-        let japanese = catalog(Language::Japanese);
-        let english = catalog(Language::English);
+    fn japanese_and_english_fluent_catalogs_have_matching_ids_and_plural_forms() {
+        use std::collections::{BTreeMap, BTreeSet};
 
-        assert_eq!(japanese.len(), english.len());
-        for (key, japanese_value) in japanese {
-            let english_value = english
-                .get(key)
-                .unwrap_or_else(|| panic!("missing English key: {key}"));
-            assert_eq!(
-                japanese_value.is_object(),
-                english_value.is_object(),
-                "message shape differs for {key}"
-            );
-            if japanese_value.is_object() {
-                assert!(
-                    japanese_value.get("other").is_some(),
-                    "Japanese plural message lacks `other`: {key}"
-                );
-                assert!(
-                    english_value.get("other").is_some(),
-                    "English plural message lacks `other`: {key}"
-                );
+        fn ids_and_plural_forms(source: &str) -> (Vec<&str>, BTreeMap<String, BTreeSet<String>>) {
+            let mut ids = Vec::new();
+            let mut plural_forms = BTreeMap::<String, BTreeSet<String>>::new();
+            let mut current_plural = None;
+
+            for line in source.lines() {
+                if let Some((id, value)) = line.split_once(" = ") {
+                    ids.push(id);
+                    current_plural = if value == "{ $count ->" {
+                        plural_forms.insert(id.to_owned(), BTreeSet::new());
+                        Some(id.to_owned())
+                    } else {
+                        None
+                    };
+                    continue;
+                }
+
+                let Some(id) = current_plural.as_ref() else {
+                    continue;
+                };
+                let variant = line.trim();
+                if variant == "}" {
+                    current_plural = None;
+                    continue;
+                }
+
+                let variant = variant.strip_prefix('*').unwrap_or(variant);
+                if let Some(category) = variant
+                    .strip_prefix('[')
+                    .and_then(|variant| variant.split_once(']'))
+                    .map(|(category, _)| category)
+                {
+                    plural_forms
+                        .get_mut(id)
+                        .expect("plural message was registered")
+                        .insert(category.to_owned());
+                }
             }
+
+            (ids, plural_forms)
         }
+
+        let japanese = include_str!("../locales/ja.ftl");
+        let english = include_str!("../locales/en.ftl");
+        let (japanese_ids, japanese_plural_forms) = ids_and_plural_forms(japanese);
+        let (english_ids, english_plural_forms) = ids_and_plural_forms(english);
+
+        assert_eq!(japanese_ids, english_ids);
+        assert!(japanese_plural_forms
+            .values()
+            .all(|forms| forms == &["other".to_owned()].into()));
+        assert!(english_plural_forms
+            .values()
+            .all(|forms| forms == &["one".to_owned(), "other".to_owned()].into()));
+        build_bundle("ja", japanese);
+        build_bundle("en", english);
     }
 
     #[test]
     fn falls_back_to_english_for_a_missing_translation() {
-        let english = json!("English fallback");
-
         assert_eq!(
-            resolve_message(Language::Japanese, "missing.ja", None, None, Some(&english)),
+            resolve(None, Some("English fallback".to_owned()), "missing.ja"),
             "English fallback"
         );
+        assert_eq!(resolve(None, None, "missing.ja"), missing("missing.ja"));
     }
 
     #[test]
-    fn english_fallback_uses_english_plural_rules() {
-        let english = json!({"one": "{count} item", "other": "{count} items"});
-
-        assert_eq!(
-            resolve_message(
-                Language::Japanese,
-                "missing.ja",
-                Some(1),
-                None,
-                Some(&english)
-            ),
-            "{count} item"
-        );
-        assert_eq!(
-            resolve_message(
-                Language::Japanese,
-                "missing.ja",
-                Some(2),
-                None,
-                Some(&english)
-            ),
-            "{count} items"
-        );
-    }
-
-    #[test]
-    fn interpolates_named_arguments_in_a_complete_message() {
+    fn formats_named_arguments() {
         assert_eq!(
             t_args(
                 Language::Japanese,
@@ -230,12 +261,12 @@ mod tests {
 
     #[test]
     fn marks_unknown_keys_in_debug_builds() {
-        let unknown = resolve_message(Language::Japanese, "unknown.key", None, None, None);
-
+        let unknown = missing("unknown.key");
         if cfg!(debug_assertions) {
             assert_eq!(unknown, "[MISSING: unknown.key]");
         } else {
             assert_eq!(unknown, "unknown.key");
         }
+        assert!(t(Language::Japanese, "unknown.key").starts_with("[MISSING:"));
     }
 }
