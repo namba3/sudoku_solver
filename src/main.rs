@@ -83,8 +83,8 @@ fn apply_theme(theme: Theme) {
             }
             if let Some(theme_color) = document.get_element_by_id("theme-color") {
                 let color = match theme {
-                    Theme::Dark => "#101318",
-                    Theme::Light => "#f4f7fb",
+                    Theme::Dark => "#171817",
+                    Theme::Light => "#f3f3f0",
                 };
                 let _ = theme_color.set_attribute("content", color);
             }
