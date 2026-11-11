@@ -28,9 +28,10 @@
 | UI-22 | 空/満盤面 | 空盤面/81 clue | 表示しセル操作 | 81セルを範囲外アクセスや表示崩れなく扱う | Unit + Web E2E | P2 | 座標IDあり。viewport fixture |
 | UI-23 | responsive layout | 固定locale/fixture | 390pxと1440px viewport | 盤面/操作が読め、重なりや横はみ出しなし | Visual + Web E2E / Playwright | P2 | CSSあり、baseline/CIなし |
 | UI-24 | role/name操作 | 初期画面と各タブ | role/nameで主要controlを検索・操作 | 翻訳文字列に依存せず意味的に識別できる | Render + Web E2E | P2 | ARIA/ID一部あり、監査未実施 |
+| UI-25 | テーマ切替 | 初期テーマがダーク | ライト／ダーク切替を操作して再読み込み | 配色とtheme-colorが切り替わり、選択がブラウザーに保存される | Unit + Web E2E | P2 | Theme状態はUnitで確認、localStorageと表示はブラウザー確認が必要 |
 
 ## 現行機能にないため対象外
 
-- Router遷移、dialog、theme toggle: 該当機能を確認できません。
+- Router遷移、dialog: 該当機能を確認できません。
 - Desktop E2E、OS設定変更、実ファイル削除、外部サービスへの書込み: 現行Web構成外です。
 - Worker時間の性能閾値: 初期段階は決定的な上限制御/状態表示を検証し、端末差のある性能測定は分離します。

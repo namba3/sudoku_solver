@@ -38,6 +38,65 @@ struct BoardSnapshot {
 }
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
+enum Theme {
+    Dark,
+    Light,
+}
+
+impl Theme {
+    fn from_preference(value: Option<&str>) -> Self {
+        match value {
+            Some("light") => Self::Light,
+            _ => Self::Dark,
+        }
+    }
+
+    fn toggle(self) -> Self {
+        match self {
+            Self::Dark => Self::Light,
+            Self::Light => Self::Dark,
+        }
+    }
+
+    fn as_str(self) -> &'static str {
+        match self {
+            Self::Dark => "dark",
+            Self::Light => "light",
+        }
+    }
+}
+
+const THEME_STORAGE_KEY: &str = "sudoku_solver.theme";
+
+fn load_theme_preference() -> Theme {
+    let saved = web_sys::window()
+        .and_then(|window| window.local_storage().ok().flatten())
+        .and_then(|storage| storage.get_item(THEME_STORAGE_KEY).ok().flatten());
+    Theme::from_preference(saved.as_deref())
+}
+
+fn apply_theme(theme: Theme) {
+    if let Some(window) = web_sys::window() {
+        if let Some(document) = window.document() {
+            if let Some(root) = document.document_element() {
+                let _ = root.set_attribute("data-theme", theme.as_str());
+            }
+            if let Some(theme_color) = document.get_element_by_id("theme-color") {
+                let color = match theme {
+                    Theme::Dark => "#101318",
+                    Theme::Light => "#f4f7fb",
+                };
+                let _ = theme_color.set_attribute("content", color);
+            }
+        }
+
+        if let Ok(Some(storage)) = window.local_storage() {
+            let _ = storage.set_item(THEME_STORAGE_KEY, theme.as_str());
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
 enum BoardDragHandle {
     Band(usize),
     Row(usize),
@@ -465,6 +524,8 @@ impl Drop for ActiveSearch {
 
 fn app() -> Element {
     let mut language = use_signal(|| Language::Japanese);
+    let mut theme = use_signal(load_theme_preference);
+    use_effect(move || apply_theme(theme()));
     let mut mtx = use_signal(|| INITIAL_MTX);
     let mut givens = use_signal(|| INITIAL_MTX);
     let mut txt = use_signal(|| to_txt(&INITIAL_MTX));
@@ -537,6 +598,14 @@ fn app() -> Element {
         t(lang, "action.lock_givens")
     };
     let language_switch_label = t(lang, "language.switch");
+    let theme_label = t(lang, "theme.label");
+    let theme_switch_label = t(
+        lang,
+        match theme() {
+            Theme::Dark => "theme.switch_light",
+            Theme::Light => "theme.switch_dark",
+        },
+    );
     let title_label = t(lang, "app.title");
     let input_help = t(lang, "help.input");
     let undo_label = format!("↶ {}", t(lang, "action.undo"));
@@ -637,6 +706,45 @@ fn app() -> Element {
                         msg.set(String::new());
                     },
                     "{language_switch_label}"
+                }
+                button {
+                    class: "theme-toggle",
+                    r#type: "button",
+                    role: "switch",
+                    aria_label: "{theme_label}",
+                    aria_checked: "{theme() == Theme::Light}",
+                    title: "{theme_switch_label}",
+                    onclick: move |_| theme.set(theme().toggle()),
+                    span {
+                        class: "theme-toggle-thumb",
+                        aria_hidden: "true",
+                        if theme() == Theme::Light {
+                            svg {
+                                width: "16",
+                                height: "16",
+                                view_box: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                stroke_width: "2",
+                                stroke_linecap: "round",
+                                stroke_linejoin: "round",
+                                circle { cx: "12", cy: "12", r: "4" }
+                                path { d: "M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" }
+                            }
+                        } else {
+                            svg {
+                                width: "16",
+                                height: "16",
+                                view_box: "0 0 24 24",
+                                fill: "none",
+                                stroke: "currentColor",
+                                stroke_width: "2",
+                                stroke_linecap: "round",
+                                stroke_linejoin: "round",
+                                path { d: "M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" }
+                            }
+                        }
+                    }
                 }
             }
             h1 { "{title_label}" }
@@ -2523,7 +2631,7 @@ mod tests {
         cell_classes, cell_text, cell_value, is_cell_locked, moved_cell, next_empty_cell,
         parse_generated_board, parse_puzzle, parse_solution, record_board_change, redo_snapshot,
         to_txt, transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform, Language,
-        SearchStatus, HISTORY_LIMIT,
+        SearchStatus, Theme, HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -2539,6 +2647,17 @@ mod tests {
         "287419635\n",
         "345286179\n",
     );
+
+    #[test]
+    fn theme_defaults_to_dark_and_toggles_between_themes() {
+        assert_eq!(Theme::from_preference(None), Theme::Dark);
+        assert_eq!(Theme::from_preference(Some("invalid")), Theme::Dark);
+        assert_eq!(Theme::from_preference(Some("light")), Theme::Light);
+        assert_eq!(Theme::Dark.toggle(), Theme::Light);
+        assert_eq!(Theme::Light.toggle(), Theme::Dark);
+        assert_eq!(Theme::Dark.as_str(), "dark");
+        assert_eq!(Theme::Light.as_str(), "light");
+    }
 
     #[test]
     fn given_cells_are_locked_by_default_and_can_be_unlocked() {
