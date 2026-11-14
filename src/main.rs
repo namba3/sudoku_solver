@@ -6,12 +6,14 @@ mod board_analysis;
 mod board_transform;
 mod i18n;
 
-use board_analysis::{candidate_digits, BoardAnalysis};
+use board_analysis::{candidate_digits, BoardAnalysis, CandidateFilterOptions};
 use board_transform::{
     band_drag_transform, column_drag_transform, row_drag_transform, stack_drag_transform,
     transform_matrix, BoardTransform,
 };
 use i18n::{t, t_args, t_plural, Language};
+
+const MAX_CANDIDATE_FILTER_ITERATIONS: usize = 100;
 
 fn main() {
     wasm_logger::init(wasm_logger::Config::default());
@@ -252,11 +254,15 @@ fn board_cell_classes(
     classes
 }
 
-fn candidate_class(is_hidden_single_digit: bool) -> &'static str {
-    if is_hidden_single_digit {
-        "candidate hidden-single-candidate"
-    } else {
-        "candidate"
+fn candidate_class(
+    is_hidden_single_digit: bool,
+    is_locked_candidate_eliminated: bool,
+) -> &'static str {
+    match (is_hidden_single_digit, is_locked_candidate_eliminated) {
+        (true, true) => "candidate hidden-single-candidate locked-candidate-elimination",
+        (true, false) => "candidate hidden-single-candidate",
+        (false, true) => "candidate locked-candidate-elimination",
+        (false, false) => "candidate",
     }
 }
 
@@ -581,6 +587,14 @@ fn app() -> Element {
     let mut msg = use_signal(String::new);
     let mut is_ok = use_signal(|| true);
     let mut show_candidates = use_signal(|| false);
+    let mut show_locked_candidates = use_signal(|| false);
+    let mut show_naked_subsets = use_signal(|| false);
+    let mut show_hidden_subsets = use_signal(|| false);
+    let mut show_fish = use_signal(|| false);
+    let mut show_xy_wing = use_signal(|| false);
+    let mut candidate_filters_enabled = use_signal(|| true);
+    let mut single_hints_use_candidate_filters = use_signal(|| true);
+    let mut candidate_filter_iterations = use_signal(|| "1".to_string());
     let mut show_naked_single_hints = use_signal(|| false);
     let mut show_hidden_single_hints = use_signal(|| false);
     let mut lock_givens = use_signal(|| true);
@@ -656,12 +670,62 @@ fn app() -> Element {
     let analysis = BoardAnalysis::new(&display_board);
     let single_hints_available =
         analysis.conflict_count() == 0 && analysis.no_candidate_count() == 0;
+    let candidate_filter_options = CandidateFilterOptions {
+        locked_candidates: candidate_filters_enabled() && show_locked_candidates(),
+        naked_subsets: candidate_filters_enabled() && show_naked_subsets(),
+        hidden_subsets: candidate_filters_enabled() && show_hidden_subsets(),
+        fish: candidate_filters_enabled() && show_fish(),
+        xy_wing: candidate_filters_enabled() && show_xy_wing(),
+        iterations: candidate_filter_iterations()
+            .parse::<usize>()
+            .unwrap_or(1)
+            .clamp(1, MAX_CANDIDATE_FILTER_ITERATIONS),
+    };
+    let candidate_filter_options = if single_hints_available {
+        candidate_filter_options
+    } else {
+        CandidateFilterOptions::default()
+    };
+    let candidate_filter_active = candidate_filter_options.any_enabled();
+    let filtered_candidates = analysis.filter_candidates(candidate_filter_options);
+    let use_candidate_filter_result = candidate_filter_active && !filtered_candidates.contradiction;
+    let use_filtered_candidates_for_singles =
+        use_candidate_filter_result && single_hints_use_candidate_filters();
+    let active_candidate_masks = if use_filtered_candidates_for_singles {
+        &filtered_candidates.candidate_masks
+    } else {
+        &analysis.candidate_masks
+    };
+    let active_hidden_single_masks = if use_filtered_candidates_for_singles {
+        &filtered_candidates.hidden_single_masks
+    } else {
+        &analysis.hidden_single_masks
+    };
     let candidate_display_label = t(lang, "action.show_candidates");
     let candidate_display_help = t(lang, "help.candidate_display");
+    let candidate_display_section = t(lang, "label.candidate_display_section");
+    let candidate_filter_section = t(lang, "label.candidate_filter_section");
+    let single_hint_section = t(lang, "label.single_hint_section");
+    let locked_candidates_label = t(lang, "action.locked_candidates");
+    let locked_candidates_help = t(lang, "help.locked_candidates");
+    let naked_subsets_label = t(lang, "action.naked_subsets");
+    let naked_subsets_help = t(lang, "help.naked_subsets");
+    let hidden_subsets_label = t(lang, "action.hidden_subsets");
+    let hidden_subsets_help = t(lang, "help.hidden_subsets");
+    let candidate_filters_enabled_label = t(lang, "action.candidate_filters_enabled");
+    let candidate_filters_enabled_help = t(lang, "help.candidate_filters_enabled");
+    let fish_label = t(lang, "action.fish");
+    let fish_help = t(lang, "help.fish");
+    let xy_wing_label = t(lang, "action.xy_wing");
+    let xy_wing_help = t(lang, "help.xy_wing");
+    let candidate_filter_iterations_label = t(lang, "label.candidate_filter_iterations");
+    let candidate_filter_iterations_help = t(lang, "help.candidate_filter_iterations");
     let naked_single_hint_label = t(lang, "action.naked_single_hint");
     let naked_single_hint_help = t(lang, "help.naked_single_hint");
     let hidden_single_hint_label = t(lang, "action.hidden_single_hint");
     let hidden_single_hint_help = t(lang, "help.hidden_single_hint");
+    let single_hints_filter_option_label = t(lang, "action.single_hints_use_candidate_filters");
+    let single_hints_filter_option_help = t(lang, "help.single_hints_use_candidate_filters");
     let givens_lock_label = if lock_givens() {
         t(lang, "action.unlock_givens")
     } else {
@@ -1226,11 +1290,11 @@ fn app() -> Element {
                                         show_naked_single_hints()
                                             && single_hints_available
                                             && !(1..=9).contains(&cell)
-                                            && analysis.candidate_masks[y][x].count_ones() == 1,
+                                            && active_candidate_masks[y][x].count_ones() == 1,
                                         show_hidden_single_hints()
                                             && single_hints_available
                                             && !(1..=9).contains(&cell)
-                                            && analysis.hidden_single_masks[y][x] != 0,
+                                            && active_hidden_single_masks[y][x] != 0,
                                         preview_transform,
                                     )}",
                                     key: "{y}-{x}",
@@ -1241,7 +1305,11 @@ fn app() -> Element {
                                                 span {
                                                     class: "{candidate_class(
                                                         show_hidden_single_hints()
-                                                            && analysis.hidden_single_masks[y][x]
+                                                            && active_hidden_single_masks[y][x]
+                                                                & (1 << (digit - 1))
+                                                                != 0,
+                                                        use_candidate_filter_result
+                                                            && filtered_candidates.eliminated_candidate_masks[y][x]
                                                                 & (1 << (digit - 1))
                                                                 != 0,
                                                     )}",
@@ -1463,63 +1531,268 @@ fn app() -> Element {
                                 tabindex: "0",
                                 div {
                                     class: "hint-controls-panel",
-                                    div {
-                                        class: "hint-switch-row",
-                                        div {
-                                            class: "hint-switch-copy",
-                                            span { class: "hint-switch-label", "{candidate_display_label}" }
-                                            p { class: "hint-switch-description", "{candidate_display_help}" }
+                                    section {
+                                        class: "hint-control-section",
+                                        role: "group",
+                                        aria_labelledby: "hint-candidate-display-heading",
+                                        h3 {
+                                            id: "hint-candidate-display-heading",
+                                            class: "hint-section-heading",
+                                            "{candidate_display_section}"
                                         }
-                                        button {
-                                            class: "hint-switch",
-                                            r#type: "button",
-                                            role: "switch",
-                                            aria_checked: "{show_candidates()}",
-                                            aria_label: "{candidate_display_label}",
-                                            onclick: move |_| show_candidates.set(!show_candidates()),
-                                            span {
-                                                class: "hint-switch-track",
-                                                span { class: "hint-switch-thumb" }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{candidate_display_label}" }
+                                                p { class: "hint-switch-description", "{candidate_display_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_candidates()}",
+                                                aria_label: "{candidate_display_label}",
+                                                onclick: move |_| show_candidates.set(!show_candidates()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
                                             }
                                         }
                                     }
-                                    div {
-                                        class: "hint-switch-row",
-                                        div {
-                                            class: "hint-switch-copy",
-                                            span { class: "hint-switch-label", "{naked_single_hint_label}" }
-                                            p { class: "hint-switch-description", "{naked_single_hint_help}" }
+                                    section {
+                                        class: "hint-control-section",
+                                        role: "group",
+                                        aria_labelledby: "hint-candidate-filter-heading",
+                                        h3 {
+                                            id: "hint-candidate-filter-heading",
+                                            class: "hint-section-heading",
+                                            "{candidate_filter_section}"
                                         }
-                                        button {
-                                            class: "hint-switch",
-                                            r#type: "button",
-                                            role: "switch",
-                                            aria_checked: "{show_naked_single_hints()}",
-                                            aria_label: "{naked_single_hint_label}",
-                                            onclick: move |_| show_naked_single_hints.set(!show_naked_single_hints()),
-                                            span {
-                                                class: "hint-switch-track",
-                                                span { class: "hint-switch-thumb" }
+                                        div {
+                                            class: "hint-switch-row candidate-filter-master",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{candidate_filters_enabled_label}" }
+                                                p { class: "hint-switch-description", "{candidate_filters_enabled_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{candidate_filters_enabled()}",
+                                                aria_label: "{candidate_filters_enabled_label}",
+                                                onclick: move |_| candidate_filters_enabled.set(!candidate_filters_enabled()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "candidate-filter-iterations",
+                                            label {
+                                                r#for: "candidate-filter-iterations",
+                                                "{candidate_filter_iterations_label}"
+                                            }
+                                            input {
+                                                id: "candidate-filter-iterations",
+                                                r#type: "number",
+                                                min: "1",
+                                                max: "100",
+                                                step: "1",
+                                                value: "{candidate_filter_iterations}",
+                                                aria_label: "{candidate_filter_iterations_label}",
+                                                disabled: !candidate_filters_enabled(),
+                                                oninput: move |event| candidate_filter_iterations.set(event.value()),
+                                                onchange: move |event| {
+                                                    let iterations = event
+                                                        .value()
+                                                        .parse::<usize>()
+                                                        .unwrap_or(1)
+                                                        .clamp(1, MAX_CANDIDATE_FILTER_ITERATIONS);
+                                                    candidate_filter_iterations.set(iterations.to_string());
+                                                },
+                                            }
+                                            p {
+                                                class: "hint-switch-description candidate-filter-iterations-help",
+                                                "{candidate_filter_iterations_help}"
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{locked_candidates_label}" }
+                                                p { class: "hint-switch-description", "{locked_candidates_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                disabled: !candidate_filters_enabled(),
+                                                aria_checked: "{show_locked_candidates()}",
+                                                aria_label: "{locked_candidates_label}",
+                                                onclick: move |_| show_locked_candidates.set(!show_locked_candidates()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{naked_subsets_label}" }
+                                                p { class: "hint-switch-description", "{naked_subsets_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                disabled: !candidate_filters_enabled(),
+                                                aria_checked: "{show_naked_subsets()}",
+                                                aria_label: "{naked_subsets_label}",
+                                                onclick: move |_| show_naked_subsets.set(!show_naked_subsets()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{hidden_subsets_label}" }
+                                                p { class: "hint-switch-description", "{hidden_subsets_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                disabled: !candidate_filters_enabled(),
+                                                aria_checked: "{show_hidden_subsets()}",
+                                                aria_label: "{hidden_subsets_label}",
+                                                onclick: move |_| show_hidden_subsets.set(!show_hidden_subsets()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{fish_label}" }
+                                                p { class: "hint-switch-description", "{fish_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                disabled: !candidate_filters_enabled(),
+                                                aria_checked: "{show_fish()}",
+                                                aria_label: "{fish_label}",
+                                                onclick: move |_| show_fish.set(!show_fish()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{xy_wing_label}" }
+                                                p { class: "hint-switch-description", "{xy_wing_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                disabled: !candidate_filters_enabled(),
+                                                aria_checked: "{show_xy_wing()}",
+                                                aria_label: "{xy_wing_label}",
+                                                onclick: move |_| show_xy_wing.set(!show_xy_wing()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
                                             }
                                         }
                                     }
-                                    div {
-                                        class: "hint-switch-row",
-                                        div {
-                                            class: "hint-switch-copy",
-                                            span { class: "hint-switch-label", "{hidden_single_hint_label}" }
-                                            p { class: "hint-switch-description", "{hidden_single_hint_help}" }
+                                    section {
+                                        class: "hint-control-section",
+                                        role: "group",
+                                        aria_labelledby: "hint-single-hints-heading",
+                                        h3 {
+                                            id: "hint-single-hints-heading",
+                                            class: "hint-section-heading",
+                                            "{single_hint_section}"
                                         }
-                                        button {
-                                            class: "hint-switch",
-                                            r#type: "button",
-                                            role: "switch",
-                                            aria_checked: "{show_hidden_single_hints()}",
-                                            aria_label: "{hidden_single_hint_label}",
-                                            onclick: move |_| show_hidden_single_hints.set(!show_hidden_single_hints()),
-                                            span {
-                                                class: "hint-switch-track",
-                                                span { class: "hint-switch-thumb" }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{single_hints_filter_option_label}" }
+                                                p { class: "hint-switch-description", "{single_hints_filter_option_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{single_hints_use_candidate_filters()}",
+                                                aria_label: "{single_hints_filter_option_label}",
+                                                onclick: move |_| single_hints_use_candidate_filters.set(!single_hints_use_candidate_filters()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{naked_single_hint_label}" }
+                                                p { class: "hint-switch-description", "{naked_single_hint_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_naked_single_hints()}",
+                                                aria_label: "{naked_single_hint_label}",
+                                                onclick: move |_| show_naked_single_hints.set(!show_naked_single_hints()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{hidden_single_hint_label}" }
+                                                p { class: "hint-switch-description", "{hidden_single_hint_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_hidden_single_hints()}",
+                                                aria_label: "{hidden_single_hint_label}",
+                                                onclick: move |_| show_hidden_single_hints.set(!show_hidden_single_hints()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
                                             }
                                         }
                                     }

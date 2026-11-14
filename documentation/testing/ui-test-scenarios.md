@@ -7,7 +7,7 @@
 | UI-01 | セル入力 | 空セル/givensロックON | 1〜9を入力 | 値が盤面へ反映し、givenは変更されない | Component / 将来`dioxus-test` | P1 | Minor Changes。盤面境界とfixtureが必要 |
 | UI-02 | 不正値入力 | 編集可能セル | 空、0、10、文字を入力 | 1〜9以外は空セル扱い、表示と状態が同期 | Unit + Component | P1 | `cell_value`はReady、UI配線はMinor |
 | UI-03 | 競合/候補表示 | 重複または候補なし盤面 | 入力を変更 | 競合/候補なしセルと`aria-invalid`が更新 | Unit + Component | P1 | `BoardAnalysis` UnitはReady、描画はMinor |
-| UI-04 | 候補表示スイッチ | 初期表示のHintタブ、候補OFF | Show candidates switchをON/OFF | 候補数字が表示／非表示になり、switchのchecked状態が同期する | Component | P2 | Minor Changes。盤面fixture |
+| UI-04 | 候補表示スイッチ | Hintタブの「候補表示」セクション、候補OFF | Show candidates switchをON/OFF | 候補数字が表示／非表示になり、switchのchecked状態が同期する | Component | P2 | Minor Changes。盤面fixture |
 | UI-05 | givens編集 | givenあり、ロックON | 初期数字セルの表示を確認。「初期数字を編集」で解除し、数字入りセルへフォーカスしてGを押す | 初期数字セルの隅にロック/解錠状態に応じた薄い錠前SVGが表示される。解除中のフォーカスでは反転配色とキャレットを維持し、候補表示中は枠線が点滅する。Gでgiven状態が切り替わりUndo/Redoできる。ロック中はG操作を受け付けない | Component + Integration | P1 | Refactoring Required。board/givens fixture |
 | UI-06 | Undo/Redo | 変更履歴あり | Undo後Redo | 盤面/givensが共に復元し、disabled状態も更新 | Unit + Component | P1 | 状態関数Unit Ready、再描画Minor |
 | UI-07 | Reset/Clear | givenとユーザー入力あり | ResetまたはClear、続いてUndo | Resetはgiven保持、Clearは双方消去、履歴で復元 | Unit + Component | P1 | 履歴関数あり、ボタン統合Minor |
@@ -29,8 +29,11 @@
 | UI-23 | responsive layout | 固定locale/fixture | 390pxと1440px viewport | 盤面/操作が読め、重なりや横はみ出しなし | Visual + Web E2E / Playwright | P2 | CSSあり、baseline/CIなし |
 | UI-24 | role/name操作 | 初期画面と各タブ | role/nameで主要controlを検索・操作 | 翻訳文字列に依存せず意味的に識別できる | Render + Web E2E | P2 | ARIA/ID一部あり、監査未実施 |
 | UI-25 | テーマ切替 | 初期テーマがダーク | ライト／ダーク切替を操作して再読み込み | 配色とtheme-colorが切り替わり、選択がブラウザーに保存される | Unit + Web E2E | P2 | Theme状態はUnitで確認、localStorageと表示はブラウザー確認が必要 |
-| UI-26 | Naked / Hidden Single強調 | 初期表示のHintタブ、矛盾・候補切れのない盤面 | Naked SingleとHidden Singleのスイッチを個別にON/OFF | Naked Singleはセルの候補が1つの空セル、Hidden Singleは行・列・ブロック内で数字の置き場所が1つの空セルが緑系色で強調される。各OFFで対応する強調が消える。候補表示との併用でも対象の候補数字を識別できる | Component + Web E2E | P2 | BoardAnalysis判定は実装済み。UI描画確認は未実施 |
+| UI-26 | Naked / Hidden Single強調 | Hintタブの「Singleの強調」セクション、矛盾・候補切れのない盤面 | Single強調と「候補フィルターを考慮」を切り替える | ONではフィルター後、OFFではフィルター前の候補でSingleを判定する。Naked Singleは候補が1つの空セル、Hidden Singleは行・列・ブロック内で数字の置き場所が1つの空セルを緑系色で強調する。候補表示との併用でも対象候補を識別できる | Component + Web E2E | P2 | BoardAnalysis判定は実装済み。UI描画確認は未実施 |
 | UI-27 | 残り空セル数 | 盤面に空セルあり | 数字を入力・消去・Undo/Redo | 表示数が盤面の空欄数に追従し、満盤面で0になる | Component + Web E2E | P2 | 表示処理は実装済み。UI描画確認は未実施 |
+| UI-28 | 候補フィルター | Hintタブの「候補フィルター」セクション、反復回数1、各フィルターが成立する盤面 | 回数を1回から増やし、各フィルターを個別・併用でON/OFF | 1回は単一パスを行い、指定回数を上限として候補を絞る。候補に変化がなくなれば早期終了する。Locked Candidates、Naked / Hidden Subsets、Fish、XY-Wingの除外候補は取り消し線で示す。「Singleの強調」で候補フィルター考慮がONなら、Naked / Hidden Singleも絞り込み後の候補から検出される。回数欄は1〜100を受け付ける | Unit + Component + Web E2E | P2 | Locked Candidates、Pair / Triple / Quad、Fish size 2〜4、XY-Wingの単体テストあり。UI描画確認は未実施 |
+| UI-29 | 候補フィルターマスター | マスターON、個別フィルターを1つ以上選択 | マスターをOFFにして再びON | OFFでは候補フィルターと反復回数欄が停止し、選択済みフィルターは適用されない。個別選択状態を保持し、ONへ戻すと再び適用する | Component + Web E2E | P2 | ロジックとUI配線は実装済み。ブラウザー確認は未実施 |
+| UI-30 | 候補フィルター反復境界 | Naked Subsetで候補ペアが発生し、その後XY-Wingになる候補配置 | 反復回数を1回、続けて2回にして比較 | 1回目は同じ開始候補から全手法が除外を集めるためXY-Wingの追加除外は起きない。2回目は1回目の更新結果からXY-Wingを検出する | Unit | P1 | ラウンド単位のスナップショット処理を単体テストで確認 |
 
 ## 現行機能にないため対象外
 
