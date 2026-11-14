@@ -622,6 +622,11 @@ fn app() -> Element {
         "msg error"
     };
     let board = *mtx.read();
+    let remaining_empty_cells_label = t_args(
+        lang,
+        "message.remaining_empty_cells",
+        &[("count", empty_cell_count(&board).to_string())],
+    );
     let preview_transform = selected_drag_handle()
         .zip(drag_target_handle())
         .and_then(|(source, target)| board_drag_transform(source, target));
@@ -913,6 +918,12 @@ fn app() -> Element {
                                 focus_cell(0, 0);
                             },
                             "{clear_label}"
+                        }
+                        span {
+                            class: "remaining-cell-count",
+                            role: "status",
+                            aria_live: "polite",
+                            "{remaining_empty_cells_label}"
                         }
                     }
                     if !lock_givens() {
@@ -2442,6 +2453,14 @@ fn cell_value(s: &str) -> u8 {
         .unwrap_or(0)
 }
 
+fn empty_cell_count(board: &sudoku_solver::Matrix) -> usize {
+    board
+        .iter()
+        .flatten()
+        .filter(|&&value| !(1..=9).contains(&value))
+        .count()
+}
+
 fn update_cell_value(
     y: usize,
     x: usize,
@@ -2904,10 +2923,10 @@ fn focus_cell(y: usize, x: usize) {
 #[cfg(test)]
 mod tests {
     use super::{
-        board_cell_classes, cell_classes, cell_text, cell_value, is_cell_locked, moved_cell,
-        next_empty_cell, parse_generated_board, parse_puzzle, parse_solution, record_board_change,
-        redo_snapshot, to_txt, transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform,
-        Language, SearchStatus, Theme, HISTORY_LIMIT,
+        board_cell_classes, cell_classes, cell_text, cell_value, empty_cell_count, is_cell_locked,
+        moved_cell, next_empty_cell, parse_generated_board, parse_puzzle, parse_solution,
+        record_board_change, redo_snapshot, to_txt, transform_snapshot, undo_snapshot,
+        BoardSnapshot, BoardTransform, Language, SearchStatus, Theme, HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -2960,6 +2979,16 @@ mod tests {
         ] {
             assert_eq!(cell_value(text), expected, "input={text:?}");
         }
+    }
+
+    #[test]
+    fn empty_cell_count_treats_only_digits_one_through_nine_as_filled() {
+        let mut board = [[0; 9]; 9];
+        assert_eq!(empty_cell_count(&board), 81);
+
+        board[0][0] = 1;
+        board[0][1] = 10;
+        assert_eq!(empty_cell_count(&board), 80);
     }
 
     #[test]

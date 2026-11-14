@@ -8,6 +8,7 @@ help-input = 矢印キーで移動、数字キーで入力して次の空欄へ�
 help-given_toggle_shortcut = ロック解除中は、数字入りセルにフォーカスして G キーを押すと、初期数字／通常入力を切り替えられます。
 help-naked_single_hint = 空セル自身の候補が1つだけのマス（Naked Single）を強調表示します。
 help-hidden_single_hint = 行・列・3×3ブロック内で、ある数字を置ける空セルが1つだけのとき（Hidden Single）、そのセルを強調表示します。
+message-remaining_empty_cells = 残りの空セル: {$count}マス
 help-candidate_display = 空セルに置ける候補数字を表示します。
 help-puzzle_generation_method = 既知の一意解初期盤面をランダムに選び、ランダムな対称変換を適用して生成します。
 action-undo = 元に戻す

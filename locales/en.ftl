@@ -8,6 +8,7 @@ help-input = Use arrow keys to move. Enter a digit to jump to the next empty cel
 help-given_toggle_shortcut = While unlocked, focus a filled cell and press G to toggle it between an initial clue and a regular entry.
 help-naked_single_hint = Highlight cells whose own candidate list contains exactly one digit (Naked Single).
 help-hidden_single_hint = Highlight a cell when a digit has only one possible position in its row, column, or 3×3 box (Hidden Single).
+message-remaining_empty_cells = Empty cells remaining: {$count}
 help-candidate_display = Show the legal candidate digits in empty cells.
 help-puzzle_generation_method = A known uniquely solvable starting board is selected at random, then randomized symmetry transforms are applied.
 action-undo = Undo

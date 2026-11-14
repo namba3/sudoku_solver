@@ -304,6 +304,18 @@ h1 {
     margin: 0 0 8px 48px;
 }
 
+.remaining-cell-count {
+    align-self: center;
+    margin-left: auto;
+    padding: 4px 8px;
+    border-radius: 999px;
+    background: var(--palette-e7efff);
+    color: var(--palette-1849a9);
+    font-size: 0.82rem;
+    font-weight: 650;
+    white-space: nowrap;
+}
+
 .matrix-interaction {
     display: grid;
     grid-template-columns: 24px 24px minmax(0, 1fr);
@@ -532,12 +544,12 @@ h1 {
 .cell.hidden-single-hint input,
 .cell.hidden-single-hint input:focus,
 .cell.hidden-single-hint.with-candidates input:focus {
-    background-color: var(--palette-fee4e2);
+    background-color: var(--palette-d1fadf);
 }
 
 .cell.single-candidate-hint.with-candidates .candidate,
 .cell.hidden-single-hint.with-candidates .hidden-single-candidate {
-    color: var(--palette-b42318);
+    color: var(--palette-039855);
     font-weight: 700;
 }
 

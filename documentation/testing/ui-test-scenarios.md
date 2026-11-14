@@ -29,7 +29,8 @@
 | UI-23 | responsive layout | 固定locale/fixture | 390pxと1440px viewport | 盤面/操作が読め、重なりや横はみ出しなし | Visual + Web E2E / Playwright | P2 | CSSあり、baseline/CIなし |
 | UI-24 | role/name操作 | 初期画面と各タブ | role/nameで主要controlを検索・操作 | 翻訳文字列に依存せず意味的に識別できる | Render + Web E2E | P2 | ARIA/ID一部あり、監査未実施 |
 | UI-25 | テーマ切替 | 初期テーマがダーク | ライト／ダーク切替を操作して再読み込み | 配色とtheme-colorが切り替わり、選択がブラウザーに保存される | Unit + Web E2E | P2 | Theme状態はUnitで確認、localStorageと表示はブラウザー確認が必要 |
-| UI-26 | Naked / Hidden Single強調 | 初期表示のHintタブ、矛盾・候補切れのない盤面 | Naked SingleとHidden Singleのスイッチを個別にON/OFF | Naked Singleはセルの候補が1つの空セル、Hidden Singleは行・列・ブロック内で数字の置き場所が1つの空セルが強調される。各OFFで対応する強調が消える。候補表示との併用でも対象の候補数字を識別できる | Component + Web E2E | P2 | BoardAnalysis判定は実装済み。UI描画確認は未実施 |
+| UI-26 | Naked / Hidden Single強調 | 初期表示のHintタブ、矛盾・候補切れのない盤面 | Naked SingleとHidden Singleのスイッチを個別にON/OFF | Naked Singleはセルの候補が1つの空セル、Hidden Singleは行・列・ブロック内で数字の置き場所が1つの空セルが緑系色で強調される。各OFFで対応する強調が消える。候補表示との併用でも対象の候補数字を識別できる | Component + Web E2E | P2 | BoardAnalysis判定は実装済み。UI描画確認は未実施 |
+| UI-27 | 残り空セル数 | 盤面に空セルあり | 数字を入力・消去・Undo/Redo | 表示数が盤面の空欄数に追従し、満盤面で0になる | Component + Web E2E | P2 | 表示処理は実装済み。UI描画確認は未実施 |
 
 ## 現行機能にないため対象外
 
