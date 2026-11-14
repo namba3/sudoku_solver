@@ -5,7 +5,6 @@ use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use super::args::parse_value;
 use sudoku_solver::archive::{
     analyze_minimality_from_puzzle, MinimalPuzzleArchive, Provenance, VerificationStatus,
 };
@@ -13,15 +12,34 @@ use sudoku_solver::generator::{generate_diverse, DiverseBudget, DiverseStrategy}
 use sudoku_solver::Matrix;
 
 #[derive(Clone)]
-struct Options {
-    archive: PathBuf,
-    seed: u64,
-    seconds: u64,
-    nodes: u64,
-    checks: u64,
-    threads: usize,
-    from: u8,
-    to: u8,
+pub(super) struct Options {
+    pub(super) archive: PathBuf,
+    pub(super) seed: u64,
+    pub(super) seconds: u64,
+    pub(super) nodes: u64,
+    pub(super) checks: u64,
+    pub(super) threads: usize,
+    pub(super) from: u8,
+    pub(super) to: u8,
+}
+
+impl Default for Options {
+    fn default() -> Self {
+        Self {
+            archive: PathBuf::from("data/minimal-puzzle-archive.json"),
+            seed: 20261160,
+            seconds: 120,
+            nodes: 1_000_000,
+            checks: 1_088,
+            threads: thread::available_parallelism()
+                .map(usize::from)
+                .unwrap_or(2)
+                .div_ceil(2)
+                .max(1),
+            from: 17,
+            to: 20,
+        }
+    }
 }
 
 struct Candidate {
@@ -32,8 +50,13 @@ struct Candidate {
     search_depth: u32,
 }
 
-pub(crate) fn run(args: impl Iterator<Item = String>) -> Result<(), String> {
-    let options = parse_args(args)?;
+pub(crate) fn run(options: Options) -> Result<(), String> {
+    if options.seconds == 0 || options.nodes == 0 || options.checks == 0 || options.threads == 0 {
+        return Err("seconds, nodes, checks, and threads must be positive".into());
+    }
+    if options.from < 17 || options.from > options.to || options.to > 80 {
+        return Err("clue range must satisfy 17 <= from <= to <= 80".into());
+    }
     let mut archive = if options.archive.exists() {
         MinimalPuzzleArchive::load_fast(&options.archive)
             .map_err(|error| format!("archive load failed: {error}"))?
@@ -246,57 +269,4 @@ fn splitmix64(mut value: u64) -> u64 {
     mixed = (mixed ^ (mixed >> 30)).wrapping_mul(0xbf58_476d_1ce4_e5b9);
     mixed = (mixed ^ (mixed >> 27)).wrapping_mul(0x94d0_49bb_1331_11eb);
     mixed ^ (mixed >> 31)
-}
-
-fn parse_args(args: impl Iterator<Item = String>) -> Result<Options, String> {
-    let mut archive = PathBuf::from("data/minimal-puzzle-archive.json");
-    let mut seed = 20261160u64;
-    let mut seconds = 120u64;
-    let mut nodes = 1_000_000u64;
-    let mut checks = 1_088u64;
-    let mut threads = thread::available_parallelism()
-        .map(usize::from)
-        .unwrap_or(2)
-        .div_ceil(2)
-        .max(1);
-    let mut from = 17u8;
-    let mut to = 20u8;
-    let mut args = args;
-    while let Some(option) = args.next() {
-        let value = args
-            .next()
-            .ok_or_else(|| format!("missing value for {option}\n{}", usage()))?;
-        match option.as_str() {
-            "--archive" => archive = PathBuf::from(value),
-            "--seed" => seed = parse_value(&value, "--seed")?,
-            "--seconds" => seconds = parse_value(&value, "--seconds")?,
-            "--nodes" => nodes = parse_value(&value, "--nodes")?,
-            "--checks" => checks = parse_value(&value, "--checks")?,
-            "--threads" => threads = parse_value(&value, "--threads")?,
-            "--from" => from = parse_value(&value, "--from")?,
-            "--to" => to = parse_value(&value, "--to")?,
-            "--help" | "-h" => return Err(usage()),
-            _ => return Err(format!("unknown option {option}\n{}", usage())),
-        }
-    }
-    if seconds == 0 || nodes == 0 || checks == 0 || threads == 0 {
-        return Err("seconds, nodes, checks, and threads must be positive".into());
-    }
-    if from < 17 || from > to || to > 80 {
-        return Err("clue range must satisfy 17 <= from <= to <= 80".into());
-    }
-    Ok(Options {
-        archive,
-        seed,
-        seconds,
-        nodes,
-        checks,
-        threads,
-        from,
-        to,
-    })
-}
-
-pub(super) fn usage() -> String {
-    "usage: sudoku scan [--archive PATH] [--from N] [--to N] [--seed N] [--seconds N] [--nodes N] [--checks N] [--threads N]\n       Runs clue-count workers in parallel, greedily descends unique Diverse puzzles to minimal puzzles, and serially merges verified results into the archive.".into()
 }

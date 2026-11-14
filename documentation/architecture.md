@@ -47,15 +47,14 @@ flowchart LR
 | `src/board_analysis.rs` | 重複セル、候補マスク、候補切れの解析と、その単体テスト |
 | `src/bin/sudoku_search_worker.rs` | Web Workerから解列挙・問題生成APIを呼び、進捗イベントを送信 |
 | `src/bin/sudoku.rs` | オフラインCLIの単一入口とコマンド振り分け |
-| `src/cli/mod.rs` | CLI command routing、help、終了時のエラー処理 |
-| `src/cli/args.rs` | 数値引数と値引数の共通解析 |
+| `src/cli/mod.rs` | clapによる型付きコマンド定義、help/version表示、CLI dispatch |
 | `src/cli/atomic_file.rs` | CLI checkpoint・JSON出力の一時ファイル作成、同期、atomic rename |
 | `src/cli/archive_cmd.rs` | Archiveの入出力、統計、検証、Fast基準盤面登録 |
-| `src/cli/minimal_cmd.rs` | Minimal検証・収集コマンドの引数解析と実行委譲 |
+| `src/cli/minimal_cmd.rs` | Minimal検証・収集コマンドの実行と入力条件検証 |
 | `src/cli/minimal.rs` | Minimal探索のcheckpoint、再開、Archive登録 |
 | `src/cli/frontier.rs` | Multi-Clue Frontier降下コマンドと探索進捗保存 |
 | `src/cli/pool.rs` | Diverse候補プールの検証・重複排除・再開可能なcheckpoint生成 |
-| `src/cli/pool_args.rs` | Diverseコマンドの設定値、CLI引数検証、使用方法 |
+| `src/cli/pool_args.rs` | Diverseコマンドの既定設定と値の検証 |
 | `src/cli/minimal_scan.rs` | 並列minimal-puzzle探索コマンド |
 | `src/cli/symmetry_bench.rs` | 正規化benchmarkコマンド |
 | `public/worker/entry.js` | ブラウザーWorkerの検索・Fast生成要求をWASMへ中継 |

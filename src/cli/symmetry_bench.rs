@@ -2,7 +2,6 @@
 //!
 //! Run with `cargo run --release --bin sudoku -- bench symmetry --iterations 5`.
 
-use super::args::parse_value;
 use std::hint::black_box;
 use std::time::Instant;
 use sudoku_solver::{
@@ -14,25 +13,10 @@ use sudoku_solver::{
     },
 };
 
-pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
-    let mut iterations = 3usize;
-    while let Some(argument) = args.next() {
-        match argument.as_str() {
-            "--iterations" => {
-                iterations = parse_value(
-                    &args.next().ok_or("--iterations requires a value")?,
-                    "--iterations",
-                )?;
-                if iterations == 0 {
-                    return Err("--iterations must be greater than zero".into());
-                }
-            }
-            "--help" | "-h" => {
-                println!("{}", usage());
-                return Ok(());
-            }
-            _ => return Err(format!("unknown option {argument:?}")),
-        }
+pub(crate) fn run(requested_iterations: Option<usize>) -> Result<(), String> {
+    let iterations = requested_iterations.unwrap_or(3);
+    if iterations == 0 {
+        return Err("--iterations must be greater than zero".into());
     }
     let seed = 2026;
     let puzzle = generate_puzzle_with_clues(seed, 17).expect("17 clue generation");
@@ -103,10 +87,6 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
     }
     report("puzzle_minlex_30_clues", start, iterations);
     Ok(())
-}
-
-pub(super) fn usage() -> &'static str {
-    "usage: sudoku bench symmetry [--iterations N]"
 }
 
 fn report(name: &str, start: Instant, iterations: usize) {

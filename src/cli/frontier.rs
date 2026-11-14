@@ -1,4 +1,3 @@
-use super::args::parse_value;
 use std::path::PathBuf;
 
 use sudoku_solver::archive::{
@@ -20,62 +19,6 @@ pub(super) struct Options {
     pub(super) checks: u64,
 }
 
-pub(crate) fn run_cli(mut args: impl Iterator<Item = String>) -> Result<(), String> {
-    let command = args.next().ok_or_else(|| usage().to_owned())?;
-    let mut archive_path = PathBuf::from("data/minimal-puzzle-archive.json");
-    let mut checkpoint_path = PathBuf::from("data/multi-clue-frontier.json");
-    let mut from_clues = None;
-    let mut to_clues = None;
-    let mut remove_count = None;
-    let mut add_count = None;
-    let mut max_sources = None;
-    let mut nodes = 100_000u64;
-    let mut checks = 10_000u64;
-
-    while let Some(option) = args.next() {
-        let value = args
-            .next()
-            .ok_or_else(|| format!("missing value after {option}\n{}", usage()))?;
-        match option.as_str() {
-            "--archive" => archive_path = PathBuf::from(value),
-            "--checkpoint" => checkpoint_path = PathBuf::from(value),
-            "--from" => from_clues = Some(parse_value(&value, "--from")?),
-            "--to" => to_clues = Some(parse_value(&value, "--to")?),
-            "--remove" => remove_count = Some(parse_value(&value, "--remove")?),
-            "--add" => add_count = Some(parse_value(&value, "--add")?),
-            "--max-sources" => max_sources = Some(parse_value(&value, "--max-sources")?),
-            "--nodes" => nodes = parse_value(&value, "--nodes")?,
-            "--checks" => checks = parse_value(&value, "--checks")?,
-            _ => return Err(format!("unknown option {option}\n{}", usage())),
-        }
-    }
-    if command != "descend" {
-        return Err(format!("unknown frontier command {command:?}\n{}", usage()));
-    }
-    if nodes == 0 || checks == 0 {
-        return Err("--nodes and --checks must be non-zero".into());
-    }
-    if max_sources == Some(0) {
-        return Err("--max-sources must be non-zero".into());
-    }
-
-    run(Options {
-        archive_path,
-        checkpoint_path,
-        from_clues,
-        to_clues,
-        remove_count,
-        add_count,
-        max_sources,
-        nodes,
-        checks,
-    })
-}
-
-pub(crate) fn usage() -> &'static str {
-    "usage: sudoku frontier descend --from N --to M [--remove R --add S] [--archive PATH] [--checkpoint PATH] [--max-sources N] [--nodes N] [--checks N]"
-}
-
 pub(super) fn run(options: Options) -> Result<(), String> {
     let Options {
         archive_path,
@@ -88,6 +31,13 @@ pub(super) fn run(options: Options) -> Result<(), String> {
         nodes,
         checks,
     } = options;
+
+    if nodes == 0 || checks == 0 {
+        return Err("--nodes and --checks must be non-zero".into());
+    }
+    if max_sources == Some(0) {
+        return Err("--max-sources must be non-zero".into());
+    }
 
     let from = from_clues.ok_or_else(|| "missing --from".to_owned())?;
     let to = to_clues.ok_or_else(|| "missing --to".to_owned())?;

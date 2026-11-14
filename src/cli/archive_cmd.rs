@@ -1,32 +1,19 @@
-use super::args::parse_value;
 use std::path::{Path, PathBuf};
 use sudoku_solver::archive::{analyze_minimality, MinimalPuzzleArchive, Provenance};
 use sudoku_solver::generator::verified_17_clue_bases;
 
-pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> {
-    let command = args.next().ok_or_else(|| usage().to_owned())?;
-    let mut archive_path = PathBuf::from("data/minimal-puzzle-archive.json");
-    let mut source_path = None;
-    let mut output_path = None;
-    let mut nodes = 100_000u64;
-
-    while let Some(option) = args.next() {
-        let value = args
-            .next()
-            .ok_or_else(|| format!("missing value after {option}\n{}", usage()))?;
-        match option.as_str() {
-            "--archive" => archive_path = PathBuf::from(value),
-            "--source" => source_path = Some(PathBuf::from(value)),
-            "--output" => output_path = Some(PathBuf::from(value)),
-            "--nodes" => nodes = parse_value(&value, "--nodes")?,
-            _ => return Err(format!("unknown option {option}\n{}", usage())),
-        }
-    }
+pub(crate) fn run(command: &str, args: super::ArchiveArgs) -> Result<(), String> {
+    let archive_path = args
+        .archive
+        .unwrap_or_else(|| PathBuf::from("data/minimal-puzzle-archive.json"));
+    let source_path = args.source;
+    let output_path = args.output;
+    let nodes = args.nodes.unwrap_or(100_000);
     if nodes == 0 {
         return Err("--nodes must be non-zero".into());
     }
 
-    match command.as_str() {
+    match command {
         "stats" => {
             let archive = load_archive_fast(&archive_path)?;
             let stats = archive.stats();
@@ -48,7 +35,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
             );
         }
         "import" => {
-            let source_path = source_path.ok_or_else(|| usage().to_owned())?;
+            let source_path = source_path.ok_or_else(|| "missing --source".to_owned())?;
             let imported = MinimalPuzzleArchive::load(&source_path, nodes)
                 .map_err(|error| format!("source archive: {error}"))?;
             let mut archive = load_or_new_fast(&archive_path)?;
@@ -63,7 +50,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
             );
         }
         "export" => {
-            let output = output_path.ok_or_else(|| usage().to_owned())?;
+            let output = output_path.ok_or_else(|| "missing --output".to_owned())?;
             let archive = load_archive_fast(&archive_path)?;
             archive
                 .save_atomic(&output)
@@ -75,7 +62,7 @@ pub(crate) fn run(mut args: impl Iterator<Item = String>) -> Result<(), String> 
             );
         }
         "seed-fast-bases" => seed_fast_bases(&archive_path, nodes)?,
-        _ => return Err(format!("unknown archive command {command:?}\n{}", usage())),
+        _ => return Err(format!("unknown archive command {command:?}")),
     }
     Ok(())
 }
@@ -128,8 +115,4 @@ fn seed_fast_bases(archive_path: &Path, nodes: u64) -> Result<(), String> {
         archive_path.display()
     );
     Ok(())
-}
-
-pub(crate) fn usage() -> &'static str {
-    "usage: sudoku archive <stats|verify|import|export|seed-fast-bases> [--archive PATH] [--source PATH] [--output PATH] [--nodes N]"
 }

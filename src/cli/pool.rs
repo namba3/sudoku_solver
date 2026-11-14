@@ -5,7 +5,7 @@ use std::io::{BufWriter, Write};
 use std::path::{Path, PathBuf};
 use std::time::Instant;
 
-use super::pool_args::{parse_args, Options};
+use super::pool_args::Options;
 use sudoku_solver::generator::{DiverseBudget, DiverseStrategy, MAX_INTERMEDIATE_CLUE_COUNT};
 use sudoku_solver::pivot::{PivotCache, PivotCandidateMode, PivotOptions, PivotSearchReport};
 use sudoku_solver::symmetry::{canonical_key, canonicalize_solution, CanonicalKey};
@@ -26,11 +26,8 @@ struct Record {
     neighborhood_checks: u64,
 }
 
-pub(crate) fn run(args: impl Iterator<Item = String>) -> Result<(), String> {
-    let mut options = parse_args(args)?;
-    if options.target == 0 || options.attempts == 0 || options.nodes == 0 {
-        return Err("target, attempts, and nodes must be greater than zero".into());
-    }
+pub(crate) fn run(mut options: Options) -> Result<(), String> {
+    options.validate()?;
     let mut records = Vec::new();
     let mut classes = HashSet::new();
     let mut solution_classes = HashSet::new();

@@ -6,6 +6,8 @@
 
 CLIはnative実行用の`sudoku`バイナリに集約しています。
 
+コマンドとオプションは`clap`で型付き解析します。`--help`は各コマンドの説明、引数の型、選択可能な探索方式を表示し、`--version`はパッケージのバージョンを表示します。数値範囲や操作同士の整合性など、探索に関わる検証は各コマンドの処理で行います。
+
 ```sh
 cargo run --release --bin sudoku -- --help
 cargo run --release --bin sudoku -- diverse --help
