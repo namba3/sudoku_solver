@@ -592,7 +592,6 @@ fn app() -> Element {
     let mut show_hidden_subsets = use_signal(|| false);
     let mut show_fish = use_signal(|| false);
     let mut show_xy_wing = use_signal(|| false);
-    let mut candidate_filters_enabled = use_signal(|| true);
     let mut single_hints_use_candidate_filters = use_signal(|| true);
     let mut candidate_filter_iterations = use_signal(|| "1".to_string());
     let mut show_naked_single_hints = use_signal(|| false);
@@ -670,12 +669,17 @@ fn app() -> Element {
     let analysis = BoardAnalysis::new(&display_board);
     let single_hints_available =
         analysis.conflict_count() == 0 && analysis.no_candidate_count() == 0;
+    let any_candidate_filter_enabled = show_locked_candidates()
+        || show_naked_subsets()
+        || show_hidden_subsets()
+        || show_fish()
+        || show_xy_wing();
     let candidate_filter_options = CandidateFilterOptions {
-        locked_candidates: candidate_filters_enabled() && show_locked_candidates(),
-        naked_subsets: candidate_filters_enabled() && show_naked_subsets(),
-        hidden_subsets: candidate_filters_enabled() && show_hidden_subsets(),
-        fish: candidate_filters_enabled() && show_fish(),
-        xy_wing: candidate_filters_enabled() && show_xy_wing(),
+        locked_candidates: show_locked_candidates(),
+        naked_subsets: show_naked_subsets(),
+        hidden_subsets: show_hidden_subsets(),
+        fish: show_fish(),
+        xy_wing: show_xy_wing(),
         iterations: candidate_filter_iterations()
             .parse::<usize>()
             .unwrap_or(1)
@@ -712,8 +716,8 @@ fn app() -> Element {
     let naked_subsets_help = t(lang, "help.naked_subsets");
     let hidden_subsets_label = t(lang, "action.hidden_subsets");
     let hidden_subsets_help = t(lang, "help.hidden_subsets");
-    let candidate_filters_enabled_label = t(lang, "action.candidate_filters_enabled");
-    let candidate_filters_enabled_help = t(lang, "help.candidate_filters_enabled");
+    let toggle_all_candidate_filters_label = t(lang, "action.toggle_all_candidate_filters");
+    let toggle_all_candidate_filters_help = t(lang, "help.toggle_all_candidate_filters");
     let fish_label = t(lang, "action.fish");
     let fish_help = t(lang, "help.fish");
     let xy_wing_label = t(lang, "action.xy_wing");
@@ -1571,19 +1575,26 @@ fn app() -> Element {
                                             "{candidate_filter_section}"
                                         }
                                         div {
-                                            class: "hint-switch-row candidate-filter-master",
+                                            class: "hint-switch-row candidate-filter-bulk-toggle",
                                             div {
                                                 class: "hint-switch-copy",
-                                                span { class: "hint-switch-label", "{candidate_filters_enabled_label}" }
-                                                p { class: "hint-switch-description", "{candidate_filters_enabled_help}" }
+                                                span { class: "hint-switch-label", "{toggle_all_candidate_filters_label}" }
+                                                p { class: "hint-switch-description", "{toggle_all_candidate_filters_help}" }
                                             }
                                             button {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                aria_checked: "{candidate_filters_enabled()}",
-                                                aria_label: "{candidate_filters_enabled_label}",
-                                                onclick: move |_| candidate_filters_enabled.set(!candidate_filters_enabled()),
+                                                aria_checked: "{any_candidate_filter_enabled}",
+                                                aria_label: "{toggle_all_candidate_filters_label}",
+                                                onclick: move |_| {
+                                                    let enable_all = !any_candidate_filter_enabled;
+                                                    show_locked_candidates.set(enable_all);
+                                                    show_naked_subsets.set(enable_all);
+                                                    show_hidden_subsets.set(enable_all);
+                                                    show_fish.set(enable_all);
+                                                    show_xy_wing.set(enable_all);
+                                                },
                                                 span {
                                                     class: "hint-switch-track",
                                                     span { class: "hint-switch-thumb" }
@@ -1604,7 +1615,6 @@ fn app() -> Element {
                                                 step: "1",
                                                 value: "{candidate_filter_iterations}",
                                                 aria_label: "{candidate_filter_iterations_label}",
-                                                disabled: !candidate_filters_enabled(),
                                                 oninput: move |event| candidate_filter_iterations.set(event.value()),
                                                 onchange: move |event| {
                                                     let iterations = event
@@ -1631,7 +1641,6 @@ fn app() -> Element {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                disabled: !candidate_filters_enabled(),
                                                 aria_checked: "{show_locked_candidates()}",
                                                 aria_label: "{locked_candidates_label}",
                                                 onclick: move |_| show_locked_candidates.set(!show_locked_candidates()),
@@ -1652,7 +1661,6 @@ fn app() -> Element {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                disabled: !candidate_filters_enabled(),
                                                 aria_checked: "{show_naked_subsets()}",
                                                 aria_label: "{naked_subsets_label}",
                                                 onclick: move |_| show_naked_subsets.set(!show_naked_subsets()),
@@ -1673,7 +1681,6 @@ fn app() -> Element {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                disabled: !candidate_filters_enabled(),
                                                 aria_checked: "{show_hidden_subsets()}",
                                                 aria_label: "{hidden_subsets_label}",
                                                 onclick: move |_| show_hidden_subsets.set(!show_hidden_subsets()),
@@ -1694,7 +1701,6 @@ fn app() -> Element {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                disabled: !candidate_filters_enabled(),
                                                 aria_checked: "{show_fish()}",
                                                 aria_label: "{fish_label}",
                                                 onclick: move |_| show_fish.set(!show_fish()),
@@ -1715,7 +1721,6 @@ fn app() -> Element {
                                                 class: "hint-switch",
                                                 r#type: "button",
                                                 role: "switch",
-                                                disabled: !candidate_filters_enabled(),
                                                 aria_checked: "{show_xy_wing()}",
                                                 aria_label: "{xy_wing_label}",
                                                 onclick: move |_| show_xy_wing.set(!show_xy_wing()),
