@@ -7,12 +7,12 @@
 | UI-01 | セル入力 | 空セル/givensロックON | 1〜9を入力 | 値が盤面へ反映し、givenは変更されない | Component / 将来`dioxus-test` | P1 | Minor Changes。盤面境界とfixtureが必要 |
 | UI-02 | 不正値入力 | 編集可能セル | 空、0、10、文字を入力 | 1〜9以外は空セル扱い、表示と状態が同期 | Unit + Component | P1 | `cell_value`はReady、UI配線はMinor |
 | UI-03 | 競合/候補表示 | 重複または候補なし盤面 | 入力を変更 | 競合/候補なしセルと`aria-invalid`が更新 | Unit + Component | P1 | `BoardAnalysis` UnitはReady、描画はMinor |
-| UI-04 | 候補toggle | 候補OFF | Show candidatesを押す | 候補数字とpressed状態/ラベルが更新し、再操作で隠れる | Component | P2 | Minor Changes。盤面fixture |
+| UI-04 | 候補表示スイッチ | 初期表示のHintタブ、候補OFF | Show candidates switchをON/OFF | 候補数字が表示／非表示になり、switchのchecked状態が同期する | Component | P2 | Minor Changes。盤面fixture |
 | UI-05 | givens編集 | givenあり、ロックON | 初期数字セルの表示を確認。「初期数字を編集」で解除し、数字入りセルへフォーカスしてGを押す | 初期数字セルの隅にロック/解錠状態に応じた薄い錠前SVGが表示される。解除中のフォーカスでは反転配色とキャレットを維持し、候補表示中は枠線が点滅する。Gでgiven状態が切り替わりUndo/Redoできる。ロック中はG操作を受け付けない | Component + Integration | P1 | Refactoring Required。board/givens fixture |
 | UI-06 | Undo/Redo | 変更履歴あり | Undo後Redo | 盤面/givensが共に復元し、disabled状態も更新 | Unit + Component | P1 | 状態関数Unit Ready、再描画Minor |
 | UI-07 | Reset/Clear | givenとユーザー入力あり | ResetまたはClear、続いてUndo | Resetはgiven保持、Clearは双方消去、履歴で復元 | Unit + Component | P1 | 履歴関数あり、ボタン統合Minor |
 | UI-08 | Solve | 解ける/競合盤面 | Solveを押す | 解を表示するか、競合/候補切れの局所化エラーを表示 | Integration + Web E2E | P1 | solver Ready、UI操作Minor。fixture盤面 |
-| UI-09 | サイドタブ | Generate表示 | Solve/Transform/Textを選ぶ | 選択tabとtabpanelが切り替わり、初期表示はGenerate | Component + Web E2E | P2 | Minor Changes。現行4タブ、Routerではない |
+| UI-09 | サイドタブ | Hint表示 | Generate/Solve/Transform/Textを選ぶ | 選択tabとtabpanelが切り替わり、初期表示はHint | Component + Web E2E | P2 | Minor Changes。現行5タブ、Routerではない |
 | UI-10 | 生成入力 | 問題生成tabのclue数欄 | 16/17/81/82/空/非整数を入力してGenerate | 生成フォームは他タブと同様のパネル内に表示。Fastで17〜81の整数だけをWorkerへ送り、無効値は翻訳エラー。生成中は同じボタンがCancel generationに切り替わり、ヒント数欄を固定 | Unit + Component | P1 | 範囲検証は実装済み。Worker requestのFake検証は未整備 |
 | UI-11 | Fast生成完了 | 固定seed/有効clue数 | Workerから完了またはエラーを送る | 指定ヒント数の盤面だけ反映し、given/盤面が同期 | Integration + Web E2E | P1 | UI配線は実装済み。Fake Workerとブラウザー検証は未整備 |
 | UI-12 | 検索進捗/完了 | 解がある盤面 | Count solutionsを押し、開始後にWorkerイベントを送る | 開始中は同じボタンがCancel searchに切り替わり、進捗/完了後はCount solutionsへ戻る。解数/ノード数を表示し解を適用可能 | Integration + Component | P1 | Refactoring Required。Fake Worker/clock |
@@ -29,6 +29,7 @@
 | UI-23 | responsive layout | 固定locale/fixture | 390pxと1440px viewport | 盤面/操作が読め、重なりや横はみ出しなし | Visual + Web E2E / Playwright | P2 | CSSあり、baseline/CIなし |
 | UI-24 | role/name操作 | 初期画面と各タブ | role/nameで主要controlを検索・操作 | 翻訳文字列に依存せず意味的に識別できる | Render + Web E2E | P2 | ARIA/ID一部あり、監査未実施 |
 | UI-25 | テーマ切替 | 初期テーマがダーク | ライト／ダーク切替を操作して再読み込み | 配色とtheme-colorが切り替わり、選択がブラウザーに保存される | Unit + Web E2E | P2 | Theme状態はUnitで確認、localStorageと表示はブラウザー確認が必要 |
+| UI-26 | Naked / Hidden Single強調 | 初期表示のHintタブ、矛盾・候補切れのない盤面 | Naked SingleとHidden Singleのスイッチを個別にON/OFF | Naked Singleはセルの候補が1つの空セル、Hidden Singleは行・列・ブロック内で数字の置き場所が1つの空セルが強調される。各OFFで対応する強調が消える。候補表示との併用でも対象の候補数字を識別できる | Component + Web E2E | P2 | BoardAnalysis判定は実装済み。UI描画確認は未実施 |
 
 ## 現行機能にないため対象外
 

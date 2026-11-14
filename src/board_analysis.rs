@@ -1,6 +1,7 @@
 pub(super) struct BoardAnalysis {
     pub(super) conflicts: [[bool; 9]; 9],
     pub(super) candidate_masks: [[u16; 9]; 9],
+    pub(super) hidden_single_masks: [[u16; 9]; 9],
     pub(super) no_candidates: [[bool; 9]; 9],
 }
 
@@ -41,6 +42,7 @@ impl BoardAnalysis {
 
         let mut conflicts = [[false; 9]; 9];
         let mut candidate_masks = [[0u16; 9]; 9];
+        let mut hidden_single_masks = [[0u16; 9]; 9];
         let mut no_candidates = [[false; 9]; 9];
         for y in 0..9 {
             for x in 0..9 {
@@ -60,9 +62,25 @@ impl BoardAnalysis {
             }
         }
 
+        for row in 0..9 {
+            let cells = std::array::from_fn(|column| (row, column));
+            mark_hidden_singles(&cells, &candidate_masks, &mut hidden_single_masks);
+        }
+        for column in 0..9 {
+            let cells = std::array::from_fn(|row| (row, column));
+            mark_hidden_singles(&cells, &candidate_masks, &mut hidden_single_masks);
+        }
+        for block in 0..9 {
+            let cells = std::array::from_fn(|offset| {
+                (block / 3 * 3 + offset / 3, block % 3 * 3 + offset % 3)
+            });
+            mark_hidden_singles(&cells, &candidate_masks, &mut hidden_single_masks);
+        }
+
         Self {
             conflicts,
             candidate_masks,
+            hidden_single_masks,
             no_candidates,
         }
     }
@@ -81,6 +99,29 @@ impl BoardAnalysis {
             .flatten()
             .filter(|&&cell| cell)
             .count()
+    }
+}
+
+fn mark_hidden_singles(
+    cells: &[(usize, usize); 9],
+    candidate_masks: &[[u16; 9]; 9],
+    hidden_single_masks: &mut [[u16; 9]; 9],
+) {
+    for digit in 0..9 {
+        let bit = 1 << digit;
+        let mut only_cell = None;
+        for &(row, column) in cells {
+            if candidate_masks[row][column] & bit == 0 {
+                continue;
+            }
+            if only_cell.replace((row, column)).is_some() {
+                only_cell = None;
+                break;
+            }
+        }
+        if let Some((row, column)) = only_cell {
+            hidden_single_masks[row][column] |= bit;
+        }
     }
 }
 
@@ -151,5 +192,67 @@ mod tests {
         assert!(analysis.no_candidates[0][0]);
         assert_eq!(analysis.candidate_masks[0][0], 0);
         assert_eq!(analysis.no_candidate_count(), 1);
+    }
+
+    #[test]
+    fn detects_hidden_single_digit_and_cell_even_with_other_candidates() {
+        let board: Matrix = [
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [6, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 8, 0, 4, 0, 0, 0, 0],
+            [8, 0, 9, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [7, 1, 0, 9, 0, 0, 0, 5, 0],
+            [0, 0, 0, 0, 3, 7, 0, 8, 4],
+            [0, 0, 0, 0, 0, 0, 0, 3, 5],
+            [0, 0, 0, 2, 8, 0, 0, 0, 0],
+        ];
+
+        let analysis = BoardAnalysis::new(&board);
+        let target_digit = 8;
+        let target_bit = 1 << (target_digit - 1);
+
+        assert_ne!(analysis.hidden_single_masks[7][1] & target_bit, 0);
+        assert!(analysis.candidate_masks[7][1].count_ones() > 1);
+        assert_eq!(
+            (0..9)
+                .filter(|&column| analysis.candidate_masks[7][column] & target_bit != 0)
+                .count(),
+            1
+        );
+    }
+
+    #[test]
+    fn detects_hidden_singles_in_columns_and_blocks() {
+        let column_board: Matrix = [
+            [0, 0, 0, 6, 0, 0, 0, 0, 2],
+            [0, 0, 2, 1, 9, 0, 0, 0, 8],
+            [0, 0, 0, 0, 0, 0, 5, 0, 0],
+            [0, 0, 0, 0, 0, 1, 0, 0, 0],
+            [4, 2, 6, 0, 0, 0, 0, 0, 0],
+            [0, 1, 0, 0, 2, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 1, 9, 6, 0, 5],
+            [0, 0, 0, 0, 0, 6, 0, 0, 0],
+        ];
+        let block_board: Matrix = [
+            [0, 0, 0, 0, 0, 8, 0, 0, 0],
+            [0, 0, 0, 1, 0, 0, 0, 0, 0],
+            [0, 0, 0, 0, 0, 0, 0, 6, 0],
+            [8, 0, 0, 0, 6, 1, 4, 0, 0],
+            [0, 2, 0, 0, 5, 3, 0, 0, 0],
+            [7, 0, 0, 0, 0, 4, 0, 0, 0],
+            [0, 0, 0, 5, 0, 0, 2, 8, 0],
+            [0, 0, 0, 0, 0, 0, 0, 0, 0],
+            [0, 0, 5, 2, 8, 0, 0, 0, 0],
+        ];
+
+        for (board, row, column, digit) in [(&column_board, 3, 4, 6), (&block_board, 5, 4, 2)] {
+            let analysis = BoardAnalysis::new(board);
+            let bit = 1 << (digit - 1);
+
+            assert_ne!(analysis.hidden_single_masks[row][column] & bit, 0);
+            assert!(analysis.candidate_masks[row][column].count_ones() > 1);
+        }
     }
 }

@@ -235,13 +235,29 @@ fn board_cell_classes(
     is_conflict: bool,
     no_candidates: bool,
     show_candidates: bool,
+    naked_single_hint: bool,
+    hidden_single_hint: bool,
     preview_transform: Option<BoardTransform>,
 ) -> String {
     let mut classes = cell_classes(y, x, is_given, is_conflict, no_candidates, show_candidates);
+    if naked_single_hint {
+        classes.push_str(" single-candidate-hint");
+    }
+    if hidden_single_hint {
+        classes.push_str(" hidden-single-hint");
+    }
     if preview_transform.is_some_and(|transform| is_drag_preview_cell(transform, y, x)) {
         classes.push_str(" drag-preview-cell");
     }
     classes
+}
+
+fn candidate_class(is_hidden_single_digit: bool) -> &'static str {
+    if is_hidden_single_digit {
+        "candidate hidden-single-candidate"
+    } else {
+        "candidate"
+    }
 }
 
 const HISTORY_LIMIT: usize = 100;
@@ -565,6 +581,8 @@ fn app() -> Element {
     let mut msg = use_signal(String::new);
     let mut is_ok = use_signal(|| true);
     let mut show_candidates = use_signal(|| false);
+    let mut show_naked_single_hints = use_signal(|| false);
+    let mut show_hidden_single_hints = use_signal(|| false);
     let mut lock_givens = use_signal(|| true);
     let mut band_first = use_signal(|| 0u8);
     let mut band_second = use_signal(|| 1u8);
@@ -631,11 +649,14 @@ fn app() -> Element {
     let can_apply_selected_solution =
         search_board.read().as_ref() == Some(&board) || found_solutions.contains(&board);
     let analysis = BoardAnalysis::new(&display_board);
-    let candidate_toggle_label = if show_candidates() {
-        t(lang, "action.hide_candidates")
-    } else {
-        t(lang, "action.show_candidates")
-    };
+    let single_hints_available =
+        analysis.conflict_count() == 0 && analysis.no_candidate_count() == 0;
+    let candidate_display_label = t(lang, "action.show_candidates");
+    let candidate_display_help = t(lang, "help.candidate_display");
+    let naked_single_hint_label = t(lang, "action.naked_single_hint");
+    let naked_single_hint_help = t(lang, "help.naked_single_hint");
+    let hidden_single_hint_label = t(lang, "action.hidden_single_hint");
+    let hidden_single_hint_help = t(lang, "help.hidden_single_hint");
     let givens_lock_label = if lock_givens() {
         t(lang, "action.unlock_givens")
     } else {
@@ -691,6 +712,7 @@ fn app() -> Element {
     let board_transform_help = t(lang, "help.drag_board_transforms");
     let generation_group_label = t(lang, "group.generation");
     let generation_tab_label = t(lang, "label.generation_tab");
+    let hint_tab_label = t(lang, "label.hint_tab");
     let transform_group_label = t(lang, "group.transform");
     let bands_label = t(lang, "label.bands");
     let stacks_label = t(lang, "label.stacks");
@@ -818,11 +840,6 @@ fn app() -> Element {
                                 redo_board(&mut undo_stack, &mut redo_stack, &mut mtx, &mut givens, &mut msg, &mut is_ok, lang);
                             },
                             "{redo_label}"
-                        }
-                        button {
-                            aria_pressed: "{show_candidates()}",
-                            onclick: move |_| show_candidates.set(!show_candidates()),
-                            "{candidate_toggle_label}"
                         }
                         button {
                             class: "given-lock-toggle",
@@ -1188,14 +1205,35 @@ fn app() -> Element {
                             class: "row",
                             for (x, cell) in row.iter().copied().enumerate() {
                                 li {
-                                    class: "{board_cell_classes(y, x, display_givens[y][x] != 0, analysis.conflicts[y][x], analysis.no_candidates[y][x], show_candidates() && !(1..=9).contains(&cell), preview_transform)}",
+                                    class: "{board_cell_classes(
+                                        y,
+                                        x,
+                                        display_givens[y][x] != 0,
+                                        analysis.conflicts[y][x],
+                                        analysis.no_candidates[y][x],
+                                        show_candidates() && !(1..=9).contains(&cell),
+                                        show_naked_single_hints()
+                                            && single_hints_available
+                                            && !(1..=9).contains(&cell)
+                                            && analysis.candidate_masks[y][x].count_ones() == 1,
+                                        show_hidden_single_hints()
+                                            && single_hints_available
+                                            && !(1..=9).contains(&cell)
+                                            && analysis.hidden_single_masks[y][x] != 0,
+                                        preview_transform,
+                                    )}",
                                     key: "{y}-{x}",
                                     if show_candidates() && !(1..=9).contains(&cell) {
                                         div {
                                             class: "candidate-grid",
                                             for digit in candidate_digits(analysis.candidate_masks[y][x]) {
                                                 span {
-                                                    class: "candidate",
+                                                    class: "{candidate_class(
+                                                        show_hidden_single_hints()
+                                                            && analysis.hidden_single_masks[y][x]
+                                                                & (1 << (digit - 1))
+                                                                != 0,
+                                                    )}",
                                                     style: "{candidate_position(digit)}",
                                                     "{digit}"
                                                 }
@@ -1355,48 +1393,129 @@ fn app() -> Element {
                         aria_label: "{side_panels_label}",
                         button {
                             r#type: "button",
-                            id: "tab-generate",
+                            id: "tab-hint",
                             role: "tab",
                             aria_selected: "{active_side_tab() == 0}",
-                            aria_controls: "panel-generate",
+                            aria_controls: "panel-hint",
                             tabindex: "0",
                             onclick: move |_| active_side_tab.set(0),
+                            "{hint_tab_label}"
+                        }
+                        button {
+                            r#type: "button",
+                            id: "tab-generate",
+                            role: "tab",
+                            aria_selected: "{active_side_tab() == 1}",
+                            aria_controls: "panel-generate",
+                            tabindex: "0",
+                            onclick: move |_| active_side_tab.set(1),
                             "{generation_tab_label}"
                         }
                         button {
                             r#type: "button",
                             id: "tab-solve",
                             role: "tab",
-                            aria_selected: "{active_side_tab() == 1}",
+                            aria_selected: "{active_side_tab() == 2}",
                             aria_controls: "panel-solve",
                             tabindex: "0",
-                            onclick: move |_| active_side_tab.set(1),
+                            onclick: move |_| active_side_tab.set(2),
                             "{solve_group_label}"
                         }
                         button {
                             r#type: "button",
                             id: "tab-transform",
                             role: "tab",
-                            aria_selected: "{active_side_tab() == 2}",
+                            aria_selected: "{active_side_tab() == 3}",
                             aria_controls: "panel-transform",
                             tabindex: "0",
-                            onclick: move |_| active_side_tab.set(2),
+                            onclick: move |_| active_side_tab.set(3),
                             "{transform_group_label}"
                         }
                         button {
                             r#type: "button",
                             id: "tab-text",
                             role: "tab",
-                            aria_selected: "{active_side_tab() == 3}",
+                            aria_selected: "{active_side_tab() == 4}",
                             aria_controls: "panel-text",
                             tabindex: "0",
-                            onclick: move |_| active_side_tab.set(3),
+                            onclick: move |_| active_side_tab.set(4),
                             "{text_group_label}"
                         }
                     }
                     div {
                         class: "side-panel-content",
-                        if active_side_tab() == 1 {
+                        if active_side_tab() == 0 {
+                            section {
+                                id: "panel-hint",
+                                role: "tabpanel",
+                                aria_labelledby: "tab-hint",
+                                tabindex: "0",
+                                div {
+                                    class: "hint-controls-panel",
+                                    div {
+                                        class: "hint-switch-row",
+                                        div {
+                                            class: "hint-switch-copy",
+                                            span { class: "hint-switch-label", "{candidate_display_label}" }
+                                            p { class: "hint-switch-description", "{candidate_display_help}" }
+                                        }
+                                        button {
+                                            class: "hint-switch",
+                                            r#type: "button",
+                                            role: "switch",
+                                            aria_checked: "{show_candidates()}",
+                                            aria_label: "{candidate_display_label}",
+                                            onclick: move |_| show_candidates.set(!show_candidates()),
+                                            span {
+                                                class: "hint-switch-track",
+                                                span { class: "hint-switch-thumb" }
+                                            }
+                                        }
+                                    }
+                                    div {
+                                        class: "hint-switch-row",
+                                        div {
+                                            class: "hint-switch-copy",
+                                            span { class: "hint-switch-label", "{naked_single_hint_label}" }
+                                            p { class: "hint-switch-description", "{naked_single_hint_help}" }
+                                        }
+                                        button {
+                                            class: "hint-switch",
+                                            r#type: "button",
+                                            role: "switch",
+                                            aria_checked: "{show_naked_single_hints()}",
+                                            aria_label: "{naked_single_hint_label}",
+                                            onclick: move |_| show_naked_single_hints.set(!show_naked_single_hints()),
+                                            span {
+                                                class: "hint-switch-track",
+                                                span { class: "hint-switch-thumb" }
+                                            }
+                                        }
+                                    }
+                                    div {
+                                        class: "hint-switch-row",
+                                        div {
+                                            class: "hint-switch-copy",
+                                            span { class: "hint-switch-label", "{hidden_single_hint_label}" }
+                                            p { class: "hint-switch-description", "{hidden_single_hint_help}" }
+                                        }
+                                        button {
+                                            class: "hint-switch",
+                                            r#type: "button",
+                                            role: "switch",
+                                            aria_checked: "{show_hidden_single_hints()}",
+                                            aria_label: "{hidden_single_hint_label}",
+                                            onclick: move |_| show_hidden_single_hints.set(!show_hidden_single_hints()),
+                                            span {
+                                                class: "hint-switch-track",
+                                                span { class: "hint-switch-thumb" }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        if active_side_tab() == 2 {
                             section {
                                 id: "panel-solve",
                                 role: "tabpanel",
@@ -1684,7 +1803,7 @@ fn app() -> Element {
                                 }
                             }
                         }
-                        if active_side_tab() == 0 {
+                        if active_side_tab() == 1 {
                             section {
                                 id: "panel-generate",
                                 role: "tabpanel",
@@ -1913,7 +2032,7 @@ fn app() -> Element {
                                     }
                             }
                         }
-                        if active_side_tab() == 2 {
+                        if active_side_tab() == 3 {
                             section {
                                 id: "panel-transform",
                                 role: "tabpanel",
@@ -2182,7 +2301,7 @@ fn app() -> Element {
                                 }
                             }
                         }
-                        if active_side_tab() == 3 {
+                        if active_side_tab() == 4 {
                             section {
                                 id: "panel-text",
                                 role: "tabpanel",
@@ -2785,10 +2904,10 @@ fn focus_cell(y: usize, x: usize) {
 #[cfg(test)]
 mod tests {
     use super::{
-        cell_classes, cell_text, cell_value, is_cell_locked, moved_cell, next_empty_cell,
-        parse_generated_board, parse_puzzle, parse_solution, record_board_change, redo_snapshot,
-        to_txt, transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform, Language,
-        SearchStatus, Theme, HISTORY_LIMIT,
+        board_cell_classes, cell_classes, cell_text, cell_value, is_cell_locked, moved_cell,
+        next_empty_cell, parse_generated_board, parse_puzzle, parse_solution, record_board_change,
+        redo_snapshot, to_txt, transform_snapshot, undo_snapshot, BoardSnapshot, BoardTransform,
+        Language, SearchStatus, Theme, HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -2858,6 +2977,14 @@ mod tests {
             "cell even given conflict no-candidates with-candidates"
         );
         assert_eq!(cell_classes(0, 3, false, false, false, false), "cell odd");
+    }
+
+    #[test]
+    fn board_cell_classes_include_naked_and_hidden_single_highlights() {
+        assert_eq!(
+            board_cell_classes(0, 0, false, false, false, true, true, true, None),
+            "cell even with-candidates single-candidate-hint hidden-single-hint"
+        );
     }
 
     #[test]

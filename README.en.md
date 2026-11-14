@@ -2,7 +2,7 @@
 
 English | [日本語](README.md)
 
-A Rust Sudoku solver with a browser UI built using Dioxus. It supports entering and solving puzzles, generating puzzles with a unique solution, displaying candidates and solution counts, loading puzzles from text, and highlighting duplicate digits or empty cells with no candidates. The solver also provides a one-move hint API; the hint control is temporarily hidden in the browser UI.
+A Rust Sudoku solver with a browser UI built using Dioxus. It supports entering and solving puzzles, generating puzzles with a unique solution, displaying candidates and solution counts, loading puzzles from text, and highlighting duplicate digits or empty cells with no candidates. The right-side Hints tab can highlight Naked Singles and Hidden Singles independently.
 
 Live app: <https://namba3.github.io/sudoku_solver/>
 
