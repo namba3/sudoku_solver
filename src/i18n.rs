@@ -213,18 +213,18 @@ mod tests {
         assert_eq!(
             t_args(
                 Language::Japanese,
-                "parse.line_count",
+                "parse.cell_count",
                 &[("actual", "3".to_owned())]
             ),
-            "9行必要ですが、3行あります。"
+            "改行を除いて81文字必要ですが、3文字あります。"
         );
         assert_eq!(
             t_args(
                 Language::English,
-                "parse.line_count",
+                "parse.cell_count",
                 &[("actual", "3".to_owned())]
             ),
-            "Expected 9 lines, found 3."
+            "Expected 81 cells after line breaks, found 3."
         );
     }
 

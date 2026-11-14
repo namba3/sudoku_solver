@@ -182,6 +182,5 @@ action-rotate_180 = Rotate 180°
 action-rotate_270 = Rotate 270°
 action-reflect_horizontal = Flip vertically
 action-reflect_vertical = Flip horizontally
-parse-line_count = Expected 9 lines, found {$actual}.
-parse-line_length = Line {$row} must contain 9 characters, found {$actual}.
+parse-cell_count = Expected 81 cells after line breaks, found {$actual}.
 parse-invalid_character = Unsupported character at row {$row}, column {$column}. Use digits, 0, . or _.

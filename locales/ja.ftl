@@ -172,6 +172,5 @@ action-rotate_180 = 180°回転
 action-rotate_270 = 270°回転
 action-reflect_horizontal = 上下反転
 action-reflect_vertical = 左右反転
-parse-line_count = 9行必要ですが、{$actual}行あります。
-parse-line_length = {$row} 行目は9文字必要ですが、{$actual}文字あります。
+parse-cell_count = 改行を除いて81文字必要ですが、{$actual}文字あります。
 parse-invalid_character = {$row} 行 {$column} 列に使えない文字があります。数字、0、.、_を使ってください。

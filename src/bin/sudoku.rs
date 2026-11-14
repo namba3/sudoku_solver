@@ -4,6 +4,9 @@ mod cli;
 #[cfg(not(target_arch = "wasm32"))]
 #[path = "../persistence.rs"]
 mod persistence;
+#[cfg(not(target_arch = "wasm32"))]
+#[path = "../puzzle_text.rs"]
+mod puzzle_text;
 
 #[cfg(not(target_arch = "wasm32"))]
 fn main() {

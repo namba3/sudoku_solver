@@ -1,6 +1,7 @@
 mod archive_cmd;
 mod atomic_file;
 mod frontier;
+mod inspect;
 mod minimal;
 mod minimal_cmd;
 mod minimal_scan;
@@ -46,6 +47,8 @@ enum Command {
     Diverse(DiverseArgs),
     /// Search multiple clue counts in parallel and collect minimal puzzles.
     Scan(ScanArgs),
+    /// Analyze solution counts, singles, and minimality for a puzzle.
+    Analyze(inspect::InspectArgs),
     /// Run local performance benchmarks.
     Bench {
         #[command(subcommand)]
@@ -93,7 +96,7 @@ enum MinimalCommand {
 
 #[derive(Debug, Args)]
 struct MinimalVerifyArgs {
-    /// Puzzle as 81 digits, using 0 or . for empty cells.
+    /// Puzzle as 81 digits, using 0 for empty cells.
     #[arg(long)]
     puzzle: Option<String>,
     /// Maximum solver nodes used during verification.
@@ -327,6 +330,7 @@ pub(crate) fn run(args: impl Iterator<Item = String>) -> Result<(), String> {
         Command::Frontier { command } => run_frontier(command),
         Command::Diverse(args) => pool::run(diverse_options(args)),
         Command::Scan(args) => minimal_scan::run(scan_options(args)),
+        Command::Analyze(args) => inspect::run(args),
         Command::Bench { command } => run_bench(command),
     }
 }
@@ -462,5 +466,20 @@ mod tests {
         assert!(
             Cli::try_parse_from(["sudoku", "diverse", "--strategy", "not-a-strategy"]).is_err()
         );
+    }
+
+    #[test]
+    fn analyze_requires_exactly_one_puzzle_source() {
+        assert!(Cli::try_parse_from(["sudoku", "analyze"]).is_err());
+        assert!(Cli::try_parse_from([
+            "sudoku",
+            "analyze",
+            "--puzzle",
+            &"0".repeat(81),
+            "--file",
+            "sample_problem/a.txt"
+        ])
+        .is_err());
+        assert!(Cli::try_parse_from(["sudoku", "analyze", "--file", "puzzle.txt"]).is_ok());
     }
 }

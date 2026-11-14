@@ -53,6 +53,7 @@ flowchart LR
 | `src/cli/minimal_cmd.rs` | Minimal検証・収集コマンドの実行と入力条件検証 |
 | `src/cli/minimal.rs` | Minimal探索のcheckpoint、再開、Archive登録 |
 | `src/cli/frontier.rs` | Multi-Clue Frontier降下コマンドと探索進捗保存 |
+| `src/cli/inspect.rs` | 初期盤面の解数、Single、minimality分析 |
 | `src/cli/pool.rs` | Diverse候補プールの検証・重複排除・再開可能なcheckpoint生成 |
 | `src/cli/pool_args.rs` | Diverseコマンドの既定設定と値の検証 |
 | `src/cli/minimal_scan.rs` | 並列minimal-puzzle探索コマンド |

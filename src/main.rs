@@ -5,6 +5,7 @@ use wasm_bindgen::JsCast;
 mod board_analysis;
 mod board_transform;
 mod i18n;
+mod puzzle_text;
 
 use board_analysis::{candidate_digits, BoardAnalysis, CandidateFilterOptions};
 use board_transform::{
@@ -3184,47 +3185,18 @@ fn candidate_position(digit: u8) -> String {
 }
 
 fn parse_puzzle(txt: &str, language: Language) -> Result<sudoku_solver::Matrix, String> {
-    let mut mtx = sudoku_solver::Matrix::default();
-    let content = txt.trim_end_matches(|ch| ch == '\n' || ch == '\r');
-    let lines: Vec<_> = content.lines().collect();
-    if lines.len() != 9 {
-        return Err(t_args(
+    puzzle_text::parse_board_text(txt).map_err(|error| match error {
+        puzzle_text::PuzzleTextError::CellCount { actual } => t_args(
             language,
-            "parse.line_count",
-            &[("actual", lines.len().to_string())],
-        ));
-    }
-
-    for (y, line) in lines.iter().enumerate() {
-        let chars: Vec<_> = line.chars().collect();
-        if chars.len() != 9 {
-            return Err(t_args(
-                language,
-                "parse.line_length",
-                &[
-                    ("row", (y + 1).to_string()),
-                    ("actual", chars.len().to_string()),
-                ],
-            ));
-        }
-        for (x, ch) in chars.into_iter().enumerate() {
-            mtx[y][x] = match ch {
-                '1'..='9' => ch as u8 - b'0',
-                '0' | '.' | '_' => 0,
-                _ => {
-                    return Err(t_args(
-                        language,
-                        "parse.invalid_character",
-                        &[
-                            ("row", (y + 1).to_string()),
-                            ("column", (x + 1).to_string()),
-                        ],
-                    ));
-                }
-            };
-        }
-    }
-    Ok(mtx)
+            "parse.cell_count",
+            &[("actual", actual.to_string())],
+        ),
+        puzzle_text::PuzzleTextError::InvalidCharacter { row, column } => t_args(
+            language,
+            "parse.invalid_character",
+            &[("row", row.to_string()), ("column", column.to_string())],
+        ),
+    })
 }
 
 fn to_txt(mtx: &sudoku_solver::Matrix) -> String {
@@ -3594,38 +3566,14 @@ mod tests {
     }
 
     #[test]
-    fn reports_localized_line_count_errors() {
+    fn reports_localized_cell_count_errors() {
         assert_eq!(
             parse_puzzle("123456789\n", Language::Japanese),
-            Err("9行必要ですが、1行あります。".to_owned())
+            Err("改行を除いて81文字必要ですが、9文字あります。".to_owned())
         );
         assert_eq!(
             parse_puzzle("123456789\n", Language::English),
-            Err("Expected 9 lines, found 1.".to_owned())
-        );
-    }
-
-    #[test]
-    fn reports_the_row_and_expected_length_for_short_lines() {
-        let text = concat!(
-            "123456789\n",
-            "12345678\n",
-            "123456789\n",
-            "123456789\n",
-            "123456789\n",
-            "123456789\n",
-            "123456789\n",
-            "123456789\n",
-            "123456789\n",
-        );
-
-        assert_eq!(
-            parse_puzzle(text, Language::Japanese),
-            Err("2 行目は9文字必要ですが、8文字あります。".to_owned())
-        );
-        assert_eq!(
-            parse_puzzle(text, Language::English),
-            Err("Line 2 must contain 9 characters, found 8.".to_owned())
+            Err("Expected 81 cells after line breaks, found 9.".to_owned())
         );
     }
 

@@ -12,6 +12,7 @@ CLIはnative実行用の`sudoku`バイナリに集約しています。
 cargo run --release --bin sudoku -- --help
 cargo run --release --bin sudoku -- diverse --help
 cargo run --release --bin sudoku -- minimal --help
+cargo run --release --bin sudoku -- analyze --help
 ```
 
 コマンド固有の全引数は`<command> --help`で確認できます。
@@ -30,6 +31,18 @@ cargo run --release --bin sudoku -- minimal --help
 Archiveは形式version 1とcanonical-key version 1、レコードchecksumを持ちます。CLIの通常ロードでは形式・checksum・構造・保存済みWitnessの整合性を確認し、一意性・minimalityの探索とcanonical keyの再計算は省略します。保存済みkeyはchecksumの範囲で信用します。完全検証には`archive verify`を使います。`archive import`は取り込むsourceを全件検証し、既存destinationは高速ロードします。Minimal collect、Frontier、scanも既存Archiveを高速ロードし、新規登録する盤面は検証します。Minimal collectとFrontierのcheckpointはversion 1、Diverseプールcheckpointはversion 7です。Diverseの再開時は各レコードの一意性、正規化key、親子関係を再確認します。異なるversionのcheckpointは直接再開できません。
 
 ## よく使うコマンド
+
+### 盤面の性質を分析
+
+```sh
+cargo run --release --bin sudoku -- analyze --file sample_problem/a.txt
+
+# 81文字の盤面テキストから直接読み込む場合
+cargo run --release --bin sudoku -- analyze \
+  --puzzle '530070000600195000098000060800060003400803001700020006060000280000419005000080079'
+```
+
+`--puzzle`と`--file`は同じ盤面テキスト形式を使います。改行を除いた81文字を9文字ずつ盤面として読み、空欄には`0`、`.`、`_`を指定できます。改行は行区切りとしても、省略して81文字を続けて入力しても構いません。空白など改行以外の文字は無視されません。どちらか一方を指定してください。解の個数を数え、Naked Single / Hidden Singleの位置、解が一意の場合はminimalityも表示します。解数の既定上限は100,000件、探索ノード上限は1,000,000です。上限に達した場合は`at-least`または`unknown`と表示し、正確な個数として扱いません。ノード上限の判定はsolverの進捗通知ごとなので、実測ノード数が上限を少し超えることがあります。`--max-solutions`と`--nodes`で解数探索の上限を、`--minimality-nodes`でminimalityの各検査の上限を変更できます。`--skip-minimality`を指定するとclue削除検査を省略します。
 
 ### Archiveの確認と統合
 
