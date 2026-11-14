@@ -522,6 +522,39 @@ impl Drop for ActiveSearch {
     }
 }
 
+fn cancel_search_task(
+    mut search_job_id: Signal<u32>,
+    mut active_search: Signal<Option<ActiveSearch>>,
+    mut is_searching: Signal<bool>,
+    mut is_generating: Signal<bool>,
+    search_started_at: Signal<f64>,
+    search_solutions: Signal<Vec<sudoku_solver::Matrix>>,
+    mut search_status: Signal<Option<SearchStatus>>,
+    mut msg: Signal<String>,
+    mut is_ok: Signal<bool>,
+    language: Language,
+) {
+    let was_generating = is_generating();
+    search_job_id.set(search_job_id().wrapping_add(1));
+    active_search.set(None);
+    is_searching.set(false);
+    is_generating.set(false);
+    let elapsed_seconds = elapsed_seconds_since(search_started_at());
+
+    if was_generating {
+        let cancelled = SearchStatus::GenerationCancelled { elapsed_seconds };
+        msg.set(cancelled.text(language));
+        is_ok.set(true);
+        search_status.set(Some(cancelled));
+    } else {
+        let count = search_solutions.read().len();
+        search_status.set(Some(SearchStatus::Cancelled {
+            solutions: count,
+            elapsed_seconds,
+        }));
+    }
+}
+
 fn app() -> Element {
     let mut language = use_signal(|| Language::Japanese);
     let mut theme = use_signal(load_theme_preference);
@@ -558,7 +591,7 @@ fn app() -> Element {
     let mut search_job_id = use_signal(|| 0u32);
     let mut active_search = use_signal(|| None::<ActiveSearch>);
     let mut selected_solution = use_signal(|| 0usize);
-    let mut active_side_tab = use_signal(|| 1u8);
+    let mut active_side_tab = use_signal(|| 0u8);
     let mut selected_drag_handle = use_signal(|| None::<BoardDragHandle>);
     let mut drag_target_handle = use_signal(|| None::<BoardDragHandle>);
 
@@ -581,6 +614,17 @@ fn app() -> Element {
     let display_givens = preview_transform
         .map(|transform| transform_matrix(&given_board, transform))
         .unwrap_or(given_board);
+    let board_base_class = match (preview_transform.is_some(), lock_givens()) {
+        (true, true) => "matrix drag-preview givens-locked",
+        (true, false) => "matrix drag-preview givens-unlocked",
+        (false, true) => "matrix givens-locked",
+        (false, false) => "matrix givens-unlocked",
+    };
+    let board_class = if show_candidates() {
+        format!("{board_base_class} candidates-visible")
+    } else {
+        board_base_class.to_owned()
+    };
     let found_solutions = search_solutions.read();
     let solution_source_board = *search_board.read();
     let solution_count = found_solutions.len();
@@ -608,24 +652,23 @@ fn app() -> Element {
     );
     let title_label = t(lang, "app.title");
     let input_help = t(lang, "help.input");
+    let given_toggle_shortcut_help = t(lang, "help.given_toggle_shortcut");
     let undo_label = format!("↶ {}", t(lang, "action.undo"));
     let redo_label = format!("↷ {}", t(lang, "action.redo"));
     let load_text_label = t(lang, "action.load_text");
-    let count_solutions_label = t(lang, "action.count_solutions");
+    let count_solutions_label = if is_searching() && !is_generating() {
+        t(lang, "action.cancel_search")
+    } else {
+        t(lang, "action.count_solutions")
+    };
     let generate_puzzle_label = if is_generating() {
-        t(lang, "action.generating")
+        t(lang, "action.cancel_generation")
     } else {
         t(lang, "action.generate")
     };
     let generation_clue_count_label = t(lang, "label.clues");
-    let generation_clue_count_help = t(lang, "label.clue_range");
     let generation_method_help = t(lang, "help.puzzle_generation_method");
     let invalid_generation_clue_count = t(lang, "message.invalid_clue_count");
-    let cancel_task_label = if is_generating() {
-        t(lang, "action.cancel_generation")
-    } else {
-        t(lang, "action.cancel_search")
-    };
     let solve_label = t(lang, "action.solve");
     let reset_label = t(lang, "action.reset");
     let clear_label = t(lang, "action.clear");
@@ -647,6 +690,7 @@ fn app() -> Element {
     let column_handles_label = t(lang, "label.drag_columns");
     let board_transform_help = t(lang, "help.drag_board_transforms");
     let generation_group_label = t(lang, "group.generation");
+    let generation_tab_label = t(lang, "label.generation_tab");
     let transform_group_label = t(lang, "group.transform");
     let bands_label = t(lang, "label.bands");
     let stacks_label = t(lang, "label.stacks");
@@ -784,7 +828,28 @@ fn app() -> Element {
                             class: "given-lock-toggle",
                             aria_pressed: "{lock_givens()}",
                             onclick: move |_| lock_givens.set(!lock_givens()),
-                            "{givens_lock_label}"
+                            span {
+                                aria_hidden: "true",
+                                svg {
+                                    class: "given-lock-icon",
+                                    width: "16",
+                                    height: "16",
+                                    view_box: "0 0 24 24",
+                                    fill: "none",
+                                    stroke: "currentColor",
+                                    stroke_width: "2",
+                                    stroke_linecap: "round",
+                                    stroke_linejoin: "round",
+                                    rect { x: "4", y: "10", width: "16", height: "11", rx: "2" }
+                                    if lock_givens() {
+                                        path { d: "M8 10V7a4 4 0 0 1 8 0v3" }
+                                    } else {
+                                        path { d: "M8 10V7a4 4 0 0 1 7.5-3.5" }
+                                    }
+                                    circle { cx: "12", cy: "15", r: "1", fill: "currentColor", stroke: "none" }
+                                }
+                            }
+                            span { "{givens_lock_label}" }
                         }
                         button {
                             disabled: board == *givens.read(),
@@ -833,211 +898,11 @@ fn app() -> Element {
                             "{clear_label}"
                         }
                     }
-                    div {
-                        class: "generation-toolbar",
-                        role: "group",
-                        aria_label: "{generation_group_label}",
-                    div {
-                        class: "generator-options",
-                        label {
-                            r#for: "generation-clue-count",
-                            "{generation_clue_count_label}"
+                    if !lock_givens() {
+                        p {
+                            class: "given-toggle-shortcut-note",
+                            "{given_toggle_shortcut_help}"
                         }
-                        input {
-                            id: "generation-clue-count",
-                            r#type: "number",
-                            min: "17",
-                            max: "81",
-                            step: "1",
-                            value: "{generation_clue_count}",
-                            aria_label: "{generation_clue_count_label}",
-                            oninput: move |event| generation_clue_count.set(event.value()),
-                        }
-                        span { "{generation_clue_count_help}" }
-                    }
-                button {
-                    disabled: is_searching(),
-                    onclick: move |_| {
-                        let Some(clue_count) = generation_clue_count()
-                            .parse::<usize>()
-                            .ok()
-                            .filter(|count| (17..=81).contains(count))
-                        else {
-                            msg.set(invalid_generation_clue_count.to_string());
-                            is_ok.set(false);
-                            return;
-                        };
-                        active_search.set(None);
-                        let job_id = search_job_id().wrapping_add(1);
-                        search_job_id.set(job_id);
-                        search_solutions.set(Vec::new());
-                        selected_solution.set(0);
-                        search_board.set(None);
-                        is_ok.set(true);
-                        let started_at = web_sys::window()
-                            .and_then(|window| window.performance())
-                            .map(|performance| performance.now())
-                            .unwrap_or(0.0);
-                        search_started_at.set(started_at);
-                        let generation_status = SearchStatus::Generating;
-                        msg.set(generation_status.text(lang));
-                        search_status.set(Some(generation_status));
-                        is_searching.set(true);
-                        is_generating.set(true);
-
-                        match create_search_worker() {
-                            Ok(worker) => {
-                                let mut status = search_status;
-                                let mut searching = is_searching;
-                                let mut generating = is_generating;
-                                let current_job_id = search_job_id;
-                                let started_at = search_started_at();
-                                let mut board_signal = mtx;
-                                let mut givens_signal = givens;
-                                let mut text_signal = txt;
-                                let mut undo = undo_stack;
-                                let mut redo = redo_stack;
-                                let language_signal = language;
-                                let mut message = msg;
-                                let mut message_ok = is_ok;
-                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
-                                    let Some(raw_message) = event.data().as_string() else {
-                                        return;
-                                    };
-                                    let Ok(response) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
-                                        return;
-                                    };
-                                    if response["job_id"].as_u64() != Some(job_id as u64)
-                                        || current_job_id() != job_id
-                                    {
-                                        return;
-                                    }
-
-                                    match response["type"].as_str() {
-                                        Some("generated") => {
-                                            let Some(generated_board) = parse_generated_board(
-                                                &response["board"],
-                                                &response["clues"],
-                                                clue_count,
-                                            ) else {
-                                                let generation_error = SearchStatus::GenerationError {
-                                                    message: t(language_signal(), "worker.error.invalid_board"),
-                                                    elapsed_seconds: elapsed_seconds_since(started_at),
-                                                };
-                                                message.set(generation_error.text(language_signal()));
-                                                message_ok.set(false);
-                                                status.set(Some(generation_error));
-                                                searching.set(false);
-                                                generating.set(false);
-                                                return;
-                                            };
-                                            let before = BoardSnapshot {
-                                                board: *board_signal.read(),
-                                                givens: *givens_signal.read(),
-                                            };
-                                            record_board_change(
-                                                &mut undo.write(),
-                                                &mut redo.write(),
-                                                before,
-                                                BoardSnapshot { board: generated_board, givens: generated_board },
-                                            );
-                                            board_signal.set(generated_board);
-                                            givens_signal.set(generated_board);
-                                            text_signal.set(to_txt(&generated_board));
-                                            let generated_status = SearchStatus::Generated {
-                                                clues: clue_count,
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            };
-                                            message.set(generated_status.text(language_signal()));
-                                            message_ok.set(true);
-                                            status.set(Some(generated_status));
-                                            searching.set(false);
-                                            generating.set(false);
-                                            focus_cell(0, 0);
-                                        }
-                                        Some("error") => {
-                                            let generation_error = SearchStatus::GenerationError {
-                                                message: response["message"].as_str().map_or_else(
-                                                    || t(language_signal(), "worker.error.unknown_generation"),
-                                                    str::to_owned,
-                                                ),
-                                                elapsed_seconds: elapsed_seconds_since(started_at),
-                                            };
-                                            message.set(generation_error.text(language_signal()));
-                                            message_ok.set(false);
-                                            status.set(Some(generation_error));
-                                            searching.set(false);
-                                            generating.set(false);
-                                        }
-                                        _ => {}
-                                    }
-                                });
-                                let mut error_status = search_status;
-                                let mut error_searching = is_searching;
-                                let mut error_generating = is_generating;
-                                let mut error_message = msg;
-                                let mut error_message_ok = is_ok;
-                                let error_language = language;
-                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
-                                    if current_job_id() == job_id {
-                                        let generation_error = SearchStatus::GenerationError {
-                                            message: event.message(),
-                                            elapsed_seconds: elapsed_seconds_since(started_at),
-                                        };
-                                        error_message.set(generation_error.text(error_language()));
-                                        error_message_ok.set(false);
-                                        error_status.set(Some(generation_error));
-                                        error_searching.set(false);
-                                        error_generating.set(false);
-                                    }
-                                });
-
-                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
-                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
-                                active_search.set(Some(ActiveSearch {
-                                    worker: worker.clone(),
-                                    _onmessage: onmessage,
-                                    _onerror: onerror,
-                                }));
-                                let seed = random_seed();
-                                let request = serde_json::json!({
-                                    "type": "generate",
-                                    "job_id": job_id,
-                                    "seed": seed,
-                                    "clue_count": clue_count,
-                                });
-                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
-                                    active_search.set(None);
-                                    let generation_error = SearchStatus::GenerationError {
-                                        message: format!("{error:?}"),
-                                        elapsed_seconds: elapsed_seconds_since(started_at),
-                                    };
-                                    msg.set(generation_error.text(lang));
-                                    is_ok.set(false);
-                                    search_status.set(Some(generation_error));
-                                    is_searching.set(false);
-                                    is_generating.set(false);
-                                }
-                            }
-                            Err(error) => {
-                                let generation_error = SearchStatus::GenerationError {
-                                    message: format!("{error:?}"),
-                                    elapsed_seconds: elapsed_seconds_since(started_at),
-                                };
-                                msg.set(generation_error.text(lang));
-                                is_ok.set(false);
-                                search_status.set(Some(generation_error));
-                                is_searching.set(false);
-                                is_generating.set(false);
-                            }
-                        }
-                    },
-                    "{generate_puzzle_label}"
-                }
-                p {
-                    class: "generation-note",
-                    "{generation_method_help}"
-                }
                     }
             div {
                 class: "matrix-interaction",
@@ -1315,7 +1180,7 @@ fn app() -> Element {
                     }
                 }
                 ul {
-                class: if preview_transform.is_some() { "matrix drag-preview" } else { "matrix" },
+                class: "{board_class}",
                 for (y, row) in display_board.iter().enumerate() {
                     li {
                         key: "{y}",
@@ -1371,6 +1236,25 @@ fn app() -> Element {
                                             let meta_key = dioxus::html::input_data::keyboard_types::Modifiers::META;
                                             let shift_key = dioxus::html::input_data::keyboard_types::Modifiers::SHIFT;
                                             let alt_key = dioxus::html::input_data::keyboard_types::Modifiers::ALT;
+                                            if !lock_givens()
+                                                && key.eq_ignore_ascii_case("g")
+                                                && !modifiers.contains(command_key)
+                                                && !modifiers.contains(meta_key)
+                                                && !modifiers.contains(alt_key)
+                                            {
+                                                evt.prevent_default();
+                                                toggle_given_cell(
+                                                    y,
+                                                    x,
+                                                    lock_givens(),
+                                                    &mut mtx,
+                                                    &mut givens,
+                                                    &mut undo_stack,
+                                                    &mut redo_stack,
+                                                );
+                                                return;
+                                            }
+
                                             if (modifiers.contains(command_key) || modifiers.contains(meta_key))
                                                 && matches!(key.to_lowercase().as_str(), "z" | "y")
                                             {
@@ -1471,6 +1355,16 @@ fn app() -> Element {
                         aria_label: "{side_panels_label}",
                         button {
                             r#type: "button",
+                            id: "tab-generate",
+                            role: "tab",
+                            aria_selected: "{active_side_tab() == 0}",
+                            aria_controls: "panel-generate",
+                            tabindex: "0",
+                            onclick: move |_| active_side_tab.set(0),
+                            "{generation_tab_label}"
+                        }
+                        button {
+                            r#type: "button",
                             id: "tab-solve",
                             role: "tab",
                             aria_selected: "{active_side_tab() == 1}",
@@ -1483,20 +1377,20 @@ fn app() -> Element {
                             r#type: "button",
                             id: "tab-transform",
                             role: "tab",
-                            aria_selected: "{active_side_tab() == 0}",
+                            aria_selected: "{active_side_tab() == 2}",
                             aria_controls: "panel-transform",
                             tabindex: "0",
-                            onclick: move |_| active_side_tab.set(0),
+                            onclick: move |_| active_side_tab.set(2),
                             "{transform_group_label}"
                         }
                         button {
                             r#type: "button",
                             id: "tab-text",
                             role: "tab",
-                            aria_selected: "{active_side_tab() == 2}",
+                            aria_selected: "{active_side_tab() == 3}",
                             aria_controls: "panel-text",
                             tabindex: "0",
-                            onclick: move |_| active_side_tab.set(2),
+                            onclick: move |_| active_side_tab.set(3),
                             "{text_group_label}"
                         }
                     }
@@ -1515,8 +1409,23 @@ fn app() -> Element {
                                         role: "group",
                                         aria_label: "{solve_group_label}",
                                     button {
-                                        disabled: is_searching(),
+                                        disabled: is_generating(),
                                         onclick: move |_| {
+                                            if is_searching() && !is_generating() {
+                                                cancel_search_task(
+                                                    search_job_id,
+                                                    active_search,
+                                                    is_searching,
+                                                    is_generating,
+                                                    search_started_at,
+                                                    search_solutions,
+                                                    search_status,
+                                                    msg,
+                                                    is_ok,
+                                                    lang,
+                                                );
+                                                return;
+                                            }
                                             active_search.set(None);
                                             let job_id = search_job_id().wrapping_add(1);
                                             search_job_id.set(job_id);
@@ -1625,28 +1534,6 @@ fn app() -> Element {
                                             }
                                         },
                                         "{count_solutions_label}"
-                                    }
-                                    if is_searching() {
-                                        button {
-                                            onclick: move |_| {
-                                                let was_generating = is_generating();
-                                                search_job_id.set(search_job_id().wrapping_add(1));
-                                                active_search.set(None);
-                                                is_searching.set(false);
-                                                is_generating.set(false);
-                                                let elapsed_seconds = elapsed_seconds_since(search_started_at());
-                                                if was_generating {
-                                                    let cancelled = SearchStatus::GenerationCancelled { elapsed_seconds };
-                                                    msg.set(cancelled.text(lang));
-                                                    is_ok.set(true);
-                                                    search_status.set(Some(cancelled));
-                                                } else {
-                                                    let count = search_solutions.read().len();
-                                                    search_status.set(Some(SearchStatus::Cancelled { solutions: count, elapsed_seconds }));
-                                                }
-                                            },
-                                            "{cancel_task_label}"
-                                        }
                                     }
                                     button {
                                         onclick: move |_| {
@@ -1798,6 +1685,235 @@ fn app() -> Element {
                             }
                         }
                         if active_side_tab() == 0 {
+                            section {
+                                id: "panel-generate",
+                                role: "tabpanel",
+                                aria_labelledby: "tab-generate",
+                                tabindex: "0",
+                                    div {
+                                        class: "generation-toolbar generation-panel",
+                                        role: "group",
+                                        aria_label: "{generation_group_label}",
+                                    div {
+                                        class: "generator-options",
+                                        label {
+                                            r#for: "generation-clue-count",
+                                            "{generation_clue_count_label}"
+                                        }
+                                        input {
+                                            id: "generation-clue-count",
+                                            r#type: "number",
+                                            min: "17",
+                                            max: "81",
+                                            step: "1",
+                                            value: "{generation_clue_count}",
+                                            aria_label: "{generation_clue_count_label}",
+                                            disabled: is_generating(),
+                                            oninput: move |event| generation_clue_count.set(event.value()),
+                                        }
+                                    }
+                                button {
+                                    disabled: is_searching() && !is_generating(),
+                                    onclick: move |_| {
+                                        if is_generating() {
+                                            cancel_search_task(
+                                                search_job_id,
+                                                active_search,
+                                                is_searching,
+                                                is_generating,
+                                                search_started_at,
+                                                search_solutions,
+                                                search_status,
+                                                msg,
+                                                is_ok,
+                                                lang,
+                                            );
+                                            return;
+                                        }
+                                        let Some(clue_count) = generation_clue_count()
+                                            .parse::<usize>()
+                                            .ok()
+                                            .filter(|count| (17..=81).contains(count))
+                                        else {
+                                            msg.set(invalid_generation_clue_count.to_string());
+                                            is_ok.set(false);
+                                            return;
+                                        };
+                                        active_search.set(None);
+                                        let job_id = search_job_id().wrapping_add(1);
+                                        search_job_id.set(job_id);
+                                        search_solutions.set(Vec::new());
+                                        selected_solution.set(0);
+                                        search_board.set(None);
+                                        is_ok.set(true);
+                                        let started_at = web_sys::window()
+                                            .and_then(|window| window.performance())
+                                            .map(|performance| performance.now())
+                                            .unwrap_or(0.0);
+                                        search_started_at.set(started_at);
+                                        let generation_status = SearchStatus::Generating;
+                                        msg.set(generation_status.text(lang));
+                                        search_status.set(Some(generation_status));
+                                        is_searching.set(true);
+                                        is_generating.set(true);
+
+                                        match create_search_worker() {
+                                            Ok(worker) => {
+                                                let mut status = search_status;
+                                                let mut searching = is_searching;
+                                                let mut generating = is_generating;
+                                                let current_job_id = search_job_id;
+                                                let started_at = search_started_at();
+                                                let mut board_signal = mtx;
+                                                let mut givens_signal = givens;
+                                                let mut text_signal = txt;
+                                                let mut undo = undo_stack;
+                                                let mut redo = redo_stack;
+                                                let language_signal = language;
+                                                let mut message = msg;
+                                                let mut message_ok = is_ok;
+                                                let onmessage = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
+                                                    let Some(raw_message) = event.data().as_string() else {
+                                                        return;
+                                                    };
+                                                    let Ok(response) = serde_json::from_str::<serde_json::Value>(&raw_message) else {
+                                                        return;
+                                                    };
+                                                    if response["job_id"].as_u64() != Some(job_id as u64)
+                                                        || current_job_id() != job_id
+                                                    {
+                                                        return;
+                                                    }
+
+                                                    match response["type"].as_str() {
+                                                        Some("generated") => {
+                                                            let Some(generated_board) = parse_generated_board(
+                                                                &response["board"],
+                                                                &response["clues"],
+                                                                clue_count,
+                                                            ) else {
+                                                                let generation_error = SearchStatus::GenerationError {
+                                                                    message: t(language_signal(), "worker.error.invalid_board"),
+                                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                                };
+                                                                message.set(generation_error.text(language_signal()));
+                                                                message_ok.set(false);
+                                                                status.set(Some(generation_error));
+                                                                searching.set(false);
+                                                                generating.set(false);
+                                                                return;
+                                                            };
+                                                            let before = BoardSnapshot {
+                                                                board: *board_signal.read(),
+                                                                givens: *givens_signal.read(),
+                                                            };
+                                                            record_board_change(
+                                                                &mut undo.write(),
+                                                                &mut redo.write(),
+                                                                before,
+                                                                BoardSnapshot { board: generated_board, givens: generated_board },
+                                                            );
+                                                            board_signal.set(generated_board);
+                                                            givens_signal.set(generated_board);
+                                                            text_signal.set(to_txt(&generated_board));
+                                                            let generated_status = SearchStatus::Generated {
+                                                                clues: clue_count,
+                                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                                            };
+                                                            message.set(generated_status.text(language_signal()));
+                                                            message_ok.set(true);
+                                                            status.set(Some(generated_status));
+                                                            searching.set(false);
+                                                            generating.set(false);
+                                                            focus_cell(0, 0);
+                                                        }
+                                                        Some("error") => {
+                                                            let generation_error = SearchStatus::GenerationError {
+                                                                message: response["message"].as_str().map_or_else(
+                                                                    || t(language_signal(), "worker.error.unknown_generation"),
+                                                                    str::to_owned,
+                                                                ),
+                                                                elapsed_seconds: elapsed_seconds_since(started_at),
+                                                            };
+                                                            message.set(generation_error.text(language_signal()));
+                                                            message_ok.set(false);
+                                                            status.set(Some(generation_error));
+                                                            searching.set(false);
+                                                            generating.set(false);
+                                                        }
+                                                        _ => {}
+                                                    }
+                                                });
+                                                let mut error_status = search_status;
+                                                let mut error_searching = is_searching;
+                                                let mut error_generating = is_generating;
+                                                let mut error_message = msg;
+                                                let mut error_message_ok = is_ok;
+                                                let error_language = language;
+                                                let onerror = Closure::<dyn FnMut(web_sys::ErrorEvent)>::new(move |event: web_sys::ErrorEvent| {
+                                                    if current_job_id() == job_id {
+                                                        let generation_error = SearchStatus::GenerationError {
+                                                            message: event.message(),
+                                                            elapsed_seconds: elapsed_seconds_since(started_at),
+                                                        };
+                                                        error_message.set(generation_error.text(error_language()));
+                                                        error_message_ok.set(false);
+                                                        error_status.set(Some(generation_error));
+                                                        error_searching.set(false);
+                                                        error_generating.set(false);
+                                                    }
+                                                });
+
+                                                worker.set_onmessage(Some(onmessage.as_ref().unchecked_ref()));
+                                                worker.set_onerror(Some(onerror.as_ref().unchecked_ref()));
+                                                active_search.set(Some(ActiveSearch {
+                                                    worker: worker.clone(),
+                                                    _onmessage: onmessage,
+                                                    _onerror: onerror,
+                                                }));
+                                                let seed = random_seed();
+                                                let request = serde_json::json!({
+                                                    "type": "generate",
+                                                    "job_id": job_id,
+                                                    "seed": seed,
+                                                    "clue_count": clue_count,
+                                                });
+                                                if let Err(error) = worker.post_message(&wasm_bindgen::JsValue::from_str(&request.to_string())) {
+                                                    active_search.set(None);
+                                                    let generation_error = SearchStatus::GenerationError {
+                                                        message: format!("{error:?}"),
+                                                        elapsed_seconds: elapsed_seconds_since(started_at),
+                                                    };
+                                                    msg.set(generation_error.text(lang));
+                                                    is_ok.set(false);
+                                                    search_status.set(Some(generation_error));
+                                                    is_searching.set(false);
+                                                    is_generating.set(false);
+                                                }
+                                            }
+                                            Err(error) => {
+                                                let generation_error = SearchStatus::GenerationError {
+                                                    message: format!("{error:?}"),
+                                                    elapsed_seconds: elapsed_seconds_since(started_at),
+                                                };
+                                                msg.set(generation_error.text(lang));
+                                                is_ok.set(false);
+                                                search_status.set(Some(generation_error));
+                                                is_searching.set(false);
+                                                is_generating.set(false);
+                                            }
+                                        }
+                                    },
+                                    "{generate_puzzle_label}"
+                                }
+                                p {
+                                    class: "generation-note",
+                                    "{generation_method_help}"
+                                }
+                                    }
+                            }
+                        }
+                        if active_side_tab() == 2 {
                             section {
                                 id: "panel-transform",
                                 role: "tabpanel",
@@ -2066,7 +2182,7 @@ fn app() -> Element {
                                 }
                             }
                         }
-                        if active_side_tab() == 2 {
+                        if active_side_tab() == 3 {
                             section {
                                 id: "panel-text",
                                 role: "tabpanel",
@@ -2268,6 +2384,47 @@ fn update_cell_value(
             focus_cell(next_y, next_x);
         }
     }
+}
+
+fn toggle_given_cell(
+    y: usize,
+    x: usize,
+    lock_givens: bool,
+    mtx: &mut Signal<sudoku_solver::Matrix>,
+    givens: &mut Signal<sudoku_solver::Matrix>,
+    undo_stack: &mut Signal<Vec<BoardSnapshot>>,
+    redo_stack: &mut Signal<Vec<BoardSnapshot>>,
+) {
+    if lock_givens {
+        return;
+    }
+
+    let board = *mtx.read();
+    if !(1..=9).contains(&board[y][x]) {
+        return;
+    }
+
+    let current_givens = *givens.read();
+    let mut next_givens = current_givens;
+    next_givens[y][x] = if current_givens[y][x] == 0 {
+        board[y][x]
+    } else {
+        0
+    };
+
+    record_board_change(
+        &mut undo_stack.write(),
+        &mut redo_stack.write(),
+        BoardSnapshot {
+            board,
+            givens: current_givens,
+        },
+        BoardSnapshot {
+            board,
+            givens: next_givens,
+        },
+    );
+    givens.set(next_givens);
 }
 
 fn is_cell_locked(lock_givens: bool, givens: sudoku_solver::Matrix, y: usize, x: usize) -> bool {

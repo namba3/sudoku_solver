@@ -8,17 +8,17 @@
 | UI-02 | 不正値入力 | 編集可能セル | 空、0、10、文字を入力 | 1〜9以外は空セル扱い、表示と状態が同期 | Unit + Component | P1 | `cell_value`はReady、UI配線はMinor |
 | UI-03 | 競合/候補表示 | 重複または候補なし盤面 | 入力を変更 | 競合/候補なしセルと`aria-invalid`が更新 | Unit + Component | P1 | `BoardAnalysis` UnitはReady、描画はMinor |
 | UI-04 | 候補toggle | 候補OFF | Show candidatesを押す | 候補数字とpressed状態/ラベルが更新し、再操作で隠れる | Component | P2 | Minor Changes。盤面fixture |
-| UI-05 | givens編集 | givenあり、ロックON | 解除してgivenセルを編集 | givenから通常入力へ変わりUndo対象となる | Component + Integration | P1 | Refactoring Required。board/givens fixture |
+| UI-05 | givens編集 | givenあり、ロックON | 初期数字セルの表示を確認。「初期数字を編集」で解除し、数字入りセルへフォーカスしてGを押す | 初期数字セルの隅にロック/解錠状態に応じた薄い錠前SVGが表示される。解除中のフォーカスでは反転配色とキャレットを維持し、候補表示中は枠線が点滅する。Gでgiven状態が切り替わりUndo/Redoできる。ロック中はG操作を受け付けない | Component + Integration | P1 | Refactoring Required。board/givens fixture |
 | UI-06 | Undo/Redo | 変更履歴あり | Undo後Redo | 盤面/givensが共に復元し、disabled状態も更新 | Unit + Component | P1 | 状態関数Unit Ready、再描画Minor |
 | UI-07 | Reset/Clear | givenとユーザー入力あり | ResetまたはClear、続いてUndo | Resetはgiven保持、Clearは双方消去、履歴で復元 | Unit + Component | P1 | 履歴関数あり、ボタン統合Minor |
 | UI-08 | Solve | 解ける/競合盤面 | Solveを押す | 解を表示するか、競合/候補切れの局所化エラーを表示 | Integration + Web E2E | P1 | solver Ready、UI操作Minor。fixture盤面 |
-| UI-09 | サイドタブ | Solve表示 | Transform/Textを選ぶ | 選択tabとtabpanelが切り替わる | Component + Web E2E | P2 | Minor Changes。現行3タブ、Routerではない |
-| UI-10 | 生成入力 | clue数欄 | 16/17/81/82/空/非整数を入力してGenerate | Fastで17〜81の整数だけをWorkerへ送り、無効値は翻訳エラー | Unit + Component | P1 | 範囲検証は実装済み。Worker requestのFake検証は未整備 |
+| UI-09 | サイドタブ | Generate表示 | Solve/Transform/Textを選ぶ | 選択tabとtabpanelが切り替わり、初期表示はGenerate | Component + Web E2E | P2 | Minor Changes。現行4タブ、Routerではない |
+| UI-10 | 生成入力 | 問題生成tabのclue数欄 | 16/17/81/82/空/非整数を入力してGenerate | 生成フォームは他タブと同様のパネル内に表示。Fastで17〜81の整数だけをWorkerへ送り、無効値は翻訳エラー。生成中は同じボタンがCancel generationに切り替わり、ヒント数欄を固定 | Unit + Component | P1 | 範囲検証は実装済み。Worker requestのFake検証は未整備 |
 | UI-11 | Fast生成完了 | 固定seed/有効clue数 | Workerから完了またはエラーを送る | 指定ヒント数の盤面だけ反映し、given/盤面が同期 | Integration + Web E2E | P1 | UI配線は実装済み。Fake Workerとブラウザー検証は未整備 |
-| UI-12 | 検索進捗/完了 | 解がある盤面 | 開始後にWorkerイベントを送る | 開始/進捗/完了、解数/ノード数を表示し解を適用可能 | Integration + Component | P1 | Refactoring Required。Fake Worker/clock |
+| UI-12 | 検索進捗/完了 | 解がある盤面 | Count solutionsを押し、開始後にWorkerイベントを送る | 開始中は同じボタンがCancel searchに切り替わり、進捗/完了後はCount solutionsへ戻る。解数/ノード数を表示し解を適用可能 | Integration + Component | P1 | Refactoring Required。Fake Worker/clock |
 | UI-13 | 検索上限 | 複数解盤面 | 上限到達event | 部分結果を総数と誤表示せず、上限到達を示す | Unit + Integration | P1 | 表示ロジックUnit可、Worker Fake必要 |
 | UI-14 | 検索エラー | 競合または不正worker応答 | Search実行 | localized errorを表示し盤面を上書きしない | Integration | P1 | parser/status Unit Ready、配線要分離 |
-| UI-15 | cancel/古いjob | job A実行中、job B開始 | cancelしAの遅延応答も返す | Aを停止/無視し、B以外で画面を上書きしない | Integration | P1 | job IDは実装済み、順序制御Fake必要 |
+| UI-15 | cancel/古いjob | 解探索または問題生成中 | 解探索はCount solutionsボタン、生成はGenerate puzzleボタンを押し、遅延応答も返す | 各ボタンが同じ位置でキャンセル操作へ切り替わり、キャンセル後の遅延応答で画面を上書きしない | Integration | P1 | job IDは実装済み、順序制御Fake必要 |
 | UI-16 | 盤面変換 | 盤面/givens | band/row/stack/column/digit交換、transpose/rotate/reflect | 同じ変換を両方に適用し、Undoで復元 | Unit + Component | P1 | 純粋関数Ready、フォームMinor |
 | UI-17 | drag preview | band等ハンドル | 有効/無効先へdrag/drop/cancel | source/target/invalid preview、drop後だけ変換 | Component + Web E2E | P2 | Dioxus testのdrag対応確認が前提 |
 | UI-18 | テキスト保存/読込 | 9行盤面 | Save text、編集、Load text | 9×9文字列を保存し、有効データを盤面へ反映 | Unit + Component | P1 | parser/formatter Unit Ready、UI Minor |

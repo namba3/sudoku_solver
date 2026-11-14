@@ -495,6 +495,18 @@ h1 {
     font-weight: 800;
 }
 
+.matrix.givens-locked .given input,
+.matrix.givens-unlocked .given input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d2946' stroke-opacity='.38' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='10' width='16' height='11' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 8 0v3'/%3E%3C/svg%3E");
+    background-position: right 3px top 3px;
+    background-repeat: no-repeat;
+    background-size: 12px 12px;
+}
+
+.matrix.givens-unlocked .given input {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%230d2946' stroke-opacity='.38' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='10' width='16' height='11' rx='2'/%3E%3Cpath d='M8 10V7a4 4 0 0 1 7.5-3.5'/%3E%3C/svg%3E");
+}
+
 .given.odd input {
     color: var(--board-tile-odd);
 }
@@ -586,6 +598,24 @@ h1 {
     background-color: var(--palette-eff8ff);
 }
 
+.cell.given.odd input:focus {
+    background-color: var(--board-digit-color);
+    color: var(--board-tile-odd);
+}
+
+.cell.given.even input:focus {
+    background-color: var(--board-digit-color);
+    color: var(--board-tile-even);
+}
+
+.matrix.givens-unlocked .cell.given input:focus {
+    caret-color: currentColor;
+}
+
+.matrix.candidates-visible.givens-unlocked .cell.given input:focus {
+    animation: candidate-focus-pulse 1s steps(2, start) infinite;
+}
+
 .cell.with-candidates input:focus {
     caret-color: transparent;
     background-color: var(--palette-fff1c2);
@@ -599,7 +629,8 @@ h1 {
 }
 
 @media (prefers-reduced-motion: reduce) {
-    .cell.with-candidates input:focus {
+    .cell.with-candidates input:focus,
+    .matrix.candidates-visible.givens-unlocked .cell.given input:focus {
         animation: none;
         outline-color: var(--palette-175cd3);
     }
@@ -629,9 +660,17 @@ h1 {
     align-items: center;
     flex-wrap: wrap;
     gap: 6px;
-    width: calc(100% - 48px);
-    margin: 0 0 12px 48px;
+    width: 100%;
+    margin: 0;
     text-align: left;
+}
+
+.generation-panel {
+    min-width: 0;
+    padding: 10px;
+    border: 1px solid var(--palette-d0d5dd);
+    border-radius: 8px;
+    background: var(--palette-f8faff);
 }
 
 .generator-options {
@@ -665,6 +704,14 @@ h1 {
     line-height: 1.35;
 }
 
+.given-toggle-shortcut-note {
+    width: calc(100% - 48px);
+    margin: 0 0 8px 48px;
+    color: var(--palette-667085);
+    font-size: 0.78rem;
+    line-height: 1.35;
+}
+
 .button-group button,
 .board-toolbar button,
 .generation-toolbar > button {
@@ -693,6 +740,17 @@ h1 {
 .board-toolbar button:hover,
 .generation-toolbar > button:hover {
     background: var(--palette-eff4ff);
+}
+
+.given-lock-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+}
+
+.given-lock-icon {
+    flex: 0 0 16px;
 }
 
 .given-lock-toggle[aria-pressed="true"] {
