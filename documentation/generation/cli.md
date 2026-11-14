@@ -35,7 +35,7 @@ Archiveは形式version 1とcanonical-key version 1、レコードchecksumを持
 ### 盤面の性質を分析
 
 ```sh
-cargo run --release --bin sudoku -- analyze --file sample_problem/a.txt
+cargo run --release --bin sudoku -- analyze --file sample_problem/minimal-23.txt
 
 # 81文字の盤面テキストから直接読み込む場合
 cargo run --release --bin sudoku -- analyze \

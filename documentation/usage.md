@@ -54,7 +54,7 @@ ____8__79
 
 読み込み結果は盤面に反映されます。行・列・3×3ブロック内の重複がある場合も読み込みますが、該当セルを赤く表示して修正を促します。出力形式では空欄が`_`になります。
 
-[`sample_problem/`](../sample_problem/)にも問題例があります。テキスト欄から読み込むときはファイルの中身を貼り付け、CLIで分析するときは`analyze --file sample_problem/a.txt`のように指定できます。
+[`sample_problem/`](../sample_problem/)にも問題例があります。テキスト欄から読み込むときはファイルの中身を貼り付け、CLIで分析するときは`analyze --file sample_problem/minimal-23.txt`のように指定できます。
 
 ## Rustライブラリとして使う
 

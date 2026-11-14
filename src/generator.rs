@@ -2558,6 +2558,8 @@ mod tests {
         assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT.len(), 82);
         assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[17].len(), 7);
         assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[18].len(), 178);
+        assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[22].len(), 1);
+        assert_eq!(MINIMAL_PUZZLES_BY_CLUE_COUNT[23].len(), 1);
         assert!(minimal_puzzle_seeds(u8::MAX).is_empty());
         let bases17 = minimal_puzzle_seeds(17);
         assert_eq!(bases17.len(), 7);
@@ -2572,6 +2574,28 @@ mod tests {
         assert_eq!(bases18.len(), 178);
         for (puzzle, solution) in bases18 {
             assert_eq!(clue_count(puzzle), 18);
+            assert!((0..81).all(|position| {
+                let clue = puzzle[position / 9][position % 9];
+                clue == 0 || clue == solution[position / 9][position % 9]
+            }));
+        }
+
+        for &(puzzle, solution) in minimal_puzzle_seeds(23) {
+            assert_eq!(clue_count(&puzzle), 23);
+            let mut solved = puzzle;
+            assert!(solve(&mut solved));
+            assert_eq!(solved, solution);
+            assert!((0..81).all(|position| {
+                let clue = puzzle[position / 9][position % 9];
+                clue == 0 || clue == solution[position / 9][position % 9]
+            }));
+        }
+
+        for &(puzzle, solution) in minimal_puzzle_seeds(22) {
+            assert_eq!(clue_count(&puzzle), 22);
+            let mut solved = puzzle;
+            assert!(solve(&mut solved));
+            assert_eq!(solved, solution);
             assert!((0..81).all(|position| {
                 let clue = puzzle[position / 9][position % 9];
                 clue == 0 || clue == solution[position / 9][position % 9]

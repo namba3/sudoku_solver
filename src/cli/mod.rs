@@ -477,7 +477,7 @@ mod tests {
             "--puzzle",
             &"0".repeat(81),
             "--file",
-            "sample_problem/a.txt"
+            "sample_problem/minimal-23.txt"
         ])
         .is_err());
         assert!(Cli::try_parse_from(["sudoku", "analyze", "--file", "puzzle.txt"]).is_ok());
