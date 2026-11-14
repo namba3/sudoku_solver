@@ -1582,7 +1582,6 @@ fn app() -> Element {
                                     }
                                     details {
                                         class: "hint-control-section hint-filter-accordion",
-                                        open: true,
                                         summary {
                                             id: "hint-candidate-filter-heading",
                                             class: "hint-section-heading hint-filter-accordion-summary",
