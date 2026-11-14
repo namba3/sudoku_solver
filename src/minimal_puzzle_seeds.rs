@@ -1,14 +1,53 @@
 use crate::Matrix;
 
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PuzzleProperties {
+    /// Whether the original Sudoku candidates contain a Naked Single; `None` means unassessed.
+    pub has_naked_single: Option<bool>,
+    /// Whether the original Sudoku candidates contain a Hidden Single; `None` means unassessed.
+    pub has_hidden_single: Option<bool>,
+}
+
+const NO_SINGLES: PuzzleProperties = PuzzleProperties {
+    has_naked_single: Some(false),
+    has_hidden_single: Some(false),
+};
+const HIDDEN_SINGLE_ONLY: PuzzleProperties = PuzzleProperties {
+    has_naked_single: Some(false),
+    has_hidden_single: Some(true),
+};
+const NAKED_AND_HIDDEN_SINGLES: PuzzleProperties = PuzzleProperties {
+    has_naked_single: Some(true),
+    has_hidden_single: Some(true),
+};
+
+/// A verified minimal puzzle, its unique solution, and cached unfiltered single properties.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct MinimalPuzzleSeed {
+    pub puzzle: Matrix,
+    pub solution: Matrix,
+    pub properties: PuzzleProperties,
+}
+
+impl MinimalPuzzleSeed {
+    pub const fn new(puzzle: Matrix, solution: Matrix, properties: PuzzleProperties) -> Self {
+        Self {
+            puzzle,
+            solution,
+            properties,
+        }
+    }
+}
+
 /// Verified minimal puzzle/solution seeds indexed by clue count.
 /// Seed counts:
 /// 17 clues (7 pairs), 18 clues (178 pairs), 19 clues (1263 pairs), 20 clues (600 pairs),
 /// 22 clues (1 pair), and 23 clues (1 pair).
-pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
-    let mut entries: [&[(Matrix, Matrix)]; 82] = [&[]; 82];
+pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[MinimalPuzzleSeed]; 82] = {
+    let mut entries: [&[MinimalPuzzleSeed]; 82] = [&[]; 82];
 
     entries[17] = &[
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [4, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -31,8 +70,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [8, 5, 6, 1, 2, 9, 7, 4, 3],
                 [2, 7, 4, 8, 3, 6, 1, 5, 9],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -55,8 +95,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 5, 9, 4, 0, 0, 0],
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
@@ -79,8 +120,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [8, 6, 1, 7, 2, 9, 3, 5, 4],
                 [5, 7, 3, 4, 8, 1, 6, 9, 2],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -103,8 +145,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -127,8 +170,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [4, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -151,8 +195,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [8, 5, 6, 1, 7, 9, 2, 4, 3],
                 [2, 7, 4, 8, 3, 6, 1, 5, 9],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 1, 0],
                 [4, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -175,10 +220,11 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [8, 5, 6, 1, 7, 9, 2, 4, 3],
                 [2, 7, 4, 8, 3, 6, 1, 5, 9],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
     ];
     entries[18] = &[
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -201,8 +247,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -225,8 +272,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -249,8 +297,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -273,8 +322,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -297,8 +347,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -321,8 +372,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -345,8 +397,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -369,8 +422,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [4, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -393,8 +447,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -417,8 +472,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -441,8 +497,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -465,8 +522,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -489,8 +547,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -513,8 +572,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -537,8 +597,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -561,8 +622,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -585,8 +647,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -609,8 +672,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -633,8 +697,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -657,8 +722,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -681,8 +747,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -705,8 +772,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -729,8 +797,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -753,8 +822,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -777,8 +847,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -801,8 +872,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -825,8 +897,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 9, 0, 0],
@@ -849,8 +922,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -873,8 +947,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -897,8 +972,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -921,8 +997,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 3, 4, 7, 6, 1, 5, 8],
                 [7, 8, 1, 5, 2, 9, 6, 3, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -945,8 +1022,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -969,8 +1047,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -993,8 +1072,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1017,8 +1097,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1041,8 +1122,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1065,8 +1147,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1089,8 +1172,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1113,8 +1197,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1137,8 +1222,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1161,8 +1247,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1185,8 +1272,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1209,8 +1297,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1233,8 +1322,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1257,8 +1347,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1281,8 +1372,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1305,8 +1397,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1329,8 +1422,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1353,8 +1447,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1377,8 +1472,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1401,8 +1497,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1425,8 +1522,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1449,8 +1547,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1473,8 +1572,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1497,8 +1597,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1521,8 +1622,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1545,8 +1647,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1569,8 +1672,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1593,8 +1697,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1617,8 +1722,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1641,8 +1747,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 3, 4, 7, 6, 1, 5, 8],
                 [7, 8, 1, 5, 2, 9, 6, 3, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1665,8 +1772,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1689,8 +1797,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1713,8 +1822,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -1737,8 +1847,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1761,8 +1872,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -1785,8 +1897,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1809,8 +1922,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1833,8 +1947,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -1857,8 +1972,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1881,8 +1997,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1905,8 +2022,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1929,8 +2047,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -1953,8 +2072,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -1977,8 +2097,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 0],
@@ -2001,8 +2122,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2025,8 +2147,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -2049,8 +2172,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2073,8 +2197,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2097,8 +2222,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2121,8 +2247,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2145,8 +2272,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2169,8 +2297,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2193,8 +2322,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2217,8 +2347,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2241,8 +2372,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2265,8 +2397,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2289,8 +2422,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2313,8 +2447,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 0],
@@ -2337,8 +2472,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2361,8 +2497,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -2385,8 +2522,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -2409,8 +2547,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -2433,8 +2572,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -2457,8 +2597,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2481,8 +2622,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2505,8 +2647,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2529,8 +2672,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2553,8 +2697,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 6, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2577,8 +2722,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2601,8 +2747,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2625,8 +2772,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2649,8 +2797,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2673,8 +2822,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2697,8 +2847,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2721,8 +2872,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2745,8 +2897,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2769,8 +2922,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2793,8 +2947,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -2817,8 +2972,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 7, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 0],
@@ -2841,8 +2997,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2865,8 +3022,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -2889,8 +3047,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2913,8 +3072,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [3, 1, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2937,8 +3097,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2961,8 +3122,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -2985,8 +3147,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3009,8 +3172,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3033,8 +3197,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -3057,8 +3222,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3081,8 +3247,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3105,8 +3272,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3129,8 +3297,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3153,8 +3322,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3177,8 +3347,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3201,8 +3372,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3225,8 +3397,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3249,8 +3422,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 2, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3273,8 +3447,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 9, 0, 0],
@@ -3297,8 +3472,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 4, 1, 2, 7, 8, 6, 3],
                 [8, 3, 6, 9, 4, 5, 1, 2, 7],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3321,8 +3497,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 6, 0, 0, 0, 0, 0, 9, 7],
@@ -3345,8 +3522,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3369,8 +3547,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 0],
@@ -3393,8 +3572,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -3417,8 +3597,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3441,8 +3622,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3465,8 +3647,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3489,8 +3672,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3513,8 +3697,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3537,8 +3722,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3561,8 +3747,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3585,8 +3772,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3609,8 +3797,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3633,8 +3822,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3657,8 +3847,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3681,8 +3872,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3705,8 +3897,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3729,8 +3922,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3753,8 +3947,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3777,8 +3972,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3801,8 +3997,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3825,8 +4022,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [9, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -3849,8 +4047,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3873,8 +4072,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -3897,8 +4097,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3921,8 +4122,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3945,8 +4147,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3969,8 +4172,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -3993,8 +4197,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4017,8 +4222,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4041,8 +4247,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4065,8 +4272,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4089,8 +4297,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4113,8 +4322,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4137,8 +4347,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4161,8 +4372,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4185,8 +4397,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4209,8 +4422,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4233,8 +4447,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4257,8 +4472,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4281,8 +4497,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4305,8 +4522,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4329,8 +4547,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -4353,8 +4572,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4377,8 +4597,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4401,8 +4622,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -4425,8 +4647,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -4449,11 +4672,12 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
     ];
 
     entries[19] = &[
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -4476,8 +4700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -4500,8 +4725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -4524,8 +4750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4548,8 +4775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4572,8 +4800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4596,8 +4825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -4620,8 +4850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -4644,8 +4875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -4668,8 +4900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -4692,8 +4925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -4716,8 +4950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4740,8 +4975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4764,8 +5000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -4788,8 +5025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -4812,8 +5050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4836,8 +5075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4860,8 +5100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4884,8 +5125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4908,8 +5150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4932,8 +5175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4956,8 +5200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -4980,8 +5225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5004,8 +5250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5028,8 +5275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5052,8 +5300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5076,8 +5325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5100,8 +5350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5124,8 +5375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5148,8 +5400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5172,8 +5425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5196,8 +5450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5220,8 +5475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5244,8 +5500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5268,8 +5525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5292,8 +5550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5316,8 +5575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5340,8 +5600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5364,8 +5625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5388,8 +5650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5412,8 +5675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5436,8 +5700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5460,8 +5725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5484,8 +5750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5508,8 +5775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NO_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5532,8 +5800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5556,8 +5825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5580,8 +5850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5604,8 +5875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5628,8 +5900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5652,8 +5925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -5676,8 +5950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5700,8 +5975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5724,8 +6000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5748,8 +6025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -5772,8 +6050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5796,8 +6075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5820,8 +6100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -5844,8 +6125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 0],
@@ -5868,8 +6150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -5892,8 +6175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5916,8 +6200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -5940,8 +6225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5964,8 +6250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -5988,8 +6275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6012,8 +6300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6036,8 +6325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6060,8 +6350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6084,8 +6375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6108,8 +6400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6132,8 +6425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6156,8 +6450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6180,8 +6475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6204,8 +6500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -6228,8 +6525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -6252,8 +6550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6276,8 +6575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6300,8 +6600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6324,8 +6625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6348,8 +6650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6372,8 +6675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6396,8 +6700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6420,8 +6725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6444,8 +6750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6468,8 +6775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6492,8 +6800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6516,8 +6825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6540,8 +6850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6564,8 +6875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6588,8 +6900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6612,8 +6925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -6636,8 +6950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6660,8 +6975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6684,8 +7000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -6708,8 +7025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6732,8 +7050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -6756,8 +7075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -6780,8 +7100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6804,8 +7125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6828,8 +7150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6852,8 +7175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6876,8 +7200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -6900,8 +7225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6924,8 +7250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -6948,8 +7275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -6972,8 +7300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -6996,8 +7325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -7020,8 +7350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7044,8 +7375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7068,8 +7400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7092,8 +7425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7116,8 +7450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7140,8 +7475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7164,8 +7500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -7188,8 +7525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7212,8 +7550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -7236,8 +7575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7260,8 +7600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7284,8 +7625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7308,8 +7650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7332,8 +7675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7356,8 +7700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -7380,8 +7725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7404,8 +7750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7428,8 +7775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7452,8 +7800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7476,8 +7825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7500,8 +7850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7524,8 +7875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7548,8 +7900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -7572,8 +7925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7596,8 +7950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -7620,8 +7975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7644,8 +8000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7668,8 +8025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7692,8 +8050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7716,8 +8075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7740,8 +8100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7764,8 +8125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7788,8 +8150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -7812,8 +8175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7836,8 +8200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7860,8 +8225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -7884,8 +8250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -7908,8 +8275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -7932,8 +8300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -7956,8 +8325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -7980,8 +8350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8004,8 +8375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8028,8 +8400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -8052,8 +8425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8076,8 +8450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8100,8 +8475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8124,8 +8500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8148,8 +8525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8172,8 +8550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -8196,8 +8575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 4, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8220,8 +8600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -8244,8 +8625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 6, 0, 0, 0, 0],
@@ -8268,8 +8650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -8292,8 +8675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8316,8 +8700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -8340,8 +8725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8364,8 +8750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8388,8 +8775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8412,8 +8800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8436,8 +8825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8460,8 +8850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -8484,8 +8875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8508,8 +8900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8532,8 +8925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8556,8 +8950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -8580,8 +8975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 6, 0, 0, 0, 0],
@@ -8604,8 +9000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8628,8 +9025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8652,8 +9050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -8676,8 +9075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 9, 4, 0, 0, 5],
@@ -8700,8 +9100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -8724,8 +9125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 0, 8, 0],
@@ -8748,8 +9150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -8772,8 +9175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8796,8 +9200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8820,8 +9225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8844,8 +9250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8868,8 +9275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 6, 0, 0, 0, 0],
@@ -8892,8 +9300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -8916,8 +9325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -8940,8 +9350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -8964,8 +9375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -8988,8 +9400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9012,8 +9425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9036,8 +9450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9060,8 +9475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9084,8 +9500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9108,8 +9525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9132,8 +9550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -9156,8 +9575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -9180,8 +9600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9204,8 +9625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9228,8 +9650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -9252,8 +9675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9276,8 +9700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9300,8 +9725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -9324,8 +9750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9348,8 +9775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -9372,8 +9800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9396,8 +9825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -9420,8 +9850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -9444,8 +9875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -9468,8 +9900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9492,8 +9925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9516,8 +9950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9540,8 +9975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9564,8 +10000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9588,8 +10025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9612,8 +10050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -9636,8 +10075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9660,8 +10100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9684,8 +10125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9708,8 +10150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9732,8 +10175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9756,8 +10200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9780,8 +10225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9804,8 +10250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9828,8 +10275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -9852,8 +10300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 4, 0, 0],
@@ -9876,8 +10325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9900,8 +10350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9924,8 +10375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -9948,8 +10400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -9972,8 +10425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 7],
@@ -9996,8 +10450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 2, 0, 0, 0, 0, 0, 0],
@@ -10020,8 +10475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10044,8 +10500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10068,8 +10525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -10092,8 +10550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -10116,8 +10575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10140,8 +10600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10164,8 +10625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10188,8 +10650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -10212,8 +10675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -10236,8 +10700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -10260,8 +10725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10284,8 +10750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10308,8 +10775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10332,8 +10800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -10356,8 +10825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -10380,8 +10850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 1, 0, 0, 0, 8, 0],
@@ -10404,8 +10875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 9, 0, 8, 0],
@@ -10428,8 +10900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 3, 0, 2],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10452,8 +10925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10476,8 +10950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10500,8 +10975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10524,8 +11000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10548,8 +11025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10572,8 +11050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10596,8 +11075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10620,8 +11100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10644,8 +11125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10668,8 +11150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10692,8 +11175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10716,8 +11200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10740,8 +11225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10764,8 +11250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10788,8 +11275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10812,8 +11300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10836,8 +11325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10860,8 +11350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10884,8 +11375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10908,8 +11400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10932,8 +11425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10956,8 +11450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -10980,8 +11475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11004,8 +11500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 0, 0, 0, 3, 0, 2],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11028,8 +11525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11052,8 +11550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11076,8 +11575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11100,8 +11600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 6, 0, 0, 0, 0],
@@ -11124,8 +11625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 1, 6, 0, 0, 0, 0],
@@ -11148,8 +11650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 1, 6, 0, 0, 0, 0],
@@ -11172,8 +11675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 1, 6, 0, 0, 0, 0],
@@ -11196,8 +11700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11220,8 +11725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11244,8 +11750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11268,8 +11775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11292,8 +11800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11316,8 +11825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11340,8 +11850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11364,8 +11875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11388,8 +11900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11412,8 +11925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11436,8 +11950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11460,8 +11975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11484,8 +12000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11508,8 +12025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 2],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11532,8 +12050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 2, 0, 6, 0, 0, 0, 0],
@@ -11556,8 +12075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -11580,8 +12100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11604,8 +12125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11628,8 +12150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11652,8 +12175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11676,8 +12200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11700,8 +12225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11724,8 +12250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11748,8 +12275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11772,8 +12300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 4, 0, 0],
@@ -11796,8 +12325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11820,8 +12350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11844,8 +12375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11868,8 +12400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11892,8 +12425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11916,8 +12450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11940,8 +12475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11964,8 +12500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -11988,8 +12525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12012,8 +12550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12036,8 +12575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12060,8 +12600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12084,8 +12625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12108,8 +12650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12132,8 +12675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12156,8 +12700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12180,8 +12725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12204,8 +12750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12228,8 +12775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12252,8 +12800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12276,8 +12825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12300,8 +12850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12324,8 +12875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12348,8 +12900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12372,8 +12925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12396,8 +12950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12420,8 +12975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12444,8 +13000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12468,8 +13025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12492,8 +13050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12516,8 +13075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12540,8 +13100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12564,8 +13125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -12588,8 +13150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12612,8 +13175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12636,8 +13200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12660,8 +13225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12684,8 +13250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -12708,8 +13275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12732,8 +13300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12756,8 +13325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12780,8 +13350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12804,8 +13375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12828,8 +13400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12852,8 +13425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12876,8 +13450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -12900,8 +13475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12924,8 +13500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12948,8 +13525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12972,8 +13550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -12996,8 +13575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13020,8 +13600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13044,8 +13625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13068,8 +13650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13092,8 +13675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13116,8 +13700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13140,8 +13725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13164,8 +13750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13188,8 +13775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13212,8 +13800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13236,8 +13825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13260,8 +13850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13284,8 +13875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13308,8 +13900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13332,8 +13925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13356,8 +13950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -13380,8 +13975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13404,8 +14000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13428,8 +14025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -13452,8 +14050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13476,8 +14075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13500,8 +14100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13524,8 +14125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13548,8 +14150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13572,8 +14175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13596,8 +14200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13620,8 +14225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 5, 0],
                 [0, 0, 2, 0, 6, 0, 0, 0, 0],
@@ -13644,8 +14250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13668,8 +14275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13692,8 +14300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13716,8 +14325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13740,8 +14350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13764,8 +14375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 5, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13788,8 +14400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13812,8 +14425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13836,8 +14450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13860,8 +14475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13884,8 +14500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13908,8 +14525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 2, 0, 6, 0, 0, 0, 0],
@@ -13932,8 +14550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13956,8 +14575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -13980,8 +14600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14004,8 +14625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14028,8 +14650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14052,8 +14675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14076,8 +14700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14100,8 +14725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14124,8 +14750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14148,8 +14775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14172,8 +14800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14196,8 +14825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14220,8 +14850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14244,8 +14875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14268,8 +14900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14292,8 +14925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14316,8 +14950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -14340,8 +14975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 4, 0, 0],
@@ -14364,8 +15000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14388,8 +15025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14412,8 +15050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14436,8 +15075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 4, 0, 0],
@@ -14460,8 +15100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14484,8 +15125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 2, 0, 6, 0, 0, 0, 0],
@@ -14508,8 +15150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14532,8 +15175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14556,8 +15200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14580,8 +15225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14604,8 +15250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14628,8 +15275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -14652,8 +15300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 2, 0, 6, 9, 0, 0, 0],
@@ -14676,8 +15325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -14700,8 +15350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -14724,8 +15375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 2],
                 [0, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -14748,8 +15400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 3, 0, 0, 6, 9, 0, 0, 0],
@@ -14772,8 +15425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -14796,8 +15450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14820,8 +15475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14844,8 +15500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14868,8 +15525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14892,8 +15550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -14916,8 +15575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14940,8 +15600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14964,8 +15625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -14988,8 +15650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15012,8 +15675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15036,8 +15700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15060,8 +15725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15084,8 +15750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15108,8 +15775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -15132,8 +15800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15156,8 +15825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15180,8 +15850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15204,8 +15875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -15228,8 +15900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15252,8 +15925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15276,8 +15950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15300,8 +15975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15324,8 +16000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15348,8 +16025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15372,8 +16050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15396,8 +16075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15420,8 +16100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15444,8 +16125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15468,8 +16150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15492,8 +16175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15516,8 +16200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15540,8 +16225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15564,8 +16250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15588,8 +16275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15612,8 +16300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15636,8 +16325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15660,8 +16350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15684,8 +16375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15708,8 +16400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15732,8 +16425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15756,8 +16450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15780,8 +16475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15804,8 +16500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15828,8 +16525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15852,8 +16550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15876,8 +16575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15900,8 +16600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15924,8 +16625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15948,8 +16650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15972,8 +16675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -15996,8 +16700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16020,8 +16725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16044,8 +16750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16068,8 +16775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16092,8 +16800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -16116,8 +16825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -16140,8 +16850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16164,8 +16875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16188,8 +16900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16212,8 +16925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16236,8 +16950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -16260,8 +16975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16284,8 +17000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16308,8 +17025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16332,8 +17050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16356,8 +17075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16380,8 +17100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16404,8 +17125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16428,8 +17150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16452,8 +17175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16476,8 +17200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16500,8 +17225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16524,8 +17250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16548,8 +17275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16572,8 +17300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16596,8 +17325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16620,8 +17350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16644,8 +17375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16668,8 +17400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16692,8 +17425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16716,8 +17450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16740,8 +17475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16764,8 +17500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16788,8 +17525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 4, 0, 0],
@@ -16812,8 +17550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16836,8 +17575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -16860,8 +17600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16884,8 +17625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16908,8 +17650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16932,8 +17675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16956,8 +17700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -16980,8 +17725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17004,8 +17750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -17028,8 +17775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17052,8 +17800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17076,8 +17825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17100,8 +17850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 4, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17124,8 +17875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17148,8 +17900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17172,8 +17925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17196,8 +17950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17220,8 +17975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 2],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17244,8 +18000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17268,8 +18025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17292,8 +18050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17316,8 +18075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17340,8 +18100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 4, 0, 0],
@@ -17364,8 +18125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 7],
@@ -17388,8 +18150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17412,8 +18175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17436,8 +18200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17460,8 +18225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17484,8 +18250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17508,8 +18275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17532,8 +18300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17556,8 +18325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 4, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17580,8 +18350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17604,8 +18375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17628,8 +18400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17652,8 +18425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17676,8 +18450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17700,8 +18475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17724,8 +18500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17748,8 +18525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17772,8 +18550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17796,8 +18575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17820,8 +18600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17844,8 +18625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17868,8 +18650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17892,8 +18675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -17916,8 +18700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17940,8 +18725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 3, 0, 0, 6, 9, 0, 0, 0],
@@ -17964,8 +18750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -17988,8 +18775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18012,8 +18800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18036,8 +18825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18060,8 +18850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18084,8 +18875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18108,8 +18900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 4, 0, 0],
@@ -18132,8 +18925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 7],
@@ -18156,8 +18950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18180,8 +18975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18204,8 +19000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18228,8 +19025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18252,8 +19050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 4, 0, 0, 2],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18276,8 +19075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18300,8 +19100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18324,8 +19125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 9, 0, 0, 0],
@@ -18348,8 +19150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18372,8 +19175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18396,8 +19200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18420,8 +19225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18444,8 +19250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18468,8 +19275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18492,8 +19300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18516,8 +19325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 4, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 7],
@@ -18540,8 +19350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18564,8 +19375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18588,8 +19400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18612,8 +19425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18636,8 +19450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18660,8 +19475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18684,8 +19500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18708,8 +19525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18732,8 +19550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18756,8 +19575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18780,8 +19600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18804,8 +19625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18828,8 +19650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18852,8 +19675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18876,8 +19700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -18900,8 +19725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18924,8 +19750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18948,8 +19775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 4, 0, 0],
@@ -18972,8 +19800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -18996,8 +19825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19020,8 +19850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19044,8 +19875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19068,8 +19900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19092,8 +19925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19116,8 +19950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19140,8 +19975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19164,8 +20000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19188,8 +20025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19212,8 +20050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19236,8 +20075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19260,8 +20100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19284,8 +20125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19308,8 +20150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19332,8 +20175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19356,8 +20200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19380,8 +20225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19404,8 +20250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19428,8 +20275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19452,8 +20300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -19476,8 +20325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19500,8 +20350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19524,8 +20375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19548,8 +20400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19572,8 +20425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19596,8 +20450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19620,8 +20475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19644,8 +20500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19668,8 +20525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19692,8 +20550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19716,8 +20575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19740,8 +20600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19764,8 +20625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19788,8 +20650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19812,8 +20675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19836,8 +20700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19860,8 +20725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19884,8 +20750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19908,8 +20775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19932,8 +20800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -19956,8 +20825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 4, 0, 0],
@@ -19980,8 +20850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 4, 0, 0],
@@ -20004,8 +20875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -20028,8 +20900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -20052,8 +20925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20076,8 +20950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20100,8 +20975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20124,8 +21000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20148,8 +21025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20172,8 +21050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20196,8 +21075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20220,8 +21100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20244,8 +21125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20268,8 +21150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20292,8 +21175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 3, 0, 0],
                 [5, 3, 0, 0, 6, 0, 4, 0, 0],
@@ -20316,8 +21200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20340,8 +21225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 7, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20364,8 +21250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -20388,8 +21275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20412,8 +21300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -20436,8 +21325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20460,8 +21350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 0, 0, 0],
                 [5, 3, 0, 0, 6, 0, 0, 0, 0],
@@ -20484,8 +21375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20508,8 +21400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 1, 5, 6, 7, 8],
                 [6, 8, 3, 7, 2, 9, 1, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 3, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20532,8 +21425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [3, 8, 1, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 3, 1, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20556,8 +21450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [3, 8, 1, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -20580,8 +21475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 3, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -20604,8 +21500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [3, 8, 1, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20628,8 +21525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 9, 2, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20652,8 +21550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20676,8 +21575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 6, 7, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20700,8 +21600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20724,8 +21625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20748,8 +21650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20772,8 +21675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20796,8 +21700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20820,8 +21725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20844,8 +21750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20868,8 +21775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 4, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20892,8 +21800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20916,8 +21825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20940,8 +21850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20964,8 +21875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 0, 6],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -20988,8 +21900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 6, 5, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 9, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 6, 9, 7],
@@ -21012,8 +21925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 5, 6, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 4, 6, 5],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 6, 9, 7],
@@ -21036,8 +21950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 5, 6, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 4, 6, 5],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21060,8 +21975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 5, 6, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 4, 6, 5],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21084,8 +22000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 5, 2, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21108,8 +22025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 5, 2, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21132,8 +22050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21156,8 +22075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21180,8 +22100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21204,8 +22125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 9, 2, 4, 7, 6, 1, 3, 8],
                 [7, 8, 1, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21228,8 +22150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 7, 2, 4, 6, 5, 1, 3, 8],
                 [1, 3, 8, 7, 2, 9, 4, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21252,8 +22175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 5, 2, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21276,8 +22200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 5, 2, 4, 7, 6, 1, 3, 8],
                 [1, 3, 8, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21300,8 +22225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21324,8 +22250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21348,8 +22275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21372,8 +22300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21396,8 +22325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21420,8 +22350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21444,8 +22375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21468,8 +22400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21492,8 +22425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21516,8 +22450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21540,8 +22475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 6, 7, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21564,8 +22500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21588,8 +22525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21612,8 +22550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21636,8 +22575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21660,8 +22600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21684,8 +22625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21708,8 +22650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21732,8 +22675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21756,8 +22700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21780,8 +22725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21804,8 +22750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21828,8 +22775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21852,8 +22800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21876,8 +22825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21900,8 +22850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21924,8 +22875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 4],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21948,8 +22900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 6, 9, 7, 5, 1, 3, 8],
                 [1, 8, 3, 4, 2, 6, 9, 7, 5],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21972,8 +22925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -21996,8 +22950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22020,8 +22975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22044,8 +23000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22068,8 +23025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 4, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22092,8 +23050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 5, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22116,8 +23075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 5, 6, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 4, 6, 5],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22140,8 +23100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 2, 4, 3, 5, 6, 1, 7, 8],
                 [1, 8, 3, 7, 2, 9, 4, 6, 5],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22164,8 +23125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22188,8 +23150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22212,8 +23175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 2, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22236,8 +23200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22260,8 +23225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22284,8 +23250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22308,8 +23275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22332,8 +23300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22356,8 +23325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [6, 1, 8, 3, 2, 9, 4, 7, 5],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22380,8 +23350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [6, 1, 8, 3, 2, 9, 4, 7, 5],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22404,8 +23375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22428,8 +23400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22452,8 +23425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22476,8 +23450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22500,8 +23475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22524,8 +23500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22548,8 +23525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 2, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22572,8 +23550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22596,8 +23575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22620,8 +23600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 4, 9, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22644,8 +23625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22668,8 +23650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22692,8 +23675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -22716,8 +23700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22740,8 +23725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22764,8 +23750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22788,8 +23775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22812,8 +23800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -22836,8 +23825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -22860,8 +23850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -22884,8 +23875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22908,8 +23900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22932,8 +23925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22956,8 +23950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -22980,8 +23975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23004,8 +24000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23028,8 +24025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -23052,8 +24050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -23076,8 +24075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -23100,8 +24100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -23124,8 +24125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -23148,8 +24150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -23172,8 +24175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -23196,8 +24200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -23220,8 +24225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23244,8 +24250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23268,8 +24275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23292,8 +24300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23316,8 +24325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23340,8 +24350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23364,8 +24375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23388,8 +24400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23412,8 +24425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23436,8 +24450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23460,8 +24475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23484,8 +24500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23508,8 +24525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23532,8 +24550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -23556,8 +24575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -23580,8 +24600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23604,8 +24625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23628,8 +24650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23652,8 +24675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23676,8 +24700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23700,8 +24725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23724,8 +24750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23748,8 +24775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23772,8 +24800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -23796,8 +24825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23820,8 +24850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23844,8 +24875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -23868,8 +24900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -23892,8 +24925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -23916,8 +24950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -23940,8 +24975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23964,8 +25000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -23988,8 +25025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24012,8 +25050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24036,8 +25075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24060,8 +25100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24084,8 +25125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24108,8 +25150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24132,8 +25175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24156,8 +25200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24180,8 +25225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24204,8 +25250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24228,8 +25275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24252,8 +25300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24276,8 +25325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24300,8 +25350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24324,8 +25375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24348,8 +25400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24372,8 +25425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24396,8 +25450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24420,8 +25475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24444,8 +25500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24468,8 +25525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24492,8 +25550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24516,8 +25575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24540,8 +25600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24564,8 +25625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24588,8 +25650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24612,8 +25675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24636,8 +25700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24660,8 +25725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24684,8 +25750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24708,8 +25775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24732,8 +25800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24756,8 +25825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24780,8 +25850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24804,8 +25875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24828,8 +25900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24852,8 +25925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24876,8 +25950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24900,8 +25975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24924,8 +26000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24948,8 +26025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24972,8 +26050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -24996,8 +26075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25020,8 +26100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25044,8 +26125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25068,8 +26150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25092,8 +26175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25116,8 +26200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25140,8 +26225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25164,8 +26250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25188,8 +26275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25212,8 +26300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25236,8 +26325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25260,8 +26350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25284,8 +26375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25308,8 +26400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25332,8 +26425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 5],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25356,8 +26450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -25380,8 +26475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25404,8 +26500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25428,8 +26525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25452,8 +26550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25476,8 +26575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25500,8 +26600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25524,8 +26625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25548,8 +26650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25572,8 +26675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25596,8 +26700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25620,8 +26725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25644,8 +26750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -25668,8 +26775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25692,8 +26800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25716,8 +26825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25740,8 +26850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25764,8 +26875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -25788,8 +26900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -25812,8 +26925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25836,8 +26950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25860,8 +26975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25884,8 +27000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25908,8 +27025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25932,8 +27050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -25956,8 +27075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -25980,8 +27100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -26004,8 +27125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -26028,8 +27150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -26052,8 +27175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -26076,8 +27200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -26100,8 +27225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -26124,8 +27250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26148,8 +27275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26172,8 +27300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26196,8 +27325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26220,8 +27350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26244,8 +27375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26268,8 +27400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26292,8 +27425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26316,8 +27450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26340,8 +27475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26364,8 +27500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -26388,8 +27525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 0, 7],
@@ -26412,8 +27550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 9, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -26436,8 +27575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26460,8 +27600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26484,8 +27625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 4, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26508,8 +27650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26532,8 +27675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26556,8 +27700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26580,8 +27725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26604,8 +27750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26628,8 +27775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26652,8 +27800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26676,8 +27825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26700,8 +27850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26724,8 +27875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26748,8 +27900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26772,8 +27925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26796,8 +27950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26820,8 +27975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26844,8 +28000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26868,8 +28025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26892,8 +28050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26916,8 +28075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26940,8 +28100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -26964,8 +28125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -26988,8 +28150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27012,8 +28175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27036,8 +28200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27060,8 +28225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27084,8 +28250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27108,8 +28275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27132,8 +28300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 2, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27156,8 +28325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27180,8 +28350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27204,8 +28375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27228,8 +28400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27252,8 +28425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27276,8 +28450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27300,8 +28475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -27324,8 +28500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27348,8 +28525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27372,8 +28550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27396,8 +28575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27420,8 +28600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 5],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27444,8 +28625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27468,8 +28650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -27492,8 +28675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27516,8 +28700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27540,8 +28725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27564,8 +28750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27588,8 +28775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27612,8 +28800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 5],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27636,8 +28825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27660,8 +28850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -27684,8 +28875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -27708,8 +28900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27732,8 +28925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27756,8 +28950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27780,8 +28975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27804,8 +29000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27828,8 +29025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27852,8 +29050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27876,8 +29075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27900,8 +29100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27924,8 +29125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27948,8 +29150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27972,8 +29175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -27996,8 +29200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28020,8 +29225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -28044,8 +29250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28068,8 +29275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28092,8 +29300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28116,8 +29325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28140,8 +29350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28164,8 +29375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28188,8 +29400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 5],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28212,8 +29425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28236,8 +29450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28260,8 +29475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28284,8 +29500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28308,8 +29525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28332,8 +29550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28356,8 +29575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28380,8 +29600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28404,8 +29625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28428,8 +29650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -28452,8 +29675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28476,8 +29700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28500,8 +29725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28524,8 +29750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28548,8 +29775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28572,8 +29800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28596,8 +29825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28620,8 +29850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28644,8 +29875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28668,8 +29900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28692,8 +29925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28716,8 +29950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28740,8 +29975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28764,8 +30000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28788,8 +30025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28812,8 +30050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28836,8 +30075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28860,8 +30100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28884,8 +30125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28908,8 +30150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28932,8 +30175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28956,8 +30200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -28980,8 +30225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29004,8 +30250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [6, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29028,8 +30275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 5, 0, 0, 9, 7],
@@ -29052,8 +30300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29076,8 +30325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29100,8 +30350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29124,8 +30375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29148,8 +30400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29172,8 +30425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29196,8 +30450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29220,8 +30475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29244,8 +30500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29268,8 +30525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29292,8 +30550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29316,8 +30575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29340,8 +30600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29364,8 +30625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29388,8 +30650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29412,8 +30675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29436,8 +30700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29460,8 +30725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29484,8 +30750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29508,8 +30775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29532,8 +30800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29556,8 +30825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29580,8 +30850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29604,8 +30875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29628,8 +30900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29652,8 +30925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29676,8 +30950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29700,8 +30975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29724,8 +31000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29748,8 +31025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29772,8 +31050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29796,8 +31075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29820,8 +31100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29844,8 +31125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [3, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 1, 0, 0, 0, 0, 0, 9, 7],
@@ -29868,8 +31150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29892,8 +31175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -29916,8 +31200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 5, 9, 4, 7, 6, 1, 3, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -29940,8 +31225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -29964,8 +31250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -29988,8 +31275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30012,8 +31300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30036,8 +31325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 6, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30060,8 +31350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30084,8 +31375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30108,8 +31400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30132,8 +31425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30156,8 +31450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 4, 9, 0],
@@ -30180,8 +31475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 0],
@@ -30204,8 +31500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [6, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30228,8 +31525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30252,8 +31550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30276,8 +31575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30300,8 +31600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30324,8 +31625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30348,8 +31650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30372,8 +31675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30396,8 +31700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30420,8 +31725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30444,8 +31750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30468,8 +31775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30492,8 +31800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30516,8 +31825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30540,8 +31850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 4, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30564,8 +31875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30588,8 +31900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30612,8 +31925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30636,8 +31950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30660,8 +31975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30684,8 +32000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30708,8 +32025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30732,8 +32050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 2, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30756,8 +32075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 3, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30780,8 +32100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30804,8 +32125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30828,8 +32150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30852,8 +32175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30876,8 +32200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30900,8 +32225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30924,8 +32250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30948,8 +32275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30972,8 +32300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -30996,8 +32325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -31020,8 +32350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -31044,8 +32375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [7, 0, 0, 1, 0, 0, 0, 0, 0],
                 [0, 0, 8, 0, 0, 0, 0, 9, 7],
@@ -31068,8 +32400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 9, 4, 3, 7, 6, 1, 5, 8],
                 [1, 8, 3, 5, 2, 9, 6, 7, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31092,8 +32425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -31116,8 +32450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31140,8 +32475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31164,8 +32500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 0, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31188,8 +32525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31212,8 +32550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31236,8 +32575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31260,8 +32600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31284,8 +32625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31308,8 +32650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31332,8 +32675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31356,8 +32700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31380,8 +32725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31404,8 +32750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31428,8 +32775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31452,8 +32800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31476,8 +32825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31500,8 +32850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31524,8 +32875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31548,8 +32900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31572,8 +32925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31596,8 +32950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31620,8 +32975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31644,8 +33000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31668,8 +33025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31692,8 +33050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31716,8 +33075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31740,8 +33100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31764,8 +33125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31788,8 +33150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31812,8 +33175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31836,8 +33200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31860,8 +33225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31884,8 +33250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31908,8 +33275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31932,8 +33300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31956,8 +33325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -31980,8 +33350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32004,8 +33375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32028,8 +33400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32052,8 +33425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32076,8 +33450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32100,8 +33475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32124,8 +33500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32148,8 +33525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32172,8 +33550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32196,8 +33575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32220,8 +33600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32244,8 +33625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32268,8 +33650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32292,8 +33675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32316,8 +33700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -32340,8 +33725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 3, 0, 9, 7],
@@ -32364,8 +33750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32388,8 +33775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32412,8 +33800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32436,8 +33825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32460,8 +33850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32484,8 +33875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 6, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32508,8 +33900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -32532,8 +33925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -32556,8 +33950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 2, 0, 0, 0, 9, 7],
@@ -32580,8 +33975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32604,8 +34000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32628,8 +34025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32652,8 +34050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32676,8 +34075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32700,8 +34100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32724,8 +34125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32748,8 +34150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32772,8 +34175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32796,8 +34200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32820,8 +34225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 9, 7],
@@ -32844,8 +34250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32868,8 +34275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 0, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -32892,8 +34300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -32916,8 +34325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 6, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -32940,8 +34350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -32964,8 +34375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -32988,8 +34400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -33012,8 +34425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 0, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -33036,8 +34450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33060,8 +34475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33084,8 +34500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33108,8 +34525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33132,8 +34550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33156,8 +34575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33180,8 +34600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 7, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33204,8 +34625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -33228,8 +34650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -33252,8 +34675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -33276,8 +34700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -33300,8 +34725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -33324,8 +34750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -33348,8 +34775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33372,8 +34800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33396,8 +34825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33420,8 +34850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33444,8 +34875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33468,8 +34900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33492,8 +34925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33516,8 +34950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33540,8 +34975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33564,8 +35000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33588,8 +35025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33612,8 +35050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33636,8 +35075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33660,8 +35100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33684,8 +35125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33708,8 +35150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33732,8 +35175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33756,8 +35200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33780,8 +35225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33804,8 +35250,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33828,8 +35275,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33852,8 +35300,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33876,8 +35325,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33900,8 +35350,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33924,8 +35375,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33948,8 +35400,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33972,8 +35425,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -33996,8 +35450,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34020,8 +35475,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34044,8 +35500,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [1, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34068,8 +35525,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 8, 0, 0, 0, 0, 0, 9, 7],
@@ -34092,8 +35550,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -34116,8 +35575,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 6, 0, 0, 0, 0, 9, 7],
@@ -34140,8 +35600,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34164,8 +35625,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34188,8 +35650,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34212,8 +35675,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34236,8 +35700,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34260,8 +35725,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34284,8 +35750,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34308,8 +35775,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34332,8 +35800,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34356,8 +35825,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34380,8 +35850,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34404,8 +35875,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34428,8 +35900,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34452,8 +35925,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34476,8 +35950,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34500,8 +35975,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 9, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34524,8 +36000,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34548,8 +36025,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34572,8 +36050,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34596,8 +36075,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34620,8 +36100,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34644,8 +36125,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34668,8 +36150,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34692,8 +36175,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34716,8 +36200,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34740,8 +36225,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 1, 4, 8, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 9, 7],
@@ -34764,11 +36250,12 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [5, 2, 9, 4, 7, 6, 1, 3, 8],
                 [7, 1, 8, 3, 2, 9, 6, 5, 4],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
     ];
 
     entries[20] = &[
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34791,8 +36278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 3, 0, 0],
@@ -34815,8 +36303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -34839,8 +36328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 0, 0, 0, 6, 0, 4, 0, 0],
                 [3, 0, 0, 0, 0, 8, 1, 0, 0],
@@ -34863,8 +36353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [9, 1, 4, 2, 8, 6, 3, 5, 7],
                 [6, 3, 7, 9, 1, 5, 8, 4, 2],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34887,8 +36378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34911,8 +36403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34935,8 +36428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34959,8 +36453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -34983,8 +36478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35007,8 +36503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35031,8 +36528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35055,8 +36553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35079,8 +36578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35103,8 +36603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35127,8 +36628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 0],
@@ -35151,8 +36653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35175,8 +36678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35199,8 +36703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 5, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35223,8 +36728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35247,8 +36753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35271,8 +36778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35295,8 +36803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35319,8 +36828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35343,8 +36853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35367,8 +36878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35391,8 +36903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35415,8 +36928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35439,8 +36953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35463,8 +36978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 2, 0, 3, 0, 4, 0, 0, 5],
@@ -35487,8 +37003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 8, 3, 0, 4, 0, 0, 5],
@@ -35511,8 +37028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35535,8 +37053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35559,8 +37078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35583,8 +37103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35607,8 +37128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35631,8 +37153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35655,8 +37178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35679,8 +37203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35703,8 +37228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35727,8 +37253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35751,8 +37278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35775,8 +37303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35799,8 +37328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35823,8 +37353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35847,8 +37378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35871,8 +37403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35895,8 +37428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35919,8 +37453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35943,8 +37478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35967,8 +37503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -35991,8 +37528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 0],
@@ -36015,8 +37553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 0, 0, 0],
@@ -36039,8 +37578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 0, 0, 0],
@@ -36063,8 +37603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 3, 0, 0],
@@ -36087,8 +37628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36111,8 +37653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36135,8 +37678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36159,8 +37703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36183,8 +37728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -36207,8 +37753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36231,8 +37778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36255,8 +37803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36279,8 +37828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36303,8 +37853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36327,8 +37878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36351,8 +37903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36375,8 +37928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 0, 0, 0],
@@ -36399,8 +37953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36423,8 +37978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -36447,8 +38003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -36471,8 +38028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36495,8 +38053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -36519,8 +38078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36543,8 +38103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36567,8 +38128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36591,8 +38153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36615,8 +38178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36639,8 +38203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36663,8 +38228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36687,8 +38253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 2, 0, 3, 0, 4, 0, 0, 5],
@@ -36711,8 +38278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 8, 3, 0, 4, 0, 0, 5],
@@ -36735,8 +38303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36759,8 +38328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36783,8 +38353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36807,8 +38378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36831,8 +38403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36855,8 +38428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36879,8 +38453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36903,8 +38478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -36927,8 +38503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -36951,8 +38528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 8, 7],
@@ -36975,8 +38553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -36999,8 +38578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37023,8 +38603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37047,8 +38628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37071,8 +38653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37095,8 +38678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37119,8 +38703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37143,8 +38728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -37167,8 +38753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37191,8 +38778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37215,8 +38803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 5, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37239,8 +38828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37263,8 +38853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37287,8 +38878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37311,8 +38903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37335,8 +38928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37359,8 +38953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -37383,8 +38978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -37407,8 +39003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -37431,8 +39028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -37455,8 +39053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -37479,8 +39078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37503,8 +39103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 5, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37527,8 +39128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37551,8 +39153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37575,8 +39178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37599,8 +39203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37623,8 +39228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37647,8 +39253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37671,8 +39278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37695,8 +39303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37719,8 +39328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37743,8 +39353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37767,8 +39378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37791,8 +39403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37815,8 +39428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37839,8 +39453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37863,8 +39478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37887,8 +39503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 5, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37911,8 +39528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37935,8 +39553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37959,8 +39578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -37983,8 +39603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -38007,8 +39628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 7],
@@ -38031,8 +39653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38055,8 +39678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38079,8 +39703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38103,8 +39728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38127,8 +39753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38151,8 +39778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -38175,8 +39803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38199,8 +39828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38223,8 +39853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38247,8 +39878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38271,8 +39903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [2, 3, 0, 0, 4, 0, 0, 0, 0],
                 [0, 0, 0, 6, 0, 0, 0, 0, 0],
@@ -38295,8 +39928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [3, 6, 8, 4, 5, 7, 2, 9, 1],
                 [7, 2, 4, 3, 1, 9, 8, 5, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -38319,8 +39953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38343,8 +39978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38367,8 +40003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38391,8 +40028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38415,8 +40053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38439,8 +40078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38463,8 +40103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38487,8 +40128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38511,8 +40153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -38535,8 +40178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -38559,8 +40203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -38583,8 +40228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -38607,8 +40253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38631,8 +40278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 0, 0, 0, 5],
@@ -38655,8 +40303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38679,8 +40328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38703,8 +40353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38727,8 +40378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38751,8 +40403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38775,8 +40428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -38799,8 +40453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38823,8 +40478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38847,8 +40503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -38871,8 +40528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38895,8 +40553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 2, 0, 3, 0, 4, 0, 0, 5],
@@ -38919,8 +40578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38943,8 +40603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38967,8 +40628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -38991,8 +40653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39015,8 +40678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39039,8 +40703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39063,8 +40728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39087,8 +40753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39111,8 +40778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39135,8 +40803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39159,8 +40828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39183,8 +40853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39207,8 +40878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39231,8 +40903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39255,8 +40928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -39279,8 +40953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39303,8 +40978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39327,8 +41003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39351,8 +41028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -39375,8 +41053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39399,8 +41078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39423,8 +41103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -39447,8 +41128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39471,8 +41153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39495,8 +41178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39519,8 +41203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39543,8 +41228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -39567,8 +41253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39591,8 +41278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39615,8 +41303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39639,8 +41328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39663,8 +41353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39687,8 +41378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39711,8 +41403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39735,8 +41428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -39759,8 +41453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39783,8 +41478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39807,8 +41503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -39831,8 +41528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39855,8 +41553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39879,8 +41578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39903,8 +41603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39927,8 +41628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -39951,8 +41653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -39975,8 +41678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -39999,8 +41703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -40023,8 +41728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -40047,8 +41753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40071,8 +41778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40095,8 +41803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40119,8 +41828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40143,8 +41853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -40167,8 +41878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40191,8 +41903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40215,8 +41928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40239,8 +41953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40263,8 +41978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40287,8 +42003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40311,8 +42028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40335,8 +42053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40359,8 +42078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40383,8 +42103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40407,8 +42128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40431,8 +42153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40455,8 +42178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40479,8 +42203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -40503,8 +42228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40527,8 +42253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40551,8 +42278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40575,8 +42303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40599,8 +42328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40623,8 +42353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40647,8 +42378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -40671,8 +42403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 7],
@@ -40695,8 +42428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40719,8 +42453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -40743,8 +42478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40767,8 +42503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40791,8 +42528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -40815,8 +42553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40839,8 +42578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40863,8 +42603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40887,8 +42628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40911,8 +42653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40935,8 +42678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -40959,8 +42703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -40983,8 +42728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41007,8 +42753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41031,8 +42778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41055,8 +42803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41079,8 +42828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41103,8 +42853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41127,8 +42878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41151,8 +42903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41175,8 +42928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41199,8 +42953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -41223,8 +42978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41247,8 +43003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41271,8 +43028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41295,8 +43053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41319,8 +43078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41343,8 +43103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41367,8 +43128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 0],
@@ -41391,8 +43153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41415,8 +43178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41439,8 +43203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41463,8 +43228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -41487,8 +43253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -41511,8 +43278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -41535,8 +43303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -41559,8 +43328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -41583,8 +43353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -41607,8 +43378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -41631,8 +43403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41655,8 +43428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41679,8 +43453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 7],
@@ -41703,8 +43478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 7],
@@ -41727,8 +43503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41751,8 +43528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41775,8 +43553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41799,8 +43578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41823,8 +43603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41847,8 +43628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41871,8 +43653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41895,8 +43678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41919,8 +43703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41943,8 +43728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -41967,8 +43753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -41991,8 +43778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -42015,8 +43803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42039,8 +43828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42063,8 +43853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42087,8 +43878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42111,8 +43903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42135,8 +43928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -42159,8 +43953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42183,8 +43978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42207,8 +44003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42231,8 +44028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42255,8 +44053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42279,8 +44078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42303,8 +44103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 7],
@@ -42327,8 +44128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 8, 7],
@@ -42351,8 +44153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42375,8 +44178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 8, 7],
@@ -42399,8 +44203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 8, 7],
@@ -42423,8 +44228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42447,8 +44253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42471,8 +44278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42495,8 +44303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42519,8 +44328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42543,8 +44353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42567,8 +44378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42591,8 +44403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42615,8 +44428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42639,8 +44453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -42663,8 +44478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -42687,8 +44503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -42711,8 +44528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -42735,8 +44553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -42759,8 +44578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42783,8 +44603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42807,8 +44628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42831,8 +44653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42855,8 +44678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42879,8 +44703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42903,8 +44728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42927,8 +44753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42951,8 +44778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -42975,8 +44803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -42999,8 +44828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -43023,8 +44853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -43047,8 +44878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -43071,8 +44903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -43095,8 +44928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43119,8 +44953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43143,8 +44978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43167,8 +45003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43191,8 +45028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43215,8 +45053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43239,8 +45078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43263,8 +45103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 7, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -43287,8 +45128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -43311,8 +45153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -43335,8 +45178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43359,8 +45203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43383,8 +45228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 2, 0, 0, 0, 0, 0, 7],
@@ -43407,8 +45253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 7],
@@ -43431,8 +45278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43455,8 +45303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43479,8 +45328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43503,8 +45353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43527,8 +45378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43551,8 +45403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43575,8 +45428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43599,8 +45453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43623,8 +45478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43647,8 +45503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43671,8 +45528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 2, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -43695,8 +45553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43719,8 +45578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43743,8 +45603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43767,8 +45628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43791,8 +45653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43815,8 +45678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -43839,8 +45703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -43863,8 +45728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43887,8 +45753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43911,8 +45778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43935,8 +45803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43959,8 +45828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -43983,8 +45853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 7],
@@ -44007,8 +45878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44031,8 +45903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44055,8 +45928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44079,8 +45953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44103,8 +45978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44127,8 +46003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44151,8 +46028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44175,8 +46053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44199,8 +46078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44223,8 +46103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44247,8 +46128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44271,8 +46153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44295,8 +46178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44319,8 +46203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44343,8 +46228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -44367,8 +46253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44391,8 +46278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44415,8 +46303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44439,8 +46328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44463,8 +46353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44487,8 +46378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44511,8 +46403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44535,8 +46428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44559,8 +46453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -44583,8 +46478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44607,8 +46503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44631,8 +46528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44655,8 +46553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44679,8 +46578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44703,8 +46603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44727,8 +46628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -44751,8 +46653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -44775,8 +46678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44799,8 +46703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -44823,8 +46728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -44847,8 +46753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 8, 7],
@@ -44871,8 +46778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 7, 5],
@@ -44895,8 +46803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 2, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44919,8 +46828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44943,8 +46853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44967,8 +46878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -44991,8 +46903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45015,8 +46928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45039,8 +46953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45063,8 +46978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45087,8 +47003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45111,8 +47028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45135,8 +47053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45159,8 +47078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45183,8 +47103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 7, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -45207,8 +47128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -45231,8 +47153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 1, 0, 0, 0, 0, 0],
@@ -45255,8 +47178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 7],
@@ -45279,8 +47203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -45303,8 +47228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -45327,8 +47253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -45351,8 +47278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 0, 0, 0, 5],
@@ -45375,8 +47303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45399,8 +47328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45423,8 +47353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45447,8 +47378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45471,8 +47403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -45495,8 +47428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45519,8 +47453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45543,8 +47478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45567,8 +47503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -45591,8 +47528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -45615,8 +47553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -45639,8 +47578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -45663,8 +47603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -45687,8 +47628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45711,8 +47653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45735,8 +47678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45759,8 +47703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45783,8 +47728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45807,8 +47753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45831,8 +47778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45855,8 +47803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45879,8 +47828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45903,8 +47853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45927,8 +47878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -45951,8 +47903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45975,8 +47928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -45999,8 +47953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46023,8 +47978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -46047,8 +48003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 4, 0, 0, 5],
@@ -46071,8 +48028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 0],
@@ -46095,8 +48053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -46119,8 +48078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -46143,8 +48103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -46167,8 +48128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 1, 0, 0, 0, 0, 0],
@@ -46191,8 +48153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46215,8 +48178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 7],
@@ -46239,8 +48203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 7],
@@ -46263,8 +48228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46287,8 +48253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46311,8 +48278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46335,8 +48303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46359,8 +48328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46383,8 +48353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46407,8 +48378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46431,8 +48403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46455,8 +48428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46479,8 +48453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 0, 0],
@@ -46503,8 +48478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46527,8 +48503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46551,8 +48528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46575,8 +48553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -46599,8 +48578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 8, 0],
@@ -46623,8 +48603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46647,8 +48628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46671,8 +48653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46695,8 +48678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -46719,8 +48703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -46743,8 +48728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -46767,8 +48753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46791,8 +48778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46815,8 +48803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 9, 0, 0, 0],
@@ -46839,8 +48828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46863,8 +48853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 9, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -46887,8 +48878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46911,8 +48903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46935,8 +48928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46959,8 +48953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -46983,8 +48978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 5, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -47007,8 +49003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -47031,8 +49028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -47055,8 +49053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -47079,8 +49078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -47103,8 +49103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -47127,8 +49128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47151,8 +49153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47175,8 +49178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47199,8 +49203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 6, 0, 0, 8, 0],
@@ -47223,8 +49228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 4, 8, 0],
@@ -47247,8 +49253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47271,8 +49278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47295,8 +49303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47319,8 +49328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47343,8 +49353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47367,8 +49378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47391,8 +49403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47415,8 +49428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47439,8 +49453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47463,8 +49478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -47487,8 +49503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47511,8 +49528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47535,8 +49553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47559,8 +49578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -47583,8 +49603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 0],
@@ -47607,8 +49628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47631,8 +49653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 4, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47655,8 +49678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47679,8 +49703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47703,8 +49728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47727,8 +49753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 0],
@@ -47751,8 +49778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47775,8 +49803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 8, 7],
@@ -47799,8 +49828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47823,8 +49853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47847,8 +49878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47871,8 +49903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 8, 7],
@@ -47895,8 +49928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [4, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 0, 0, 0, 5],
@@ -47919,8 +49953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 1, 0, 0, 0],
                 [0, 0, 0, 3, 0, 0, 0, 0, 5],
@@ -47943,8 +49978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -47967,8 +50003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -47991,8 +50028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48015,8 +50053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48039,8 +50078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48063,8 +50103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48087,8 +50128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48111,8 +50153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48135,8 +50178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48159,8 +50203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48183,8 +50228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48207,8 +50253,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48231,8 +50278,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48255,8 +50303,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 2],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48279,8 +50328,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48303,8 +50353,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48327,8 +50378,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48351,8 +50403,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48375,8 +50428,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 5, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48399,8 +50453,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48423,8 +50478,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48447,8 +50503,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48471,8 +50528,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48495,8 +50553,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 3, 0, 0],
                 [0, 3, 0, 0, 0, 0, 0, 0, 0],
@@ -48519,8 +50578,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48543,8 +50603,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48567,8 +50628,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 1, 0, 0, 8, 0, 3, 0, 0],
                 [5, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48591,8 +50653,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -48615,8 +50678,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 8, 0, 0, 0, 2],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -48639,8 +50703,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 2, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48663,8 +50728,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48687,8 +50753,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 8],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48711,8 +50778,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48735,8 +50803,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48759,8 +50828,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48783,8 +50853,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48807,8 +50878,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48831,8 +50903,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48855,8 +50928,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48879,8 +50953,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48903,8 +50978,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -48927,8 +51003,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            NAKED_AND_HIDDEN_SINGLES,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 0, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -48951,8 +51028,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -48975,8 +51053,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 4, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -48999,8 +51078,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 3, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -49023,8 +51103,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -49047,8 +51128,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -49071,8 +51153,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -49095,8 +51178,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [6, 1, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 0, 0, 0, 0, 0, 7],
@@ -49119,8 +51203,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [4, 6, 3, 8, 9, 2, 1, 7, 5],
                 [8, 9, 1, 5, 7, 3, 2, 4, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 0, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 7, 5],
@@ -49143,8 +51228,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
-        (
+        MinimalPuzzleSeed::new(
             [
                 [0, 6, 7, 0, 0, 0, 0, 0, 0],
                 [0, 0, 0, 3, 0, 4, 0, 0, 5],
@@ -49167,9 +51253,10 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
                 [2, 8, 6, 4, 3, 9, 7, 5, 1],
                 [3, 4, 9, 1, 7, 5, 8, 2, 6],
             ],
+            HIDDEN_SINGLE_ONLY,
         ),
     ];
-    entries[22] = &[(
+    entries[22] = &[MinimalPuzzleSeed::new(
         [
             [0, 8, 0, 0, 0, 0, 1, 5, 0],
             [4, 0, 6, 5, 0, 9, 0, 8, 0],
@@ -49192,8 +51279,9 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
             [6, 3, 8, 9, 5, 2, 7, 1, 4],
             [1, 5, 7, 3, 8, 4, 2, 9, 6],
         ],
+        NO_SINGLES,
     )];
-    entries[23] = &[(
+    entries[23] = &[MinimalPuzzleSeed::new(
         [
             [0, 4, 6, 0, 0, 5, 7, 0, 0],
             [0, 0, 0, 9, 0, 0, 0, 0, 0],
@@ -49216,14 +51304,85 @@ pub static MINIMAL_PUZZLES_BY_CLUE_COUNT: [&[(Matrix, Matrix)]; 82] = {
             [5, 7, 9, 3, 1, 6, 4, 8, 2],
             [2, 1, 4, 8, 5, 7, 3, 6, 9],
         ],
+        NO_SINGLES,
     )];
     entries
 };
 
 /// Return the built-in puzzle/solution pairs for a clue count.
-pub fn minimal_puzzle_seeds(clue_count: u8) -> &'static [(Matrix, Matrix)] {
+pub fn minimal_puzzle_seeds(clue_count: u8) -> &'static [MinimalPuzzleSeed] {
     MINIMAL_PUZZLES_BY_CLUE_COUNT
         .get(usize::from(clue_count))
         .copied()
         .unwrap_or(&[])
+}
+
+#[cfg(test)]
+mod tests {
+    use super::MINIMAL_PUZZLES_BY_CLUE_COUNT;
+    use crate::{candidates_for, Matrix};
+
+    fn recompute_single_presence(puzzle: &Matrix) -> (bool, bool) {
+        let mut candidates = [[0u16; 9]; 9];
+        for row in 0..9 {
+            for column in 0..9 {
+                if (1..=9).contains(&puzzle[row][column]) {
+                    continue;
+                }
+                candidates[row][column] = candidates_for(puzzle, column, row)
+                    .into_iter()
+                    .fold(0u16, |mask, digit| mask | (1 << (digit - 1)));
+            }
+        }
+
+        let has_naked_single = candidates
+            .iter()
+            .flatten()
+            .any(|mask| mask.count_ones() == 1);
+
+        let mut units = Vec::with_capacity(27);
+        for row in 0..9 {
+            units.push((0..9).map(|column| (row, column)).collect::<Vec<_>>());
+        }
+        for column in 0..9 {
+            units.push((0..9).map(|row| (row, column)).collect::<Vec<_>>());
+        }
+        for box_row in (0..9).step_by(3) {
+            for box_column in (0..9).step_by(3) {
+                units.push(
+                    (box_row..box_row + 3)
+                        .flat_map(|row| {
+                            (box_column..box_column + 3).map(move |column| (row, column))
+                        })
+                        .collect::<Vec<_>>(),
+                );
+            }
+        }
+
+        let has_hidden_single = units.iter().any(|unit| {
+            (1..=9).any(|digit| {
+                unit.iter()
+                    .filter(|&&(row, column)| {
+                        !(1..=9).contains(&puzzle[row][column])
+                            && candidates[row][column] & (1 << (digit - 1)) != 0
+                    })
+                    .count()
+                    == 1
+            })
+        });
+
+        (has_naked_single, has_hidden_single)
+    }
+
+    #[test]
+    fn cached_single_properties_match_the_solver_candidates() {
+        for seed in MINIMAL_PUZZLES_BY_CLUE_COUNT
+            .iter()
+            .flat_map(|seeds| seeds.iter())
+        {
+            let (has_naked_single, has_hidden_single) = recompute_single_presence(&seed.puzzle);
+            assert_eq!(seed.properties.has_naked_single, Some(has_naked_single));
+            assert_eq!(seed.properties.has_hidden_single, Some(has_hidden_single));
+        }
+    }
 }

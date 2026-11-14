@@ -1,4 +1,6 @@
-pub use crate::minimal_puzzle_seeds::{minimal_puzzle_seeds, MINIMAL_PUZZLES_BY_CLUE_COUNT};
+pub use crate::minimal_puzzle_seeds::{
+    minimal_puzzle_seeds, MinimalPuzzleSeed, PuzzleProperties, MINIMAL_PUZZLES_BY_CLUE_COUNT,
+};
 pub mod minimal_search;
 
 use crate::solver::AlternativeSolutionStatus;
@@ -136,12 +138,14 @@ fn solution_difference(solution: &Matrix, alternative: &Matrix) -> u128 {
 pub fn verified_17_clue_base(seed: u64) -> (Matrix, Matrix) {
     let bases = minimal_puzzle_seeds(17);
     let index = (SplitMix64(seed).next() % bases.len() as u64) as usize;
-    bases[index]
+    (bases[index].puzzle, bases[index].solution)
 }
 
 /// Return every built-in verified 17-clue seed, including the original anchor.
 pub fn verified_17_clue_bases() -> impl Iterator<Item = (Matrix, Matrix)> {
-    minimal_puzzle_seeds(17).iter().copied()
+    minimal_puzzle_seeds(17)
+        .iter()
+        .map(|seed| (seed.puzzle, seed.solution))
 }
 
 fn verified_minimal_base_up_to(rng: &mut SplitMix64, max_clue_count: usize) -> (Matrix, Matrix) {
@@ -154,7 +158,7 @@ fn verified_minimal_base_up_to(rng: &mut SplitMix64, max_clue_count: usize) -> (
     for clue_count in MIN_CLUE_COUNT..=max_clue_count {
         let pool = minimal_puzzle_seeds(clue_count as u8);
         if index < pool.len() {
-            return pool[index];
+            return (pool[index].puzzle, pool[index].solution);
         }
         index -= pool.len();
     }
@@ -2563,7 +2567,9 @@ mod tests {
         assert!(minimal_puzzle_seeds(u8::MAX).is_empty());
         let bases17 = minimal_puzzle_seeds(17);
         assert_eq!(bases17.len(), 7);
-        for &(puzzle, solution) in bases17 {
+        for seed in bases17 {
+            let puzzle = seed.puzzle;
+            let solution = seed.solution;
             assert_eq!(clue_count(&puzzle), MIN_CLUE_COUNT);
             let mut solved = puzzle;
             assert!(solve(&mut solved));
@@ -2572,15 +2578,19 @@ mod tests {
 
         let bases18 = minimal_puzzle_seeds(18);
         assert_eq!(bases18.len(), 178);
-        for (puzzle, solution) in bases18 {
-            assert_eq!(clue_count(puzzle), 18);
+        for seed in bases18 {
+            let puzzle = seed.puzzle;
+            let solution = seed.solution;
+            assert_eq!(clue_count(&puzzle), 18);
             assert!((0..81).all(|position| {
                 let clue = puzzle[position / 9][position % 9];
                 clue == 0 || clue == solution[position / 9][position % 9]
             }));
         }
 
-        for &(puzzle, solution) in minimal_puzzle_seeds(23) {
+        for seed in minimal_puzzle_seeds(23) {
+            let puzzle = seed.puzzle;
+            let solution = seed.solution;
             assert_eq!(clue_count(&puzzle), 23);
             let mut solved = puzzle;
             assert!(solve(&mut solved));
@@ -2591,7 +2601,9 @@ mod tests {
             }));
         }
 
-        for &(puzzle, solution) in minimal_puzzle_seeds(22) {
+        for seed in minimal_puzzle_seeds(22) {
+            let puzzle = seed.puzzle;
+            let solution = seed.solution;
             assert_eq!(clue_count(&puzzle), 22);
             let mut solved = puzzle;
             assert!(solve(&mut solved));
@@ -2671,14 +2683,14 @@ mod tests {
 
     #[test]
     fn triple_witness_pruning_keeps_only_sets_that_distinguish_the_solution() {
-        let mut alternative = minimal_puzzle_seeds(17)[0].1;
+        let mut alternative = minimal_puzzle_seeds(17)[0].solution;
         for position in [0, 4, 8] {
             let value = alternative[position / 9][position % 9];
             alternative[position / 9][position % 9] = if value == 1 { 2 } else { 1 };
         }
         let mut candidates = vec![(0, 1, 2), (1, 2, 3), (4, 5, 6), (9, 10, 11)];
         prune_triple_witnesses(
-            &minimal_puzzle_seeds(17)[0].1,
+            &minimal_puzzle_seeds(17)[0].solution,
             &alternative,
             &mut candidates,
         );
@@ -2689,8 +2701,11 @@ mod tests {
     fn adding_three_known_solution_clues_preserves_the_selected_values() {
         let reduced = [[0; 9]; 9];
         let candidate =
-            with_three_solution_clues(&reduced, &minimal_puzzle_seeds(17)[0].1, 0, 1, 2);
-        assert_eq!(candidate[0][0..3], minimal_puzzle_seeds(17)[0].1[0][0..3]);
+            with_three_solution_clues(&reduced, &minimal_puzzle_seeds(17)[0].solution, 0, 1, 2);
+        assert_eq!(
+            candidate[0][0..3],
+            minimal_puzzle_seeds(17)[0].solution[0][0..3]
+        );
         assert_eq!(clue_count(&candidate), 3);
     }
 
@@ -2699,8 +2714,8 @@ mod tests {
         let mut bridge_counts = Vec::new();
         let error = generate_diverse_from_parent_with_progress(
             19,
-            minimal_puzzle_seeds(17)[0].0,
-            minimal_puzzle_seeds(17)[0].1,
+            minimal_puzzle_seeds(17)[0].puzzle,
+            minimal_puzzle_seeds(17)[0].solution,
             DiverseBudget {
                 max_attempts: 1,
                 max_nodes_per_uniqueness_check: 100_000,
@@ -2827,7 +2842,7 @@ mod tests {
 
     #[test]
     fn alternative_solution_difference_becomes_an_unavoidable_set() {
-        let mut alternative = minimal_puzzle_seeds(17)[0].1;
+        let mut alternative = minimal_puzzle_seeds(17)[0].solution;
         for value in alternative.iter_mut().flatten() {
             if *value == 1 {
                 *value = 2;
@@ -2836,27 +2851,35 @@ mod tests {
             }
         }
         let mut sets = Vec::new();
-        add_unavoidable_set(&minimal_puzzle_seeds(17)[0].1, &alternative, &mut sets);
+        add_unavoidable_set(
+            &minimal_puzzle_seeds(17)[0].solution,
+            &alternative,
+            &mut sets,
+        );
         assert_eq!(sets.len(), 1);
         assert!(sets[0].count_ones() > 0);
-        add_unavoidable_set(&minimal_puzzle_seeds(17)[0].1, &alternative, &mut sets);
+        add_unavoidable_set(
+            &minimal_puzzle_seeds(17)[0].solution,
+            &alternative,
+            &mut sets,
+        );
         assert_eq!(sets.len(), 1);
     }
 
     #[test]
     fn witness_guided_swap_adds_a_differing_cell_and_keeps_seventeen_clues() {
         let removed = (0..81)
-            .find(|&position| minimal_puzzle_seeds(17)[0].0[position / 9][position % 9] != 0)
+            .find(|&position| minimal_puzzle_seeds(17)[0].puzzle[position / 9][position % 9] != 0)
             .unwrap();
-        let mut reduced = minimal_puzzle_seeds(17)[0].0;
+        let mut reduced = minimal_puzzle_seeds(17)[0].puzzle;
         reduced[removed / 9][removed % 9] = 0;
         let ProbeResult::Multiple { alternative, .. } =
-            find_alternative_solution(&reduced, &minimal_puzzle_seeds(17)[0].1, 100_000)
+            find_alternative_solution(&reduced, &minimal_puzzle_seeds(17)[0].solution, 100_000)
         else {
             panic!("expected a second completion after removing a clue");
         };
         let difference = (0..81).fold(0u128, |mask, position| {
-            if minimal_puzzle_seeds(17)[0].1[position / 9][position % 9]
+            if minimal_puzzle_seeds(17)[0].solution[position / 9][position % 9]
                 != alternative[position / 9][position % 9]
             {
                 mask | (1u128 << position)
@@ -2917,30 +2940,30 @@ mod tests {
     #[test]
     fn counterexample_prunes_only_added_clues_that_leave_it_valid() {
         let removed = (0..81)
-            .find(|&position| minimal_puzzle_seeds(17)[0].0[position / 9][position % 9] != 0)
+            .find(|&position| minimal_puzzle_seeds(17)[0].puzzle[position / 9][position % 9] != 0)
             .unwrap();
-        let mut reduced = minimal_puzzle_seeds(17)[0].0;
+        let mut reduced = minimal_puzzle_seeds(17)[0].puzzle;
         reduced[removed / 9][removed % 9] = 0;
         let super::ProbeResult::Multiple { alternative, .. } =
-            find_alternative_solution(&reduced, &minimal_puzzle_seeds(17)[0].1, 100_000)
+            find_alternative_solution(&reduced, &minimal_puzzle_seeds(17)[0].solution, 100_000)
         else {
             panic!("expected a counterexample completion");
         };
         let mut candidates: Vec<_> = (0..81)
             .filter(|&position| {
-                minimal_puzzle_seeds(17)[0].0[position / 9][position % 9] == 0
+                minimal_puzzle_seeds(17)[0].puzzle[position / 9][position % 9] == 0
                     && position != removed
             })
             .collect();
         let before = candidates.len();
         prune_witness_survivors(
-            &minimal_puzzle_seeds(17)[0].1,
+            &minimal_puzzle_seeds(17)[0].solution,
             &alternative,
             &mut candidates,
         );
         assert!(candidates.len() < before);
         assert!(candidates.iter().all(|&position| {
-            minimal_puzzle_seeds(17)[0].1[position / 9][position % 9]
+            minimal_puzzle_seeds(17)[0].solution[position / 9][position % 9]
                 != alternative[position / 9][position % 9]
         }));
     }
@@ -2949,14 +2972,14 @@ mod tests {
     fn two_swap_pairs_are_unique_and_counterexamples_filter_them_soundly() {
         let pairs = position_pairs(&[1, 4, 7]);
         assert_eq!(pairs, vec![(1, 4), (1, 7), (4, 7)]);
-        let mut alternative = minimal_puzzle_seeds(17)[0].1;
+        let mut alternative = minimal_puzzle_seeds(17)[0].solution;
         let first = alternative[0][0];
         alternative[0][0] = if first == 1 { 2 } else { 1 };
         let second = alternative[0][1];
         alternative[0][1] = if second == 1 { 2 } else { 1 };
         let mut candidates = vec![(0, 1), (0, 2), (2, 3)];
         prune_pair_witnesses(
-            &minimal_puzzle_seeds(17)[0].1,
+            &minimal_puzzle_seeds(17)[0].solution,
             &alternative,
             &mut candidates,
         );
@@ -2981,7 +3004,7 @@ mod tests {
 
     #[test]
     fn unavoidable_witness_cache_reuses_only_compatible_witnesses_and_is_bounded() {
-        let alternative = minimal_puzzle_seeds(17)[0].1.map(|row| {
+        let alternative = minimal_puzzle_seeds(17)[0].solution.map(|row| {
             row.map(|digit| match digit {
                 1 => 2,
                 2 => 1,
@@ -2995,7 +3018,7 @@ mod tests {
         assert_eq!(cache.compatible_with(&compatible_core).count(), 1);
 
         let mut incompatible_core = compatible_core;
-        incompatible_core[0][7] = minimal_puzzle_seeds(17)[0].1[0][7];
+        incompatible_core[0][7] = minimal_puzzle_seeds(17)[0].solution[0][7];
         assert_eq!(cache.compatible_with(&incompatible_core).count(), 0);
 
         for marker in 0..=UNAVOIDABLE_WITNESS_CACHE_CAPACITY {
@@ -3025,8 +3048,8 @@ mod tests {
             };
             let error = generate_diverse_from_parent(
                 7,
-                minimal_puzzle_seeds(17)[0].0,
-                minimal_puzzle_seeds(17)[0].1,
+                minimal_puzzle_seeds(17)[0].puzzle,
+                minimal_puzzle_seeds(17)[0].solution,
                 budget,
             )
             .expect_err("one check cannot exhaust either strategy");
@@ -3052,8 +3075,8 @@ mod tests {
         };
         let puzzle = generate_diverse_from_parent(
             20_261_027,
-            minimal_puzzle_seeds(17)[0].0,
-            minimal_puzzle_seeds(17)[0].1,
+            minimal_puzzle_seeds(17)[0].puzzle,
+            minimal_puzzle_seeds(17)[0].solution,
             budget,
         )
         .expect("the fixed 18-clue path has a verified child");
@@ -3061,7 +3084,7 @@ mod tests {
         assert_eq!(solution_count(&puzzle), 1);
         assert_ne!(
             crate::symmetry::canonical_key(&puzzle),
-            crate::symmetry::canonical_key(&minimal_puzzle_seeds(17)[0].0)
+            crate::symmetry::canonical_key(&minimal_puzzle_seeds(17)[0].puzzle)
         );
     }
 
@@ -3069,8 +3092,8 @@ mod tests {
     fn configurable_intermediate_route_finds_a_solution_changing_unique_child() {
         let puzzle = generate_diverse_from_parent(
             20_261_027,
-            minimal_puzzle_seeds(17)[0].0,
-            minimal_puzzle_seeds(17)[0].1,
+            minimal_puzzle_seeds(17)[0].puzzle,
+            minimal_puzzle_seeds(17)[0].solution,
             DiverseBudget {
                 max_attempts: 1,
                 max_nodes_per_uniqueness_check: 100_000,
@@ -3085,7 +3108,7 @@ mod tests {
         assert_eq!(solution_count(&puzzle), 1);
         let mut solution = puzzle;
         assert!(solve(&mut solution));
-        assert_ne!(solution, minimal_puzzle_seeds(17)[0].1);
+        assert_ne!(solution, minimal_puzzle_seeds(17)[0].solution);
     }
 
     #[test]
@@ -3099,7 +3122,12 @@ mod tests {
             strategy: DiverseStrategy::Adaptive,
         };
         assert!(matches!(
-            generate_diverse_from_parent(1, [[0; 9]; 9], minimal_puzzle_seeds(17)[0].1, budget),
+            generate_diverse_from_parent(
+                1,
+                [[0; 9]; 9],
+                minimal_puzzle_seeds(17)[0].solution,
+                budget
+            ),
             Err(super::DiverseGenerationError::InvalidParent)
         ));
     }
@@ -3113,8 +3141,8 @@ mod tests {
         assert_eq!(
             generate_diverse_from_parent(
                 7,
-                minimal_puzzle_seeds(17)[0].0,
-                minimal_puzzle_seeds(17)[0].1,
+                minimal_puzzle_seeds(17)[0].puzzle,
+                minimal_puzzle_seeds(17)[0].solution,
                 budget,
             ),
             Err(super::DiverseGenerationError::StrategyDoesNotUseParent)
@@ -3133,8 +3161,8 @@ mod tests {
         };
         let error = generate_diverse_from_parent(
             1,
-            minimal_puzzle_seeds(17)[0].0,
-            minimal_puzzle_seeds(17)[0].1,
+            minimal_puzzle_seeds(17)[0].puzzle,
+            minimal_puzzle_seeds(17)[0].solution,
             budget,
         )
         .expect_err("one neighborhood check is not enough to establish a new class");
@@ -3171,9 +3199,9 @@ mod tests {
 
     #[test]
     fn cached_base_solution_matches_the_solver() {
-        let mut solved = minimal_puzzle_seeds(17)[0].0;
+        let mut solved = minimal_puzzle_seeds(17)[0].puzzle;
         assert!(solve(&mut solved));
-        assert_eq!(solved, minimal_puzzle_seeds(17)[0].1);
+        assert_eq!(solved, minimal_puzzle_seeds(17)[0].solution);
     }
 
     #[test]
@@ -3185,10 +3213,13 @@ mod tests {
             transpose: true,
         };
 
-        let transformed = transform.apply(&minimal_puzzle_seeds(17)[0].1);
+        let transformed = transform.apply(&minimal_puzzle_seeds(17)[0].solution);
         for y in 0..9 {
             for x in 0..9 {
-                assert_eq!(transformed[x][y], minimal_puzzle_seeds(17)[0].1[y][x]);
+                assert_eq!(
+                    transformed[x][y],
+                    minimal_puzzle_seeds(17)[0].solution[y][x]
+                );
             }
         }
     }
@@ -3198,7 +3229,7 @@ mod tests {
         for seed in 0..256 {
             let mut rng = SplitMix64(seed);
             let transform = SudokuTransform::random(&mut rng);
-            let mut transformed = transform.apply(&minimal_puzzle_seeds(17)[0].1);
+            let mut transformed = transform.apply(&minimal_puzzle_seeds(17)[0].solution);
             let expected = transformed;
 
             assert!(solve(&mut transformed), "seed={seed}");

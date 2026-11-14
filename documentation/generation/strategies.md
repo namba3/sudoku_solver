@@ -6,7 +6,7 @@
 
 `generator::generate_puzzle_with_clues(seed, clue_count)`は、目標以下のヒント数にある検証済みMinimal盤面をまとめたプールから1件をseedで選び、盤面と解に同じランダム対称変換を100回連続で適用します。目標数に足りない分だけ、その解から数字を追加します。たとえば18ヒント生成ではMinimal 17・18、19ヒント生成ではMinimal 17〜19が選択対象です。該当するヒント数の組み込み盤面がまだない場合は、存在する少ないヒント数の盤面から補います。選択確率はヒント数ごとではなく、プール内の各盤面で均等です。同じseedとヒント数なら同じ盤面を返します。
 
-基準盤面は[`MINIMAL_PUZZLES_BY_CLUE_COUNT`](../../src/minimal_puzzle_seeds.rs)に、添字がヒント数となる配列で保持しています。現在の組み込み数は17ヒント7組、18ヒント178組、19ヒント1263組、20ヒント600組です。Archiveへ登録した問題と、生成器に組み込んだseedは別管理です。追加したseedを配列へ反映する手順は[Archive資料](archive.md)を参照してください。
+基準盤面は[`MINIMAL_PUZZLES_BY_CLUE_COUNT`](../../src/minimal_puzzle_seeds.rs)に、添字がヒント数となる配列で保持しています。現在の組み込み数は17ヒント7組、18ヒント178組、19ヒント1263組、20ヒント600組、22ヒント1組、23ヒント1組です。各要素は盤面・解・性質を持つ`MinimalPuzzleSeed`で、性質には候補フィルター適用前のNaked Single / Hidden Singleの有無を保存します。`Some(true/false)`は評価済み、`None`は未評価を表します。Minimal性と一意解性はこの配列への登録条件として保証します。Archiveへ登録した問題と、生成器に組み込んだseedは別管理です。追加したseedを配列へ反映する手順は[Archive資料](archive.md)を参照してください。
 
 ## Diverse
 
