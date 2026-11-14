@@ -1016,6 +1016,21 @@ h1 {
     text-align: left;
 }
 
+.hint-filter-accordion-summary {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.hint-filter-accordion[open] > .hint-filter-accordion-summary {
+    margin-bottom: 8px;
+}
+
+.hint-filter-accordion-summary:focus-visible {
+    border-radius: 4px;
+    outline: 2px solid var(--palette-98a2b3);
+    outline-offset: 3px;
+}
+
 .candidate-filter-iterations {
     display: grid;
     grid-template-columns: minmax(0, 1fr) 5.5em;

@@ -12,6 +12,9 @@ pub(super) struct CandidateFilterOptions {
     pub(super) hidden_subsets: bool,
     pub(super) fish: bool,
     pub(super) xy_wing: bool,
+    pub(super) skyscraper: bool,
+    pub(super) two_string_kite: bool,
+    pub(super) w_wing: bool,
     pub(super) iterations: usize,
 }
 
@@ -23,6 +26,9 @@ impl Default for CandidateFilterOptions {
             hidden_subsets: false,
             fish: false,
             xy_wing: false,
+            skyscraper: false,
+            two_string_kite: false,
+            w_wing: false,
             iterations: 1,
         }
     }
@@ -35,6 +41,9 @@ impl CandidateFilterOptions {
             || self.hidden_subsets
             || self.fish
             || self.xy_wing
+            || self.skyscraper
+            || self.two_string_kite
+            || self.w_wing
     }
 }
 
@@ -161,6 +170,16 @@ fn filter_candidates(
             }
             if options.xy_wing {
                 collect_xy_wing_eliminations(&round_candidates, &mut eliminations);
+            }
+            if options.skyscraper {
+                collect_skyscraper_eliminations(&round_candidates, false, &mut eliminations);
+                collect_skyscraper_eliminations(&round_candidates, true, &mut eliminations);
+            }
+            if options.two_string_kite {
+                collect_two_string_kite_eliminations(&round_candidates, &mut eliminations);
+            }
+            if options.w_wing {
+                collect_w_wing_eliminations(&round_candidates, &mut eliminations);
             }
             let mut next_candidates = round_candidates;
             apply_eliminations(&mut next_candidates, &eliminations);
@@ -307,6 +326,213 @@ fn collect_xy_wing_eliminations(candidates: &[[u16; 9]; 9], eliminations: &mut [
                 }
             }
         }
+    }
+}
+
+fn collect_skyscraper_eliminations(
+    candidates: &[[u16; 9]; 9],
+    transposed: bool,
+    eliminations: &mut [[u16; 9]; 9],
+) {
+    let peer_masks = cell_peer_masks();
+    for digit in 0..9 {
+        let bit = 1 << digit;
+        for first_base in 0..9 {
+            let first_positions =
+                candidate_positions_in_line(candidates, first_base, bit, transposed);
+            if first_positions.count_ones() != 2 {
+                continue;
+            }
+            for second_base in first_base + 1..9 {
+                let second_positions =
+                    candidate_positions_in_line(candidates, second_base, bit, transposed);
+                if second_positions.count_ones() != 2 {
+                    continue;
+                }
+                let shared_positions = first_positions & second_positions;
+                if shared_positions.count_ones() != 1 {
+                    continue;
+                }
+
+                let first_endpoint = first_positions & !shared_positions;
+                let second_endpoint = second_positions & !shared_positions;
+                if first_endpoint.count_ones() != 1 || second_endpoint.count_ones() != 1 {
+                    continue;
+                }
+                let first_offset = first_endpoint.trailing_zeros() as usize;
+                let second_offset = second_endpoint.trailing_zeros() as usize;
+                let (first_row, first_column) = if transposed {
+                    (first_offset, first_base)
+                } else {
+                    (first_base, first_offset)
+                };
+                let (second_row, second_column) = if transposed {
+                    (second_offset, second_base)
+                } else {
+                    (second_base, second_offset)
+                };
+                collect_common_peer_elimination(
+                    first_row * 9 + first_column,
+                    second_row * 9 + second_column,
+                    bit,
+                    &peer_masks,
+                    eliminations,
+                );
+            }
+        }
+    }
+}
+
+fn candidate_positions_in_line(
+    candidates: &[[u16; 9]; 9],
+    line: usize,
+    digit: u16,
+    transposed: bool,
+) -> u16 {
+    (0..9).fold(0u16, |positions, offset| {
+        let mask = if transposed {
+            candidates[offset][line]
+        } else {
+            candidates[line][offset]
+        };
+        if mask & digit != 0 {
+            positions | (1 << offset)
+        } else {
+            positions
+        }
+    })
+}
+
+fn collect_two_string_kite_eliminations(
+    candidates: &[[u16; 9]; 9],
+    eliminations: &mut [[u16; 9]; 9],
+) {
+    let peer_masks = cell_peer_masks();
+    for digit in 0..9 {
+        let bit = 1 << digit;
+        for row in 0..9 {
+            let row_positions = candidate_positions_in_line(candidates, row, bit, false);
+            if row_positions.count_ones() != 2 {
+                continue;
+            }
+            for column in 0..9 {
+                let column_positions = candidate_positions_in_line(candidates, column, bit, true);
+                if column_positions.count_ones() != 2 {
+                    continue;
+                }
+
+                for row_endpoint_column in 0..9 {
+                    if row_positions & (1 << row_endpoint_column) == 0 {
+                        continue;
+                    }
+                    for column_endpoint_row in 0..9 {
+                        if column_positions & (1 << column_endpoint_row) == 0 {
+                            continue;
+                        }
+                        let row_link_cell = row * 9 + row_endpoint_column;
+                        let column_link_cell = column_endpoint_row * 9 + column;
+                        if row_link_cell == column_link_cell
+                            || (row / 3, row_endpoint_column / 3)
+                                != (column_endpoint_row / 3, column / 3)
+                        {
+                            continue;
+                        }
+
+                        let row_far_column =
+                            (row_positions & !(1 << row_endpoint_column)).trailing_zeros() as usize;
+                        let column_far_row = (column_positions & !(1 << column_endpoint_row))
+                            .trailing_zeros() as usize;
+                        collect_common_peer_elimination(
+                            row * 9 + row_far_column,
+                            column_far_row * 9 + column,
+                            bit,
+                            &peer_masks,
+                            eliminations,
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn collect_w_wing_eliminations(candidates: &[[u16; 9]; 9], eliminations: &mut [[u16; 9]; 9]) {
+    let peer_masks = cell_peer_masks();
+    let units = candidate_units();
+    let mut strong_links = [[(0usize, 0usize); 27]; 9];
+    let mut strong_link_counts = [0usize; 9];
+
+    for digit in 0..9 {
+        let bit = 1 << digit;
+        for unit in &units {
+            let mut link_cells = [0usize; 2];
+            let mut link_count = 0;
+            for &(row, column) in unit {
+                if candidates[row][column] & bit == 0 {
+                    continue;
+                }
+                if link_count < 2 {
+                    link_cells[link_count] = row * 9 + column;
+                }
+                link_count += 1;
+            }
+            if link_count == 2 {
+                let index = strong_link_counts[digit];
+                strong_links[digit][index] = (link_cells[0], link_cells[1]);
+                strong_link_counts[digit] += 1;
+            }
+        }
+    }
+
+    for first in 0..81 {
+        let first_candidates = candidates[first / 9][first % 9];
+        if first_candidates.count_ones() != 2 {
+            continue;
+        }
+        for second in first + 1..81 {
+            if candidates[second / 9][second % 9] != first_candidates {
+                continue;
+            }
+            let mut digits = first_candidates;
+            while digits != 0 {
+                let strong_digit = digits & digits.wrapping_neg();
+                digits &= digits - 1;
+                let elimination_digit = first_candidates & !strong_digit;
+
+                let digit_index = strong_digit.trailing_zeros() as usize;
+                for link_index in 0..strong_link_counts[digit_index] {
+                    let (link_first, link_second) = strong_links[digit_index][link_index];
+                    let direct = peer_masks[first] & (1u128 << link_first) != 0
+                        && peer_masks[second] & (1u128 << link_second) != 0;
+                    let reversed = peer_masks[first] & (1u128 << link_second) != 0
+                        && peer_masks[second] & (1u128 << link_first) != 0;
+                    if direct || reversed {
+                        collect_common_peer_elimination(
+                            first,
+                            second,
+                            elimination_digit,
+                            &peer_masks,
+                            eliminations,
+                        );
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn collect_common_peer_elimination(
+    first: usize,
+    second: usize,
+    digit: u16,
+    peer_masks: &[u128; 81],
+    eliminations: &mut [[u16; 9]; 9],
+) {
+    let mut targets = peer_masks[first] & peer_masks[second];
+    while targets != 0 {
+        let target = targets.trailing_zeros() as usize;
+        targets &= targets - 1;
+        eliminations[target / 9][target % 9] |= digit;
     }
 }
 
@@ -883,6 +1109,89 @@ mod tests {
         assert_eq!(filtered.candidate_masks[1][1] & digit_eight, 0);
         assert_ne!(filtered.candidate_masks[1][1] & other, 0);
         assert_ne!(filtered.candidate_masks[0][8] & digit_eight, 0);
+    }
+
+    #[test]
+    fn skyscraper_eliminates_from_common_peers_in_rows_and_columns() {
+        let digit = 1 << 4;
+        let other = 1;
+
+        for transposed in [false, true] {
+            let mut candidates = [[0u16; 9]; 9];
+            for (row, column) in [(0, 1), (0, 7), (3, 1), (3, 8)] {
+                let (row, column) = if transposed {
+                    (column, row)
+                } else {
+                    (row, column)
+                };
+                candidates[row][column] = digit;
+            }
+            let (target_row, target_column) = if transposed { (8, 1) } else { (1, 8) };
+            candidates[target_row][target_column] = digit | other;
+
+            let filtered = filter_candidates(
+                candidates,
+                CandidateFilterOptions {
+                    skyscraper: true,
+                    ..CandidateFilterOptions::default()
+                },
+            );
+
+            assert_eq!(
+                filtered.candidate_masks[target_row][target_column] & digit,
+                0
+            );
+            assert_ne!(
+                filtered.candidate_masks[target_row][target_column] & other,
+                0
+            );
+        }
+    }
+
+    #[test]
+    fn two_string_kite_eliminates_from_cells_seeing_both_far_endpoints() {
+        let digit = 1 << 4;
+        let other = 1;
+        let mut candidates = [[0u16; 9]; 9];
+        candidates[0][3] = digit;
+        candidates[0][7] = digit;
+        candidates[1][4] = digit;
+        candidates[5][4] = digit;
+        candidates[5][7] = digit | other;
+
+        let filtered = filter_candidates(
+            candidates,
+            CandidateFilterOptions {
+                two_string_kite: true,
+                ..CandidateFilterOptions::default()
+            },
+        );
+
+        assert_eq!(filtered.candidate_masks[5][7] & digit, 0);
+        assert_ne!(filtered.candidate_masks[5][7] & other, 0);
+    }
+
+    #[test]
+    fn w_wing_uses_a_strong_link_to_eliminate_the_other_pair_digit() {
+        let digit_three = 1 << 2;
+        let digit_seven = 1 << 6;
+        let mut candidates = [[0u16; 9]; 9];
+        candidates[0][0] = digit_three | digit_seven;
+        candidates[4][4] = digit_three | digit_seven;
+        candidates[2][0] = digit_seven | (1 << 0);
+        candidates[2][4] = digit_seven | (1 << 1);
+        candidates[0][4] = digit_three | (1 << 8);
+
+        let filtered = filter_candidates(
+            candidates,
+            CandidateFilterOptions {
+                w_wing: true,
+                ..CandidateFilterOptions::default()
+            },
+        );
+
+        assert_eq!(filtered.candidate_masks[0][4] & digit_three, 0);
+        assert_ne!(filtered.candidate_masks[0][4] & (1 << 8), 0);
     }
 
     #[test]

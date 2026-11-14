@@ -592,6 +592,9 @@ fn app() -> Element {
     let mut show_hidden_subsets = use_signal(|| false);
     let mut show_fish = use_signal(|| false);
     let mut show_xy_wing = use_signal(|| false);
+    let mut show_skyscraper = use_signal(|| false);
+    let mut show_two_string_kite = use_signal(|| false);
+    let mut show_w_wing = use_signal(|| false);
     let mut single_hints_use_candidate_filters = use_signal(|| true);
     let mut candidate_filter_iterations = use_signal(|| "1".to_string());
     let mut show_naked_single_hints = use_signal(|| false);
@@ -673,13 +676,19 @@ fn app() -> Element {
         || show_naked_subsets()
         || show_hidden_subsets()
         || show_fish()
-        || show_xy_wing();
+        || show_xy_wing()
+        || show_skyscraper()
+        || show_two_string_kite()
+        || show_w_wing();
     let candidate_filter_options = CandidateFilterOptions {
         locked_candidates: show_locked_candidates(),
         naked_subsets: show_naked_subsets(),
         hidden_subsets: show_hidden_subsets(),
         fish: show_fish(),
         xy_wing: show_xy_wing(),
+        skyscraper: show_skyscraper(),
+        two_string_kite: show_two_string_kite(),
+        w_wing: show_w_wing(),
         iterations: candidate_filter_iterations()
             .parse::<usize>()
             .unwrap_or(1)
@@ -722,6 +731,12 @@ fn app() -> Element {
     let fish_help = t(lang, "help.fish");
     let xy_wing_label = t(lang, "action.xy_wing");
     let xy_wing_help = t(lang, "help.xy_wing");
+    let skyscraper_label = t(lang, "action.skyscraper");
+    let skyscraper_help = t(lang, "help.skyscraper");
+    let two_string_kite_label = t(lang, "action.two_string_kite");
+    let two_string_kite_help = t(lang, "help.two_string_kite");
+    let w_wing_label = t(lang, "action.w_wing");
+    let w_wing_help = t(lang, "help.w_wing");
     let candidate_filter_iterations_label = t(lang, "label.candidate_filter_iterations");
     let candidate_filter_iterations_help = t(lang, "help.candidate_filter_iterations");
     let naked_single_hint_label = t(lang, "action.naked_single_hint");
@@ -1565,13 +1580,12 @@ fn app() -> Element {
                                             }
                                         }
                                     }
-                                    section {
-                                        class: "hint-control-section",
-                                        role: "group",
-                                        aria_labelledby: "hint-candidate-filter-heading",
-                                        h3 {
+                                    details {
+                                        class: "hint-control-section hint-filter-accordion",
+                                        open: true,
+                                        summary {
                                             id: "hint-candidate-filter-heading",
-                                            class: "hint-section-heading",
+                                            class: "hint-section-heading hint-filter-accordion-summary",
                                             "{candidate_filter_section}"
                                         }
                                         div {
@@ -1594,6 +1608,9 @@ fn app() -> Element {
                                                     show_hidden_subsets.set(enable_all);
                                                     show_fish.set(enable_all);
                                                     show_xy_wing.set(enable_all);
+                                                    show_skyscraper.set(enable_all);
+                                                    show_two_string_kite.set(enable_all);
+                                                    show_w_wing.set(enable_all);
                                                 },
                                                 span {
                                                     class: "hint-switch-track",
@@ -1724,6 +1741,66 @@ fn app() -> Element {
                                                 aria_checked: "{show_xy_wing()}",
                                                 aria_label: "{xy_wing_label}",
                                                 onclick: move |_| show_xy_wing.set(!show_xy_wing()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{skyscraper_label}" }
+                                                p { class: "hint-switch-description", "{skyscraper_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_skyscraper()}",
+                                                aria_label: "{skyscraper_label}",
+                                                onclick: move |_| show_skyscraper.set(!show_skyscraper()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{two_string_kite_label}" }
+                                                p { class: "hint-switch-description", "{two_string_kite_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_two_string_kite()}",
+                                                aria_label: "{two_string_kite_label}",
+                                                onclick: move |_| show_two_string_kite.set(!show_two_string_kite()),
+                                                span {
+                                                    class: "hint-switch-track",
+                                                    span { class: "hint-switch-thumb" }
+                                                }
+                                            }
+                                        }
+                                        div {
+                                            class: "hint-switch-row",
+                                            div {
+                                                class: "hint-switch-copy",
+                                                span { class: "hint-switch-label", "{w_wing_label}" }
+                                                p { class: "hint-switch-description", "{w_wing_help}" }
+                                            }
+                                            button {
+                                                class: "hint-switch",
+                                                r#type: "button",
+                                                role: "switch",
+                                                aria_checked: "{show_w_wing()}",
+                                                aria_label: "{w_wing_label}",
+                                                onclick: move |_| show_w_wing.set(!show_w_wing()),
                                                 span {
                                                     class: "hint-switch-track",
                                                     span { class: "hint-switch-thumb" }
