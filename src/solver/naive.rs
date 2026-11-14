@@ -295,11 +295,11 @@ fn is_legal(board: &Matrix, x: usize, y: usize, digit: u8) -> bool {
 
 #[cfg(test)]
 mod tests {
-    use super::{check_uniqueness, find_alternative_solution, solve, Backend, SolutionSearch};
-    use crate::solver::{
-        backend::SolverBackend, optimized, AlternativeSolutionStatus, SearchEvent, UniquenessStatus,
-    };
+    use super::{Backend, SolutionSearch, check_uniqueness, find_alternative_solution, solve};
     use crate::Matrix;
+    use crate::solver::{
+        AlternativeSolutionStatus, SearchEvent, UniquenessStatus, backend::SolverBackend, optimized,
+    };
 
     const PUZZLE: Matrix = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],

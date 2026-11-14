@@ -3,7 +3,7 @@
 //! The spatial group contains 2 * 1,296 * 1,296 transforms. Digit relabeling is
 //! normalized by first occurrence, so the 9! digit permutations are never listed.
 
-use crate::{check_uniqueness, Matrix, UniquenessStatus};
+use crate::{Matrix, UniquenessStatus, check_uniqueness};
 use std::collections::{HashMap, VecDeque};
 use std::sync::OnceLock;
 
@@ -303,7 +303,7 @@ pub fn canonicalize_solution(
         UniquenessStatus::Unknown => {
             return Err(CanonicalizationError::UniquenessUnknown {
                 explored_nodes: nodes,
-            })
+            });
         }
     }
 

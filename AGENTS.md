@@ -2,7 +2,7 @@
 
 ## Project shape
 
-- This is a Rust 2021 Sudoku solver with a Dioxus 0.7 WebAssembly UI.
+- This is a Rust 2024 Sudoku solver with a Dioxus 0.7 WebAssembly UI.
 - `src/lib.rs` exposes `Matrix`, `solve`, `candidates_for`, `find_hint`, and the unrestricted `SolutionSearch` iterator; keep the solver usable independently of the UI.
 - `src/solver.rs` contains solving and enumeration implementations, result events, and unit tests.
 - `src/main.rs` contains the browser UI and text conversion helpers.

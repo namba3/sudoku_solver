@@ -1,6 +1,6 @@
 //! Reference minimal-puzzle search by random clue-subset sampling.
 
-use super::{random_clue_subset, validate, MinimalClueSearchBackend, MinimalSearchBudget};
+use super::{MinimalClueSearchBackend, MinimalSearchBudget, random_clue_subset, validate};
 use crate::archive::minimality;
 use crate::archive::{MinimalPuzzleAnalysis, VerificationStatus};
 use crate::generator::{DiverseGenerationError, SplitMix64};

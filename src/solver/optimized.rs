@@ -1030,8 +1030,8 @@ impl Iterator for Candidates {
 #[cfg(test)]
 mod tests {
     use super::{
-        check_uniqueness, find_hint, solve, Candidates, HintError, HintTechnique, SearchEvent,
-        SolutionSearch, StateManager, UniquenessStatus,
+        Candidates, HintError, HintTechnique, SearchEvent, SolutionSearch, StateManager,
+        UniquenessStatus, check_uniqueness, find_hint, solve,
     };
     use crate::Matrix;
 
@@ -1506,11 +1506,13 @@ mod tests {
         );
         let alternative = multiple.alternative.expect("witness is returned");
         assert_ne!(alternative, SOLUTION);
-        assert!(ambiguous
-            .iter()
-            .flatten()
-            .zip(alternative.iter().flatten())
-            .all(|(&clue, &value)| !(1..=9).contains(&clue) || clue == value));
+        assert!(
+            ambiguous
+                .iter()
+                .flatten()
+                .zip(alternative.iter().flatten())
+                .all(|(&clue, &value)| !(1..=9).contains(&clue) || clue == value)
+        );
 
         let trusted_multiple =
             super::find_alternative_solution_for_known_solution(&ambiguous, &SOLUTION, 100);

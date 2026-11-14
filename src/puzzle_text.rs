@@ -59,7 +59,7 @@ pub fn parse_board_text(text: &str) -> Result<Matrix, PuzzleTextError> {
 
 #[cfg(test)]
 mod tests {
-    use super::{parse_board_text, PuzzleTextError};
+    use super::{PuzzleTextError, parse_board_text};
 
     #[test]
     fn parses_crlf_text_and_all_empty_markers() {

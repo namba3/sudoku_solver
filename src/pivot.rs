@@ -498,36 +498,39 @@ fn enumerate_deletion_batch(
             let sender = sender.clone();
             let tasks = tasks;
             let next_task = &next_task;
-            scope.spawn(move || loop {
-                let task_index = next_task.fetch_add(1, Ordering::Relaxed);
-                let Some(&(result_index, removed_position, board)) = tasks.get(task_index) else {
-                    break;
-                };
-                let task_started = Instant::now();
-                let mut send_progress = |progress| {
-                    let _ = sender.send(DeletionWorkerMessage::Progress {
+            scope.spawn(move || {
+                loop {
+                    let task_index = next_task.fetch_add(1, Ordering::Relaxed);
+                    let Some(&(result_index, removed_position, board)) = tasks.get(task_index)
+                    else {
+                        break;
+                    };
+                    let task_started = Instant::now();
+                    let mut send_progress = |progress| {
+                        let _ = sender.send(DeletionWorkerMessage::Progress {
+                            task_index,
+                            progress,
+                        });
+                    };
+                    let result = enumerate_solution_space_until(
+                        &board,
+                        options.max_solutions,
+                        options.max_nodes_per_search,
+                        cancelled,
+                        options.max_duration.map(|limit| (started, limit)),
+                        removed_position,
+                        0,
+                        0,
+                        &mut send_progress,
+                    );
+                    let elapsed_micros = task_started.elapsed().as_micros() as u64;
+                    let _ = sender.send(DeletionWorkerMessage::Done {
                         task_index,
-                        progress,
+                        result_index,
+                        result,
+                        elapsed_micros,
                     });
-                };
-                let result = enumerate_solution_space_until(
-                    &board,
-                    options.max_solutions,
-                    options.max_nodes_per_search,
-                    cancelled,
-                    options.max_duration.map(|limit| (started, limit)),
-                    removed_position,
-                    0,
-                    0,
-                    &mut send_progress,
-                );
-                let elapsed_micros = task_started.elapsed().as_micros() as u64;
-                let _ = sender.send(DeletionWorkerMessage::Done {
-                    task_index,
-                    result_index,
-                    result,
-                    elapsed_micros,
-                });
+                }
             });
         }
         drop(sender);
@@ -648,16 +651,19 @@ fn parallel_unique_checks(
             for _ in 0..worker_count {
                 let sender = sender.clone();
                 let next_candidate = &next_candidate;
-                scope.spawn(move || loop {
-                    let index = next_candidate.fetch_add(1, Ordering::Relaxed);
-                    let Some((_, puzzle)) = candidates.get(index) else {
-                        break;
-                    };
-                    let check =
-                        check_unique_solution_cancellable(puzzle, max_nodes, cancelled, deadline)
-                            .ok();
-                    if sender.send((index, check)).is_err() {
-                        break;
+                scope.spawn(move || {
+                    loop {
+                        let index = next_candidate.fetch_add(1, Ordering::Relaxed);
+                        let Some((_, puzzle)) = candidates.get(index) else {
+                            break;
+                        };
+                        let check = check_unique_solution_cancellable(
+                            puzzle, max_nodes, cancelled, deadline,
+                        )
+                        .ok();
+                        if sender.send((index, check)).is_err() {
+                            break;
+                        }
                     }
                 });
             }
@@ -1394,9 +1400,9 @@ impl PivotRng {
 #[cfg(test)]
 mod tests {
     use super::{
-        enumerate_solution_space, PivotCache, SolutionFrequencies, SolutionSpaceKind, StopReason,
+        PivotCache, SolutionFrequencies, SolutionSpaceKind, StopReason, enumerate_solution_space,
     };
-    use crate::{check_uniqueness, Matrix, UniquenessStatus};
+    use crate::{Matrix, UniquenessStatus, check_uniqueness};
     use std::collections::HashSet;
     use std::sync::atomic::AtomicBool;
 
@@ -1523,13 +1529,15 @@ mod tests {
 
         let candidates = summary.frequencies.singleton_candidates(&board);
         assert!(candidates.is_empty());
-        assert!(summary
-            .frequencies
-            .counts
-            .iter()
-            .flat_map(|counts| counts.iter())
-            .filter(|&&count| count != 0)
-            .all(|&count| count >= 2));
+        assert!(
+            summary
+                .frequencies
+                .counts
+                .iter()
+                .flat_map(|counts| counts.iter())
+                .filter(|&&count| count != 0)
+                .all(|&count| count >= 2)
+        );
 
         let partial =
             enumerate_solution_space(&board, 2, 100_000, &AtomicBool::new(false)).unwrap();
@@ -1612,10 +1620,12 @@ mod tests {
         )
         .unwrap();
 
-        assert!(report
-            .deletions
-            .iter()
-            .any(|deletion| deletion.witness_pruned_candidates > 0));
+        assert!(
+            report
+                .deletions
+                .iter()
+                .any(|deletion| deletion.witness_pruned_candidates > 0)
+        );
     }
 
     #[test]
@@ -1763,21 +1773,23 @@ mod tests {
                 .collect::<Vec<_>>()
         };
         assert_eq!(summaries(sequential), summaries(parallel));
-        assert!(summaries(
-            super::enumerate_deletion_batch(
-                &tasks,
-                tasks.len(),
-                sequential_options,
-                std::time::Instant::now(),
-                0,
-                &AtomicBool::new(false),
-                &mut |_| {},
+        assert!(
+            summaries(
+                super::enumerate_deletion_batch(
+                    &tasks,
+                    tasks.len(),
+                    sequential_options,
+                    std::time::Instant::now(),
+                    0,
+                    &AtomicBool::new(false),
+                    &mut |_| {},
+                )
+                .unwrap()
             )
-            .unwrap()
-        )
-        .iter()
-        .all(|summary| summary
-            .as_ref()
-            .is_some_and(|summary| summary.kind == SolutionSpaceKind::ExactMany)));
+            .iter()
+            .all(|summary| summary
+                .as_ref()
+                .is_some_and(|summary| summary.kind == SolutionSpaceKind::ExactMany))
+        );
     }
 }

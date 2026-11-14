@@ -1,5 +1,5 @@
-use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::prelude::*;
 use web_sys::DedicatedWorkerGlobalScope;
 
 use sudoku_solver::{Matrix, SearchEvent, SolutionSearch};

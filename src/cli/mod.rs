@@ -471,15 +471,17 @@ mod tests {
     #[test]
     fn analyze_requires_exactly_one_puzzle_source() {
         assert!(Cli::try_parse_from(["sudoku", "analyze"]).is_err());
-        assert!(Cli::try_parse_from([
-            "sudoku",
-            "analyze",
-            "--puzzle",
-            &"0".repeat(81),
-            "--file",
-            "sample_problem/minimal-23.txt"
-        ])
-        .is_err());
+        assert!(
+            Cli::try_parse_from([
+                "sudoku",
+                "analyze",
+                "--puzzle",
+                &"0".repeat(81),
+                "--file",
+                "sample_problem/minimal-23.txt"
+            ])
+            .is_err()
+        );
         assert!(Cli::try_parse_from(["sudoku", "analyze", "--file", "puzzle.txt"]).is_ok());
     }
 }

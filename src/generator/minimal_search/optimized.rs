@@ -1,7 +1,7 @@
 //! Minimal-puzzle search using Diverse candidate generation and optimized
 //! minimality verification.
 
-use super::{validate, MinimalClueSearchBackend, MinimalSearchBudget};
+use super::{MinimalClueSearchBackend, MinimalSearchBudget, validate};
 use crate::archive::minimality;
 use crate::archive::{MinimalPuzzleAnalysis, VerificationStatus};
 use crate::generator::{DiverseBudget, DiverseGenerationError, DiverseStrategy};

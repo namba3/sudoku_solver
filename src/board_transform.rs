@@ -164,8 +164,8 @@ pub(super) fn transform_matrix(
 #[cfg(test)]
 mod tests {
     use super::{
-        band_drag_transform, column_drag_transform, row_drag_transform, stack_drag_transform,
-        transform_matrix, BoardTransform,
+        BoardTransform, band_drag_transform, column_drag_transform, row_drag_transform,
+        stack_drag_transform, transform_matrix,
     };
     use sudoku_solver::Matrix;
 

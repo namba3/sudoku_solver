@@ -1,8 +1,8 @@
 //! Scalar MRV backend using four packed 16-bit lanes in a `u64`.
 
+use super::SearchError;
 use super::backend::SolverBackend;
 use super::optimized::SolutionSearchEngine;
-use super::SearchError;
 use crate::Matrix;
 
 /// MRV solver that computes four candidate counts with packed `u64` operations.

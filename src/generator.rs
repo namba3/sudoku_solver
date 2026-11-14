@@ -1,10 +1,10 @@
 pub use crate::minimal_puzzle_seeds::{
-    minimal_puzzle_seeds, MinimalPuzzleSeed, PuzzleProperties, MINIMAL_PUZZLES_BY_CLUE_COUNT,
+    MINIMAL_PUZZLES_BY_CLUE_COUNT, MinimalPuzzleSeed, PuzzleProperties, minimal_puzzle_seeds,
 };
 pub mod minimal_search;
 
-use crate::solver::AlternativeSolutionStatus;
 use crate::Matrix;
+use crate::solver::AlternativeSolutionStatus;
 use std::collections::{HashSet, VecDeque};
 
 pub const MIN_CLUE_COUNT: usize = 17;
@@ -2520,18 +2520,18 @@ impl SplitMix64 {
 #[cfg(test)]
 mod tests {
     use super::{
-        adaptive_schedule, add_unavoidable_set, drift_walk_add_probability,
-        find_alternative_solution, find_hitting_set, generate, generate_diverse,
-        generate_diverse_from_parent, generate_diverse_from_parent_with_progress, generate_puzzle,
-        generate_puzzle_with_clues, minimal_puzzle_seeds, position_pairs, prune_pair_witnesses,
-        prune_triple_witnesses, prune_witness_survivors, verified_17_clue_base,
-        verified_minimal_base_up_to, with_three_solution_clues, witness_guided_swap,
-        DifferenceAntichain, DiverseBudget, DiverseStrategy, GenerationConfig, GenerationMethod,
+        DEFAULT_CLUE_COUNT, DifferenceAntichain, DiverseBudget, DiverseStrategy, GenerationConfig,
+        GenerationMethod, MAX_CLUE_COUNT, MIN_CLUE_COUNT, MINIMAL_PUZZLES_BY_CLUE_COUNT,
         PairCandidateSet, PositionCombinations, ProbeResult, SplitMix64, SudokuTransform,
-        UnavoidableWitnessCache, DEFAULT_CLUE_COUNT, MAX_CLUE_COUNT, MINIMAL_PUZZLES_BY_CLUE_COUNT,
-        MIN_CLUE_COUNT, UNAVOIDABLE_WITNESS_CACHE_CAPACITY,
+        UNAVOIDABLE_WITNESS_CACHE_CAPACITY, UnavoidableWitnessCache, adaptive_schedule,
+        add_unavoidable_set, drift_walk_add_probability, find_alternative_solution,
+        find_hitting_set, generate, generate_diverse, generate_diverse_from_parent,
+        generate_diverse_from_parent_with_progress, generate_puzzle, generate_puzzle_with_clues,
+        minimal_puzzle_seeds, position_pairs, prune_pair_witnesses, prune_triple_witnesses,
+        prune_witness_survivors, verified_17_clue_base, verified_minimal_base_up_to,
+        with_three_solution_clues, witness_guided_swap,
     };
-    use crate::{solve, SearchEvent, SolutionSearch};
+    use crate::{SearchEvent, SolutionSearch, solve};
     use std::collections::HashSet;
 
     fn clue_count(board: &crate::Matrix) -> usize {

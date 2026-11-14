@@ -25,16 +25,16 @@ pub use optimized_simd::OptimizedSimd;
 pub use optimized_u64::OptimizedU64;
 
 use super::{
-    canonical_key, is_complete_solution, matches_clues, solution_difference_mask,
     AlternativeSolutionStatus, DeletionStatus, DeletionWitness, MinimalPuzzleAnalysis,
-    MinimalityError, MinimalityEvidence, VerificationStatus,
+    MinimalityError, MinimalityEvidence, VerificationStatus, canonical_key, is_complete_solution,
+    matches_clues, solution_difference_mask,
 };
 use crate::Matrix;
 
 #[cfg(test)]
 mod tests {
-    use super::{analyze_with, Naive, Optimized, OptimizedU64};
-    use crate::archive::{analyze_minimality, VerificationStatus};
+    use super::{Naive, Optimized, OptimizedU64, analyze_with};
+    use crate::archive::{VerificationStatus, analyze_minimality};
     use crate::generator::verified_17_clue_base;
 
     #[test]
@@ -160,7 +160,7 @@ pub(super) fn analyze_using(
                         (DeletionStatus::Unknown, None, 0)
                     }
                     AlternativeSolutionStatus::InvalidInput => {
-                        return Err(MinimalityError::SolutionDoesNotMatchPuzzle)
+                        return Err(MinimalityError::SolutionDoesNotMatchPuzzle);
                     }
                 };
                 evidence.deletions.push(DeletionWitness {

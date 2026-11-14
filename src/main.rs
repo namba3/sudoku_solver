@@ -1,18 +1,18 @@
 use dioxus::prelude::*;
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
+use wasm_bindgen::closure::Closure;
 
 mod board_analysis;
 mod board_transform;
 mod i18n;
 mod puzzle_text;
 
-use board_analysis::{candidate_digits, BoardAnalysis, CandidateFilterOptions};
+use board_analysis::{BoardAnalysis, CandidateFilterOptions, candidate_digits};
 use board_transform::{
-    band_drag_transform, column_drag_transform, row_drag_transform, stack_drag_transform,
-    transform_matrix, BoardTransform,
+    BoardTransform, band_drag_transform, column_drag_transform, row_drag_transform,
+    stack_drag_transform, transform_matrix,
 };
-use i18n::{t, t_args, t_plural, Language};
+use i18n::{Language, t, t_args, t_plural};
 
 const MAX_CANDIDATE_FILTER_ITERATIONS: usize = 100;
 
@@ -3249,10 +3249,10 @@ fn focus_cell(y: usize, x: usize) {
 #[cfg(test)]
 mod tests {
     use super::{
+        BoardSnapshot, BoardTransform, HISTORY_LIMIT, Language, SearchStatus, Theme,
         board_cell_classes, cell_classes, cell_text, cell_value, empty_cell_count, is_cell_locked,
         moved_cell, next_empty_cell, parse_generated_board, parse_puzzle, parse_solution,
         record_board_change, redo_snapshot, to_txt, transform_snapshot, undo_snapshot,
-        BoardSnapshot, BoardTransform, Language, SearchStatus, Theme, HISTORY_LIMIT,
     };
     use serde_json::json;
     use sudoku_solver::Matrix;
@@ -3494,35 +3494,47 @@ mod tests {
             SearchStatus::Generating.text(Language::English),
             "Generating a unique puzzle…"
         );
-        assert!(SearchStatus::Cancelled {
-            solutions: 2,
-            elapsed_seconds: 1.5,
-        }
-        .text(Language::English)
-        .contains("2 solutions"));
-        assert!(SearchStatus::Generated {
-            clues: 30,
-            elapsed_seconds: 0.5,
-        }
-        .text(Language::English)
-        .contains("30 clues"));
-        assert!(SearchStatus::GenerationCancelled {
-            elapsed_seconds: 0.5,
-        }
-        .text(Language::Japanese)
-        .contains("問題の生成を中断"));
-        assert!(SearchStatus::GenerationError {
-            message: "test failure".to_owned(),
-            elapsed_seconds: 0.5,
-        }
-        .text(Language::English)
-        .contains("test failure"));
-        assert!(SearchStatus::WorkerError("worker failed".to_owned())
+        assert!(
+            SearchStatus::Cancelled {
+                solutions: 2,
+                elapsed_seconds: 1.5,
+            }
             .text(Language::English)
-            .contains("worker failed"));
-        assert!(SearchStatus::StartError("startup failed".to_owned())
+            .contains("2 solutions")
+        );
+        assert!(
+            SearchStatus::Generated {
+                clues: 30,
+                elapsed_seconds: 0.5,
+            }
             .text(Language::English)
-            .contains("startup failed"));
+            .contains("30 clues")
+        );
+        assert!(
+            SearchStatus::GenerationCancelled {
+                elapsed_seconds: 0.5,
+            }
+            .text(Language::Japanese)
+            .contains("問題の生成を中断")
+        );
+        assert!(
+            SearchStatus::GenerationError {
+                message: "test failure".to_owned(),
+                elapsed_seconds: 0.5,
+            }
+            .text(Language::English)
+            .contains("test failure")
+        );
+        assert!(
+            SearchStatus::WorkerError("worker failed".to_owned())
+                .text(Language::English)
+                .contains("worker failed")
+        );
+        assert!(
+            SearchStatus::StartError("startup failed".to_owned())
+                .text(Language::English)
+                .contains("startup failed")
+        );
     }
 
     #[test]
@@ -3560,9 +3572,11 @@ mod tests {
         assert_eq!(to_txt(&parsed), SOLVED_TEXT);
 
         let text_with_space = SOLVED_TEXT.replacen('5', " ", 1);
-        assert!(parse_puzzle(&text_with_space, Language::English)
-            .unwrap_err()
-            .contains("Unsupported character"));
+        assert!(
+            parse_puzzle(&text_with_space, Language::English)
+                .unwrap_err()
+                .contains("Unsupported character")
+        );
     }
 
     #[test]

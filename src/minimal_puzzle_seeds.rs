@@ -51320,7 +51320,7 @@ pub fn minimal_puzzle_seeds(clue_count: u8) -> &'static [MinimalPuzzleSeed] {
 #[cfg(test)]
 mod tests {
     use super::MINIMAL_PUZZLES_BY_CLUE_COUNT;
-    use crate::{candidates_for, Matrix};
+    use crate::{Matrix, candidates_for};
 
     fn recompute_single_presence(puzzle: &Matrix) -> (bool, bool) {
         let mut candidates = [[0u16; 9]; 9];

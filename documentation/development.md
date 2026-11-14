@@ -2,7 +2,7 @@
 
 ## 必要なもの
 
-- Rust toolchain（Edition 2021対応）
+- Rust toolchain（Edition 2024対応）
 - Dioxus CLI（プロジェクトのDioxus依存と同じ0.7系）
 - WebAssembly target `wasm32-unknown-unknown`（WASM向けチェックやビルドに必要）
 - `wasm-bindgen` CLI（`Cargo.lock`内のwasm-bindgenと同じバージョン。検索Workerのビルドに必要）

@@ -1,9 +1,9 @@
 use std::hint::black_box;
 use std::time::Instant;
 
+use sudoku_solver::Matrix;
 use sudoku_solver::solver::backend::SolverBackend;
 use sudoku_solver::solver::{self, SearchEvent};
-use sudoku_solver::Matrix;
 
 const EASY: Matrix = [
     [5, 3, 0, 0, 7, 0, 0, 0, 0],
@@ -84,7 +84,7 @@ fn benchmark_minimal_search<
 >(
     backend: &str,
 ) {
-    use sudoku_solver::generator::minimal_search::{search_with, MinimalSearchBudget};
+    use sudoku_solver::generator::minimal_search::{MinimalSearchBudget, search_with};
 
     let budget = MinimalSearchBudget {
         candidate_attempts: 1,

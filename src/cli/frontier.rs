@@ -1,10 +1,10 @@
 use std::path::PathBuf;
 
 use sudoku_solver::archive::{
-    analyze_minimality, MinimalPuzzleArchive, Provenance, VerificationStatus,
+    MinimalPuzzleArchive, Provenance, VerificationStatus, analyze_minimality,
 };
 use sudoku_solver::multi_clue::{
-    search_n_remove_add, FrontierOperation, MultiClueFrontier, RemoveAddSearchOptions,
+    FrontierOperation, MultiClueFrontier, RemoveAddSearchOptions, search_n_remove_add,
 };
 
 pub(super) struct Options {
@@ -176,9 +176,9 @@ pub(super) fn run(options: Options) -> Result<(), String> {
         frontier.save_checkpoint(&checkpoint_path)?;
     }
     println!(
-                "from={from} to={to} remove={remove_count} add={add_count} sources_selected={sources_selected} sources_completed={completed_sources} sources_incomplete={incomplete_sources} unique_children={verified_unique} new_minimal={inserted_minimal} deletion_sets={total_deletion_sets} add_sets={total_add_sets} candidate_checks={total_checks} proof_nodes={total_proof_nodes} checkpoint={}",
-                checkpoint_path.display()
-            );
+        "from={from} to={to} remove={remove_count} add={add_count} sources_selected={sources_selected} sources_completed={completed_sources} sources_incomplete={incomplete_sources} unique_children={verified_unique} new_minimal={inserted_minimal} deletion_sets={total_deletion_sets} add_sets={total_add_sets} candidate_checks={total_checks} proof_nodes={total_proof_nodes} checkpoint={}",
+        checkpoint_path.display()
+    );
 
     Ok(())
 }

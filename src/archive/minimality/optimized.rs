@@ -1,8 +1,8 @@
 //! Optimized minimality verification implementation.
 
-use super::{analyze_using, MinimalityBackend};
-use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
+use super::{MinimalityBackend, analyze_using};
 use crate::Matrix;
+use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
 
 /// Reuses the completion proof established during input validation instead of
 /// re-solving that completion for each clue.

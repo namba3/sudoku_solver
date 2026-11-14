@@ -809,9 +809,9 @@ pub(super) fn candidate_digits(mask: u16) -> impl Iterator<Item = u8> {
 #[cfg(test)]
 mod tests {
     use super::{
-        apply_eliminations, candidate_digits, candidate_units, collect_hidden_subset_eliminations,
-        collect_naked_subset_eliminations, filter_candidates, BoardAnalysis,
-        CandidateFilterOptions,
+        BoardAnalysis, CandidateFilterOptions, apply_eliminations, candidate_digits,
+        candidate_units, collect_hidden_subset_eliminations, collect_naked_subset_eliminations,
+        filter_candidates,
     };
     use sudoku_solver::Matrix;
 

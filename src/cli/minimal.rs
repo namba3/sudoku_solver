@@ -1,11 +1,11 @@
 use std::collections::HashSet;
 use std::path::PathBuf;
 
-use sudoku_solver::archive::{
-    analyze_minimality, MinimalPuzzleArchive, Provenance, VerificationStatus,
-};
-use sudoku_solver::multi_clue::{search_n_remove_add, RemoveAddSearchOptions};
 use sudoku_solver::Matrix;
+use sudoku_solver::archive::{
+    MinimalPuzzleArchive, Provenance, VerificationStatus, analyze_minimality,
+};
+use sudoku_solver::multi_clue::{RemoveAddSearchOptions, search_n_remove_add};
 
 const COLLECT_CHECKPOINT_STRATEGY: &str = "cegar-witness-intersection-same-n-v1";
 const COLLECT_TWO_FOR_TWO_CHECKPOINT_STRATEGY: &str = "cegar-witness-intersection-same-n-2x2-v1";

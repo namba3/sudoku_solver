@@ -4,7 +4,7 @@ use std::collections::BTreeSet;
 use std::fs;
 use std::path::PathBuf;
 use sudoku_solver::archive::analyze_minimality_from_puzzle;
-use sudoku_solver::{candidates_for, Matrix, SearchEvent, SolutionSearch};
+use sudoku_solver::{Matrix, SearchEvent, SolutionSearch, candidates_for};
 
 #[derive(Debug, Args)]
 #[command(group(ArgGroup::new("puzzle_input").required(true).args(["puzzle", "file"]))) ]
@@ -243,7 +243,7 @@ fn print_singles(label: &str, singles: &[(usize, usize, u8)]) {
 
 #[cfg(test)]
 mod tests {
-    use super::{count_solutions, find_singles, SolutionCount};
+    use super::{SolutionCount, count_solutions, find_singles};
     use crate::puzzle_text::parse_board_text;
     use sudoku_solver::{Matrix, SolutionSearch};
 
@@ -313,15 +313,19 @@ mod tests {
 
     #[test]
     fn file_format_rejects_wrong_shapes_and_characters() {
-        assert!(parse_board_text(".........\n")
-            .unwrap_err()
-            .to_string()
-            .contains("81 cells"));
+        assert!(
+            parse_board_text(".........\n")
+                .unwrap_err()
+                .to_string()
+                .contains("81 cells")
+        );
         let mut rows = ["........."; 9].join("\n");
         rows.replace_range(0..1, "x");
-        assert!(parse_board_text(&rows)
-            .unwrap_err()
-            .to_string()
-            .contains("row 1, column 1"));
+        assert!(
+            parse_board_text(&rows)
+                .unwrap_err()
+                .to_string()
+                .contains("row 1, column 1")
+        );
     }
 }

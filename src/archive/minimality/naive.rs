@@ -1,8 +1,8 @@
 //! Reference minimality verification implementation.
 
-use super::{analyze_using, MinimalityBackend};
-use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
+use super::{MinimalityBackend, analyze_using};
 use crate::Matrix;
+use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
 
 /// Reference implementation that validates the supplied completion on every
 /// alternative-solution query.

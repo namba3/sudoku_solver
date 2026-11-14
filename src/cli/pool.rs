@@ -8,8 +8,8 @@ use std::time::Instant;
 use super::pool_args::Options;
 use sudoku_solver::generator::{DiverseBudget, DiverseStrategy, MAX_INTERMEDIATE_CLUE_COUNT};
 use sudoku_solver::pivot::{PivotCache, PivotCandidateMode, PivotOptions, PivotSearchReport};
-use sudoku_solver::symmetry::{canonical_key, canonicalize_solution, CanonicalKey};
-use sudoku_solver::{check_uniqueness, Matrix, UniquenessStatus};
+use sudoku_solver::symmetry::{CanonicalKey, canonical_key, canonicalize_solution};
+use sudoku_solver::{Matrix, UniquenessStatus, check_uniqueness};
 
 #[derive(Clone)]
 struct Record {
@@ -330,7 +330,7 @@ pub(crate) fn run(mut options: Options) -> Result<(), String> {
                     ..
                 }) => (false, *uniqueness_nodes, *neighborhood_checks),
                 Err(error) => {
-                    return Err(format!("random-17-witness rejected its request: {error:?}"))
+                    return Err(format!("random-17-witness rejected its request: {error:?}"));
                 }
             };
             let stats_path = options
@@ -360,12 +360,12 @@ pub(crate) fn run(mut options: Options) -> Result<(), String> {
                     last_hitting_nodes = hitting_set_nodes.saturating_add(*neighborhood_checks);
                 }
                 sudoku_solver::generator::DiverseGenerationError::InvalidParent => {
-                    return Err("selected checkpoint parent failed validation".into())
+                    return Err("selected checkpoint parent failed validation".into());
                 }
                 _ => {
                     return Err(format!(
                         "Diverse generator rejected its fixed request: {error:?}"
-                    ))
+                    ));
                 }
             },
         }

@@ -7,11 +7,11 @@ pub use naive::Naive;
 pub use optimized::Optimized;
 
 use super::{
-    fill_random_solution, SplitMix64, MAX_CLUE_COUNT, MAX_INTERMEDIATE_CLUE_COUNT, MIN_CLUE_COUNT,
+    MAX_CLUE_COUNT, MAX_INTERMEDIATE_CLUE_COUNT, MIN_CLUE_COUNT, SplitMix64, fill_random_solution,
 };
+use crate::Matrix;
 use crate::archive::MinimalPuzzleAnalysis;
 use crate::generator::DiverseGenerationError;
-use crate::Matrix;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub struct MinimalSearchBudget {
@@ -98,7 +98,7 @@ pub(super) fn random_clue_subset(
 
 #[cfg(test)]
 mod tests {
-    use super::{search_with, MinimalSearchBudget, Naive, Optimized};
+    use super::{MinimalSearchBudget, Naive, Optimized, search_with};
 
     #[test]
     fn backends_reject_invalid_clue_counts_and_empty_budgets() {
@@ -110,23 +110,27 @@ mod tests {
             max_intermediate_clues: 18,
         };
         assert!(search_with::<Optimized>(411, 16, budget).is_err());
-        assert!(search_with::<Optimized>(
-            411,
-            17,
-            MinimalSearchBudget {
-                max_neighborhood_checks: 0,
-                ..budget
-            }
-        )
-        .is_err());
-        assert!(search_with::<Naive>(
-            411,
-            17,
-            MinimalSearchBudget {
-                candidate_attempts: 0,
-                ..budget
-            }
-        )
-        .is_err());
+        assert!(
+            search_with::<Optimized>(
+                411,
+                17,
+                MinimalSearchBudget {
+                    max_neighborhood_checks: 0,
+                    ..budget
+                }
+            )
+            .is_err()
+        );
+        assert!(
+            search_with::<Naive>(
+                411,
+                17,
+                MinimalSearchBudget {
+                    candidate_attempts: 0,
+                    ..budget
+                }
+            )
+            .is_err()
+        );
     }
 }

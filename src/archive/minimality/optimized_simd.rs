@@ -1,8 +1,8 @@
 //! Minimality verification using the native SIMD solution-search backend.
 
-use super::{analyze_using, MinimalityBackend};
-use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
+use super::{MinimalityBackend, analyze_using};
 use crate::Matrix;
+use crate::archive::{MinimalPuzzleAnalysis, MinimalityError};
 
 /// Minimality verifier backed by native SIMD MRV candidate counting.
 pub struct OptimizedSimd;

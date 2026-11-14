@@ -1,11 +1,11 @@
 //! Shared N-clue frontier operations and scheduling models.
 
-use crate::archive::{
-    analyze_minimality, validate_minimality_evidence, MinimalPuzzleAnalysis, VerificationStatus,
-};
-use crate::solver::{find_alternative_solution, AlternativeSolutionStatus};
-use crate::symmetry::canonical_key;
 use crate::Matrix;
+use crate::archive::{
+    MinimalPuzzleAnalysis, VerificationStatus, analyze_minimality, validate_minimality_evidence,
+};
+use crate::solver::{AlternativeSolutionStatus, find_alternative_solution};
+use crate::symmetry::canonical_key;
 use std::collections::HashSet;
 use std::fs;
 use std::path::Path;
@@ -281,7 +281,7 @@ pub fn search_n_remove_add(
                     report.stats.complete = false;
                 }
                 AlternativeSolutionStatus::InvalidInput => {
-                    return Err("candidate did not preserve the known completion".into())
+                    return Err("candidate did not preserve the known completion".into());
                 }
             }
         }
@@ -834,13 +834,15 @@ mod tests {
         puzzle18[extra / 9][extra % 9] = solution[extra / 9][extra % 9];
         let analysis18 = crate::archive::analyze_minimality(puzzle18, solution, 100_000).unwrap();
         assert_eq!(analysis18.status, VerificationStatus::VerifiedNonMinimal);
-        assert!(frontier
-            .register(
-                analysis18,
-                Some(analysis17.puzzle_key.clone()),
-                Some(FrontierOperation::AddOne)
-            )
-            .unwrap());
+        assert!(
+            frontier
+                .register(
+                    analysis18,
+                    Some(analysis17.puzzle_key.clone()),
+                    Some(FrontierOperation::AddOne)
+                )
+                .unwrap()
+        );
         assert_eq!(frontier.stats().by_clue_count, vec![(17, 1), (18, 1)]);
         assert_eq!(
             frontier.select_next(17, 20).unwrap().analysis.clue_count,
@@ -867,12 +869,14 @@ mod tests {
         .unwrap();
         assert!(report.stats.deletion_sets <= 136);
         assert!(report.stats.candidate_checks <= 1);
-        assert!(report
-            .candidates
-            .iter()
-            .all(|candidate| candidate.clue_count == 16
-                && candidate.removed_positions.len() == 2
-                && candidate.added_positions.len() == 1));
+        assert!(
+            report
+                .candidates
+                .iter()
+                .all(|candidate| candidate.clue_count == 16
+                    && candidate.removed_positions.len() == 2
+                    && candidate.added_positions.len() == 1)
+        );
     }
 
     #[test]

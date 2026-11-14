@@ -8,8 +8,8 @@ use sudoku_solver::{
     generator::generate_puzzle_with_clues,
     solve,
     symmetry::{
-        canonicalize_puzzle, canonicalize_solution, check_equivalent_pairwise, EquivalenceResult,
-        SpatialTransform,
+        EquivalenceResult, SpatialTransform, canonicalize_puzzle, canonicalize_solution,
+        check_equivalent_pairwise,
     },
 };
 

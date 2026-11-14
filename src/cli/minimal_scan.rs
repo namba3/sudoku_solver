@@ -1,15 +1,15 @@
 use std::path::PathBuf;
+use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 use std::sync::mpsc;
-use std::sync::Arc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use sudoku_solver::archive::{
-    analyze_minimality_from_puzzle, MinimalPuzzleArchive, Provenance, VerificationStatus,
-};
-use sudoku_solver::generator::{generate_diverse, DiverseBudget, DiverseStrategy};
 use sudoku_solver::Matrix;
+use sudoku_solver::archive::{
+    MinimalPuzzleArchive, Provenance, VerificationStatus, analyze_minimality_from_puzzle,
+};
+use sudoku_solver::generator::{DiverseBudget, DiverseStrategy, generate_diverse};
 
 #[derive(Clone)]
 pub(super) struct Options {

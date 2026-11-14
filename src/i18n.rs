@@ -135,7 +135,7 @@ fn missing(key: &str) -> String {
 
 #[cfg(test)]
 mod tests {
-    use super::{build_bundle, missing, resolve, t, t_args, t_plural, Language};
+    use super::{Language, build_bundle, missing, resolve, t, t_args, t_plural};
 
     #[test]
     fn japanese_and_english_fluent_catalogs_have_matching_ids_and_plural_forms() {
@@ -189,12 +189,16 @@ mod tests {
         let (english_ids, english_plural_forms) = ids_and_plural_forms(english);
 
         assert_eq!(japanese_ids, english_ids);
-        assert!(japanese_plural_forms
-            .values()
-            .all(|forms| forms == &["other".to_owned()].into()));
-        assert!(english_plural_forms
-            .values()
-            .all(|forms| forms == &["one".to_owned(), "other".to_owned()].into()));
+        assert!(
+            japanese_plural_forms
+                .values()
+                .all(|forms| forms == &["other".to_owned()].into())
+        );
+        assert!(
+            english_plural_forms
+                .values()
+                .all(|forms| forms == &["one".to_owned(), "other".to_owned()].into())
+        );
         build_bundle("ja", japanese);
         build_bundle("en", english);
     }

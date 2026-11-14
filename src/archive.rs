@@ -4,7 +4,7 @@ pub mod minimality;
 
 use crate::solver::{AlternativeSolutionStatus, SearchEvent, SolutionSearch};
 use crate::symmetry::canonical_key;
-use crate::{solve, Matrix};
+use crate::{Matrix, solve};
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 use std::fs;
@@ -621,7 +621,7 @@ fn evidence_from_json(
                 _ => {
                     return Err(ArchiveError(format!(
                         "record {index} has unknown deletion status"
-                    )))
+                    )));
                 }
             };
             let alternative = match deletion.get("alternative") {
@@ -632,7 +632,7 @@ fn evidence_from_json(
                 _ => {
                     return Err(ArchiveError(format!(
                         "record {index} has invalid alternative"
-                    )))
+                    )));
                 }
             };
             let mask = required_str(deletion, "difference_mask", index)?;
@@ -883,12 +883,16 @@ mod tests {
             seed: Some(7),
             ..Provenance::default()
         };
-        assert!(archive
-            .insert_analysis(&analysis, provenance, 100_000)
-            .unwrap());
-        assert!(!archive
-            .insert_analysis(&analysis, Provenance::default(), 100_000)
-            .unwrap());
+        assert!(
+            archive
+                .insert_analysis(&analysis, provenance, 100_000)
+                .unwrap()
+        );
+        assert!(
+            !archive
+                .insert_analysis(&analysis, Provenance::default(), 100_000)
+                .unwrap()
+        );
         assert_eq!(archive.count(17), 1);
         assert_eq!(archive.count(18), 0);
         assert_eq!(archive.stats().distinct_solution_classes, 1);

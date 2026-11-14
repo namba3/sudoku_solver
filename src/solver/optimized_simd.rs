@@ -98,9 +98,15 @@ use std::arch::x86_64::*;
 #[cfg(any(target_arch = "x86", target_arch = "x86_64"))]
 #[target_feature(enable = "sse2")]
 unsafe fn candidate_counts_sse2(rows: [u16; 8], columns: [u16; 8], boxes: [u16; 8]) -> [u8; 8] {
-    let rows = _mm_loadu_si128(rows.as_ptr().cast());
-    let columns = _mm_loadu_si128(columns.as_ptr().cast());
-    let boxes = _mm_loadu_si128(boxes.as_ptr().cast());
+    // SAFETY: each pointer refers to eight initialized u16 values; the loadu
+    // intrinsics permit unaligned pointers and read exactly those 16 bytes.
+    let (rows, columns, boxes) = unsafe {
+        (
+            _mm_loadu_si128(rows.as_ptr().cast()),
+            _mm_loadu_si128(columns.as_ptr().cast()),
+            _mm_loadu_si128(boxes.as_ptr().cast()),
+        )
+    };
     let used = _mm_or_si128(_mm_or_si128(rows, columns), boxes);
 
     // Parallel 16-bit SWAR popcount. The masks stay within each 16-bit lane.
@@ -117,7 +123,9 @@ unsafe fn candidate_counts_sse2(rows: [u16; 8], columns: [u16; 8], boxes: [u16; 
     counts = _mm_and_si128(counts, _mm_set1_epi16(0x001f));
 
     let mut used_counts = [0u16; 8];
-    _mm_storeu_si128(used_counts.as_mut_ptr().cast(), counts);
+    // SAFETY: the output pointer refers to eight initialized u16 slots, and
+    // storeu writes exactly 16 bytes without requiring alignment.
+    unsafe { _mm_storeu_si128(used_counts.as_mut_ptr().cast(), counts) };
     std::array::from_fn(|lane| 9 - used_counts[lane] as u8)
 }
 
@@ -150,16 +158,17 @@ unsafe fn candidate_counts_wasm_simd(
     counts = u16x8_add(counts, u16x8_shr(counts, 8));
     counts = v128_and(counts, u16x8_splat(0x001f));
 
-    let used_counts: [u16; 8] = std::mem::transmute(counts);
+    // SAFETY: both v128 and [u16; 8] have exactly 16 bytes.
+    let used_counts: [u16; 8] = unsafe { std::mem::transmute(counts) };
     std::array::from_fn(|lane| 9 - used_counts[lane] as u8)
 }
 
 #[cfg(test)]
 mod tests {
     use super::Backend as Simd;
-    use crate::solver::backend::{Optimized, SolverBackend};
-    use crate::solver::SearchEvent;
     use crate::Matrix;
+    use crate::solver::SearchEvent;
+    use crate::solver::backend::{Optimized, SolverBackend};
 
     const PUZZLE: Matrix = [
         [5, 3, 0, 0, 7, 0, 0, 0, 0],

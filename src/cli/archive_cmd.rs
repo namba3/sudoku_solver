@@ -1,5 +1,5 @@
 use std::path::{Path, PathBuf};
-use sudoku_solver::archive::{analyze_minimality, MinimalPuzzleArchive, Provenance};
+use sudoku_solver::archive::{MinimalPuzzleArchive, Provenance, analyze_minimality};
 use sudoku_solver::generator::verified_17_clue_bases;
 
 pub(crate) fn run(command: &str, args: super::ArchiveArgs) -> Result<(), String> {
